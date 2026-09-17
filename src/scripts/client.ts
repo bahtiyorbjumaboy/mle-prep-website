@@ -4,7 +4,7 @@ import type { ProgressStore } from '@/lib/types';
 export function readProgress(): ProgressStore {
   try { return validateProgress(JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')).store; } catch { return emptyProgress(); }
 }
-export function writeProgress(store: ProgressStore) { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); window.dispatchEvent(new CustomEvent('progresschange')); }
+export function writeProgress(store: ProgressStore) { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); renderProgress(); window.dispatchEvent(new CustomEvent('progresschange')); }
 
 export function initShell() {
   const sidebar = document.querySelector('#sidebar'); const scrim = document.querySelector('[data-scrim]');
@@ -12,7 +12,7 @@ export function initShell() {
   scrim?.addEventListener('click', () => { sidebar?.classList.remove('open'); scrim.classList.remove('show'); });
   document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => { const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = theme; localStorage.setItem('ml-os-theme', theme); });
   document.addEventListener('keydown', (event) => { if (event.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes((event.target as HTMLElement).tagName)) { event.preventDefault(); const base = import.meta.env.BASE_URL.replace(/\/$/, ''); location.href = `${base}/search/`; } });
-  initProgressForms(); initFilters(); initPortability(); initReviewQueue(); initCurriculumSelector(); renderProgress(); renderReviewQueue();
+  initProgressForms(); renderProgress(); initFilters(); initPortability(); initReviewQueue(); initCurriculumSelector(); renderReviewQueue();
 }
 
 function initCurriculumSelector() {
@@ -72,7 +72,25 @@ function renderReviewQueue() {
 function initFilters() {
   const controls = [...document.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-filter]')];
   if (!controls.length) return;
-  const apply = () => document.querySelectorAll<HTMLElement>('[data-filter-item]').forEach((item) => { const visible = controls.every((control) => { const value = control.type === 'checkbox' ? (control as HTMLInputElement).checked ? 'true' : '' : control.value.toLowerCase(); if (!value) return true; if (control.dataset.filter === 'text') return (item.dataset.search || '').includes(value); if (control.dataset.filter === 'incomplete') return item.dataset.complete !== 'true'; if (control.dataset.filter === 'due') { const progress = readProgress().items[item.dataset.progressKey || '']; return Boolean(progress?.nextReview && progress.nextReview <= new Date().toISOString().slice(0,10)); } return (item.dataset[control.dataset.filter || ''] || '').toLowerCase() === value; }); item.hidden = !visible; });
+  const items = [...document.querySelectorAll<HTMLElement>('[data-filter-item]')];
+  const summary = document.querySelector<HTMLElement>('[data-filter-summary]');
+  const apply = () => {
+    let visibleCount = 0;
+    items.forEach((item) => {
+      const visible = controls.every((control) => {
+        const value = control.type === 'checkbox' ? (control as HTMLInputElement).checked ? 'true' : '' : control.value.trim().toLowerCase();
+        if (!value) return true;
+        if (control.dataset.filter === 'text') return (item.dataset.search || '').includes(value);
+        if (control.dataset.filter === 'incomplete') return item.dataset.complete !== 'true';
+        if (control.dataset.filter === 'due') { const progress = readProgress().items[item.dataset.progressKey || '']; return Boolean(progress?.nextReview && progress.nextReview <= new Date().toISOString().slice(0,10)); }
+        return (item.dataset[control.dataset.filter || ''] || '').toLowerCase() === value;
+      });
+      item.hidden = !visible;
+      item.setAttribute('aria-hidden', String(!visible));
+      if (visible) visibleCount++;
+    });
+    if (summary) summary.textContent = `${visibleCount} of ${items.length} items`;
+  };
   controls.forEach((control) => control.addEventListener(control.tagName === 'SELECT' ? 'change' : 'input', apply)); window.addEventListener('progresschange', apply); apply();
 }
 

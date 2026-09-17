@@ -1,0 +1,6 @@
+/* Author-level display rules (for example `.item-row { display: grid }`) must
+   never override application visibility state. This also covers search,
+   curriculum panels, and review groups that use the native hidden attribute. */
+[hidden] {
+  display: none !important;
+}
