@@ -10,7 +10,7 @@ export function initShell() {
   const sidebar = document.querySelector('#sidebar'); const scrim = document.querySelector('[data-scrim]');
   document.querySelector('[data-menu]')?.addEventListener('click', () => { sidebar?.classList.toggle('open'); scrim?.classList.toggle('show'); });
   scrim?.addEventListener('click', () => { sidebar?.classList.remove('open'); scrim.classList.remove('show'); });
-  document.querySelector('[data-theme]')?.addEventListener('click', () => { const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = theme; localStorage.setItem('ml-os-theme', theme); });
+  document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => { const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = theme; localStorage.setItem('ml-os-theme', theme); });
   document.addEventListener('keydown', (event) => { if (event.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes((event.target as HTMLElement).tagName)) { event.preventDefault(); const base = import.meta.env.BASE_URL.replace(/\/$/, ''); location.href = `${base}/search/`; } });
   initProgressForms(); initFilters(); initPortability(); initReviewQueue(); initCurriculumSelector(); renderProgress(); renderReviewQueue();
 }
