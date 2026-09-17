@@ -1,0 +1,215 @@
+# ML Interview OS
+
+A static, source-driven workspace for a machine learning interview curriculum. It turns canonical Markdown into a dashboard, chronological roadmap, knowledge and coding browsers, review queue, lesson library, notes archive, searchable source library, and browser-local completion tracker.
+
+The project uses Astro, Starlight, TypeScript, and static generation. It requires no backend, database, authentication, or hosted content service.
+
+## Screenshots
+
+Add current desktop and mobile screenshots here after deploying your curriculum.
+
+## Quick start
+
+Requirements: Node.js 22+ and npm.
+
+```bash
+npm install
+npm run dev
+```
+
+Useful commands:
+
+```bash
+npm run index      # regenerate generated/curriculum-index.json
+npm run validate   # validate curriculum relationships
+npm run test       # parser, identity, and progress tests
+npm run build      # production static build
+npm run check      # type-check, test, validate, and build
+```
+
+The empty repository is a supported state. It renders instructions instead of demo curriculum data.
+
+## Repository structure
+
+```text
+curriculum/
+  2026/{sources,interview-answers,coding-reviews,lessons,notes}/
+  2027/{sources,interview-answers,coding-reviews,lessons,notes}/
+  sprint/{sources,notes}/
+generated/curriculum-index.json
+scripts/                       # indexing, validation, lesson scaffold
+src/{components,layouts,lib,pages,styles}/
+templates/{lesson,note}.md
+.github/workflows/deploy-pages.yml
+```
+
+Files under `curriculum/**/sources/` are canonical and are never changed by a build. The generated JSON file is derived and may be regenerated at any time.
+
+## Study artifact contract
+
+| Artifact | Purpose | Relationship | May contain live progress? |
+| --- | --- | --- | --- |
+| Source | Authoritative question bank, coding set, roadmap, or instruction document | Defines canonical items | No |
+| Interview answer | Durable reusable answer to one knowledge question | Exactly one knowledge item; at most one per item | No |
+| Coding review | Durable reusable solution review | Exactly one coding item; at most one per item | No |
+| Lesson | Concept-scoped teaching material | Many-to-many with knowledge and coding items | No |
+| Session note | Chronological evidence from a real study session | May reference several items | Historical evidence only |
+
+Current completion, mastery, attempts, and review dates live in the browser progress store. Durable answers, reviews, and lessons must not contain those fields. Session notes may preserve historical `observed_mastery`, `sprint_result`, and `next_review`; these never overwrite current browser state.
+
+## Adding curriculum files
+
+Copy files without renaming their internal wording:
+
+```text
+curriculum/2026/sources/01_2026_Generalist_MLE_Coding_Set_FINAL.md
+curriculum/2026/sources/Bank_01_Linear_Algebra_FINAL.md
+curriculum/2027/sources/03_2027_Search_Recs_STAFF_Roadmap_FINAL.md
+curriculum/sprint/sources/Interview_Sprint_02_3_Week_Roadmap.md
+```
+
+Then run:
+
+```bash
+npm run validate
+npm run build
+```
+
+The indexer recognizes question/problem headings, coding ID families, bank filenames, and roadmap `Week N` headings. It retains unparsed source content and reports useful warnings instead of inventing missing fields. A sprint is indexed as a separate overlay curriculum.
+
+## Canonical IDs
+
+Knowledge IDs such as `A3` are not globally unique. Their keys include curriculum and bank:
+
+- `2026:bank01:A3`
+- `2026:bank02:A3`
+- `2027:ranking-recommendation:R08`
+
+Coding keys use a coding namespace, for example `2027:coding:REC-05`. Progress and lesson links use these stable keys, not mutable question wording. Ambiguous roadmap references are not guessed.
+
+Artifact frontmatter may use the concise unambiguous 2027 forms `2027:R01` and `2027:REC-05`; the index resolves them to internal bank/coding-qualified keys. A 2026 knowledge reference must always include its bank, such as `2026:bank01:A3`, because `A3` may also exist in another bank.
+
+## Adding interview answers
+
+Use `curriculum/2026/interview-answers/bankXX/<ID>.md` or one of the domain-qualified 2027 locations:
+
+```text
+curriculum/2027/interview-answers/search/S01.md
+curriculum/2027/interview-answers/recommendation/R01.md
+```
+
+```yaml
+---
+type: interview-answer
+item: "2027:R01"
+title: "Two-stage and multi-stage recommender architecture"
+created: "2026-09-17"
+updated: "2026-09-17"
+tags: [recommendation, ranking]
+---
+```
+
+Begin body headings at H2. One answer maps to exactly one knowledge item. See `templates/interview-answer.md`.
+
+## Adding coding reviews
+
+Use `curriculum/2026/coding-reviews/<ID>.md`, `curriculum/2027/coding-reviews/search/SRCH-xx.md`, or `curriculum/2027/coding-reviews/recommendation/REC-xx.md`.
+
+```yaml
+---
+type: coding-review
+item: "2027:REC-05"
+title: "Two-Tower Retrieval"
+created: "2026-09-17"
+updated: "2026-09-17"
+tags: [retrieval, embeddings]
+---
+```
+
+Begin body headings at H2. One review maps to exactly one coding problem. See `templates/coding-review.md`.
+
+## Adding lessons
+
+Generate a safe skeleton:
+
+```bash
+npm run new:lesson -- 2026:bank01:A3
+npm run new:lesson -- 2027:REC-05
+```
+
+The command refuses to overwrite a file and requires bank context for 2026 knowledge keys. Lessons are concept-scoped and many-to-many:
+
+```yaml
+---
+type: lesson
+id: "least-squares-geometry"
+title: "Least Squares Geometry and the Pseudoinverse"
+items:
+  - "2026:bank01:A3"
+  - "2026:bank01:A4"
+created: "2026-09-17"
+updated: "2026-09-17"
+tags: [linear-algebra, least-squares]
+---
+```
+
+Lesson Markdown supports headings, tables, task lists, fenced code, inline and display LaTeX math, and Mermaid fenced blocks. Math is processed through Astro's Unified pipeline with `remark-math` and `rehype-katex`; source LaTeX is passed through unchanged before rendering. Use `$...$` for inline math and `$$...$$` for display math. The KaTeX stylesheet is included globally. See `templates/lesson.md`. A lesson may map to multiple items, and an item may have multiple lessons.
+
+## Adding session notes
+
+Notes are personal session work and may map to several items:
+
+```yaml
+---
+type: session-note
+title: "Least-squares practice session"
+items:
+  - "2026:bank01:A3"
+date: "2026-09-17"
+curriculum: "2026"
+session_type: "theory"
+---
+```
+
+Put the file anywhere under the matching `curriculum/<id>/notes/` directory. Multiple notes can link to one item. See `templates/note.md`.
+
+The sprint is an overlay, not an owner of durable artifacts. A sprint session note may reference `2027:R01` and record historical sprint evidence, but its interview answer, coding review, and lessons remain under `curriculum/2027/`. Do not add `interview-answers/`, `coding-reviews/`, or `lessons/` under `curriculum/sprint/`.
+
+## Progress persistence and portability
+
+Interactive progress is stored in browser `localStorage` under a versioned key. Each record can contain completion, curriculum-specific mastery wording, attempt count, last-attempt date, next-review date, and a short personal note. This data is private to that browser and is not committed.
+
+Use **Export progress** to download readable JSON, **Import** to validate and replace local data, and **Reset** to clear it. Import preserves valid records, reports malformed ones, and safely retains unknown canonical keys for future curricula. Import overwrite and reset both require confirmation.
+
+## Validation
+
+`npm run validate` detects duplicate canonical keys, unknown artifact references, duplicate interview answers/reviews, duplicate lesson IDs, malformed or unquoted dates, H1 artifact headings, forbidden live-progress fields, empty lesson mappings, sprint-owned durable artifacts, malformed frontmatter, and invalid progress fixtures. Non-fatal source ambiguity is printed with context. Tests cover parsing, identity, artifact relationships, contract violations, progress import, and real KaTeX output. The mandatory math fixture is `tests/fixtures/math-rendering.md`.
+
+## GitHub Pages deployment
+
+1. Push the repository to GitHub with the default branch named `main`.
+2. In **Settings → Pages**, choose **GitHub Actions** as the source.
+3. Push a commit or run the workflow manually.
+
+`.github/workflows/deploy-pages.yml` installs locked dependencies, validates curriculum data, runs tests, builds static output, and deploys `dist/` using standard Pages permissions. No secrets are needed.
+
+The Astro config derives the project-page base from `GITHUB_REPOSITORY`, so `https://USERNAME.github.io/REPOSITORY/` works without hard-coded usernames. For unusual hosting, set `SITE_URL` and/or `BASE_PATH` at build time.
+
+## Updating the site
+
+Add or edit any source or study-artifact Markdown; run `npm run check`; commit; and push. Pages rebuilds automatically. Navigation, browse pages, relationships, and detail routes come from the generated index, so no manual menu edit is needed.
+
+## Troubleshooting base paths
+
+- Do not hand-prefix Markdown assets with the repository name. Use relative paths where practical.
+- Local development intentionally runs at `/`; the Actions build supplies `/<repository>` automatically.
+- Reproduce a project-page build locally with `BASE_PATH=/your-repository npm run build`.
+- If Pages shows a 404, confirm the Pages source is **GitHub Actions** and the repository's default branch matches the workflow trigger.
+
+## Why Markdown stays the source of truth
+
+Markdown is portable, Git-friendly, diffable, easy to author, and independent of this UI. The build reads it into a normalized model and renders richer navigable pages without rewriting the original documents. That separation keeps curriculum review honest: source wording and schedules remain authoritative while the application adds search, linking, progress, and presentation.
+
+## Intentionally deferred
+
+Cloud/GitHub progress sync, automatic spaced-repetition scheduling, analytics, generated lessons, mock-interview history, and charts are extension points rather than first-version features. The local progress adapter and normalized index keep those additions possible without changing the Markdown authoring model.

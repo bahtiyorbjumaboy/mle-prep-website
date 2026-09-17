@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "items": {
+    "2026:bank01:A3": {
+      "completed": true,
+      "mastery": "Interview-ready",
+      "attempts": 2,
+      "lastAttempt": "2026-09-16",
+      "nextReview": "2026-09-24"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+---
+import Icon from '@/components/Icon.astro';
+import '@/styles/global.css';
+import 'katex/dist/katex.min.css';
+const { title = 'Dashboard', description = 'Your machine learning interview preparation command center.' } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const href = (path: string) => `${base}${path}` || '/';
+const route = Astro.url.pathname.replace(base, '') || '/';
+const nav = [
+  ['/', 'Dashboard', 'home'], ['/roadmap/', 'Roadmap', 'map'], ['/knowledge/', 'Knowledge', 'brain'], ['/coding/', 'Coding', 'code'],
+  ['/interview-answers/', 'Answers', 'answer'], ['/coding-reviews/', 'Code Reviews', 'review'], ['/review/', 'Review Queue', 'review'],
+  ['/lessons/', 'Lessons', 'book'], ['/notes/', 'Notes', 'note'], ['/sources/', 'Sources', 'source'],
+];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} /><meta name="generator" content={Astro.generator} />
+    <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" /><title>{title} · ML Interview OS</title>
+    <script is:inline>document.documentElement.dataset.theme=localStorage.getItem('ml-os-theme')||'dark'</script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href={href('/')}><span class="brand-mark">ML</span><span><strong>Interview OS</strong><small>Preparation workspace</small></span></a>
+      <nav aria-label="Primary">{nav.map(([url, label, icon]) => <a class:list={['nav-link', { active: url === '/' ? route === '/' : route.startsWith(url) }]} href={href(url)}><Icon name={icon} /><span>{label}</span></a>)}</nav>
+      <div class="sidebar-footer"><span class="status-dot"></span><span>Local progress enabled</span></div>
+    </aside>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="icon-button menu-button" data-menu aria-label="Open navigation"><Icon name="menu" /></button>
+        <a class="mobile-brand" href={href('/')}>ML Interview OS</a>
+        <div class="top-actions">
+          <a class="search-button" href={href('/search/')}><Icon name="search" size={16} /><span>Search</span><kbd>/</kbd></a>
+          <button class="icon-button" data-theme aria-label="Toggle color theme"><span class="theme-glyph">◐</span></button>
+        </div>
+      </header>
+      <main id="main" class="main"><slot /></main>
+    </div>
+    <div class="scrim" data-scrim></div>
+    <script>
+      import { initShell } from '@/scripts/client';
+      initShell();
+    </script>
+  </body>
+</html>

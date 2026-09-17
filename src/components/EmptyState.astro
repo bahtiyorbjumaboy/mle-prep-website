@@ -1,0 +1,10 @@
+---
+import Icon from './Icon.astro';
+const { title = 'No curriculum files yet', message = 'Add Markdown sources to curriculum/<year>/sources and rebuild the site.' } = Astro.props;
+---
+<section class="empty-state">
+  <div class="empty-icon"><Icon name="source" size={28} /></div>
+  <h2>{title}</h2>
+  <p>{message}</p>
+  <code>npm run validate && npm run build</code>
+</section>

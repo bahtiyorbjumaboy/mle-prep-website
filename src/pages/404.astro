@@ -1,0 +1,5 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+<AppLayout title="Not found"><section class="empty-state" style="margin-top:8vh"><div class="empty-icon">404</div><h1>That page is not in the curriculum.</h1><p>The source may have moved, or the item may no longer be indexed.</p><a class="button" href={`${base}/`}>Return to dashboard</a></section></AppLayout>
