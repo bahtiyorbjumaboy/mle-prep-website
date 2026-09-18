@@ -78,27 +78,39 @@ Required body structure:
 
 ## Mastery Answer
 
+## Learn the Concepts
+
 ## Material Follow-ups / Scenario Variants
-
-## Plain-English Model
-
-## Reasoning Chain
-
-## Staff Compression
 ```
+
+Content contract:
+
+- **`## Mastery Answer` is the interview answer.** Keep it polished, direct, mechanism-first, and at the bank's required depth. It should be strong enough to give aloud under interview time pressure, while still including the important assumptions, trade-offs, and failure modes needed by the canonical prompt.
+- **`## Learn the Concepts` is mandatory for every interview-answer artifact, even when the learner answers the question perfectly cold.** It is not a remediation-only section. Make it a thorough self-study treatment of the concepts the question is testing so the learner does not need a second lesson file to learn this item.
+- The `Learn the Concepts` section should include, when relevant: first-principles motivation; precise definitions; mechanism/derivation; worked or quantitative examples; assumptions; trade-offs; failure modes; metric/evaluation semantics; implementation or serving implications; debugging/diagnosis; changed-constraint reasoning; and connections needed to understand the canonical question deeply. Include only material that genuinely supports this item; do not expand into an unrelated textbook chapter.
+- **`## Material Follow-ups / Scenario Variants` contains durable answers/explanations for canonical follow-ups and substantive interviewer probes or changed-constraint variants.** Do not merely list questions when the session established useful answer content.
+- Do **not** add `Plain-English Model`, `Reasoning Chain`, `Staff Compression`, `Mastery Record`, reconstruction-log, repair-log, or review-plan sections.
+
+Durable-update rule:
+
+- The interview-answer file is the canonical study source for this knowledge item. It must become more complete as understanding improves.
+- If a session teaches a substantive concept, asks the learner to reconstruct reasoning at greater depth than the file currently contains, resolves an important misconception, derives something useful, or answers a meaningful follow-up/variant, **update the existing interview-answer in the same session**. Do not leave that knowledge only in the chat or session note.
+- Fold new durable content into the existing sections rather than creating a chronological or repair section: update `Mastery Answer` if the interview answer itself should improve; extend `Learn the Concepts` for deeper teaching/derivation/mechanism; extend `Material Follow-ups / Scenario Variants` for follow-up or changed-constraint knowledge.
+- Reconstruction evidence itself (what the learner said, whether it was correct, attempts, mistakes, dates, mastery) belongs only in the session note. The **knowledge exposed by the reconstruction** belongs in the durable interview-answer.
+- A separate lesson is **not** the default home for question-specific teaching. Do not create a lesson merely because the learner needed teaching or because `Learn the Concepts` is long. A lesson is justified only for genuinely reusable cross-item material that would otherwise be duplicated across multiple knowledge/coding artifacts. Even then, all material needed to understand and defend this canonical item must remain self-contained in its interview-answer.
 
 Rules:
 
 - Copy the exact canonical Staff-depth question from the authoritative bank; do not paraphrase it.
-- Keep the artifact reusable, synthesized, and mechanism-first rather than chronological.
-- When new learning improves the answer, update the durable explanation in place.
+- Keep the artifact reusable, synthesized, and non-chronological.
+- Preserve an existing `created` date; update `updated` whenever durable content changes.
 - Do not append attempts, repair history, mastery state, review dates, sprint result, or reconstruction evidence here; those belong in the session note.
 
-## 5. Lesson artifact — concept-scoped, many-to-many
+## 5. Lesson artifact — optional cross-item teaching only
 
-A lesson is a reusable teaching unit, not a question answer and not a progress record. Create/update one only when substantive teaching is useful.
+A lesson is an optional reusable teaching unit for material that genuinely spans multiple canonical items. It is not the default teaching artifact for a knowledge question: the question's mandatory `Learn the Concepts` section owns all question-specific conceptual depth.
 
-A lesson may support one or many Search/Recommendation knowledge or coding items, and an item may link to multiple lessons.
+Create/update a lesson only when the material is meaningfully reusable across multiple Search/Recommendation knowledge/coding items and centralizing it prevents real duplication. A lesson may support one or many items, and an item may link to multiple lessons.
 
 Preferred location:
 
@@ -126,8 +138,10 @@ Rules:
 
 - `items` must be a non-empty YAML list of canonical keys.
 - Do not force one lesson per curriculum item.
+- Do not create a lesson merely because substantive teaching occurred; that teaching belongs in the interview-answer `Learn the Concepts` section first.
+- Do not use a lesson to offload material required to understand or defend a canonical question. Interview answers must remain self-contained.
 - Do not create trivial lesson stubs merely to satisfy the format.
-- Do not duplicate the interview answer verbatim. Teach the reusable concept, including mechanisms, quantitative trade-offs, implementation/system connections, diagnosis, and changed-constraint transfer where relevant.
+- Do not duplicate interview answers verbatim. Teach only the genuinely cross-item reusable concept, including mechanisms, quantitative trade-offs, implementation/system connections, diagnosis, and changed-constraint transfer where relevant.
 - The Markdown body must begin at H2; do not repeat `title` as an H1.
 - No mastery/progress/attempt history belongs in a lesson.
 
@@ -260,6 +274,8 @@ Before finishing any session that writes artifacts, verify:
 - all date values are quoted strings;
 - no artifact body contains an H1;
 - each interview answer maps to exactly one knowledge item;
+- every interview answer contains `Mastery Answer`, mandatory thorough `Learn the Concepts`, and the appropriate follow-up section;
+- any substantive teaching/deeper reconstruction/follow-up knowledge discovered this session has been folded into the existing interview-answer sections;
 - each coding review maps to exactly one coding item;
 - lesson `items` is a non-empty canonical-key list;
 - no durable artifact contains live mastery/progress fields;
@@ -319,8 +335,10 @@ Run the Staff-depth theory process:
 Follow the website-compatible study artifact contract above.
 
 - Create one NEW session-note file for this session; put attempts, reconstruction evidence, repairs, observed mastery, and next-review planning there.
-- For every knowledge question seriously covered, create or update its one-item interview-answer file as a durable artifact only; do NOT put status/mastery/review/attempt history in it.
-- Create/update lesson files only for substantive reusable teaching; lessons may map to multiple Search/Recommendation knowledge or coding items.
+- For every knowledge question seriously covered, create or update its one-item interview-answer with exactly these durable sections: `Canonical Staff-Depth Question`, `Mastery Answer`, mandatory thorough `Learn the Concepts`, and `Material Follow-ups / Scenario Variants`.
+- `Learn the Concepts` is required even when my cold answer is already correct/complete. It must teach the underlying concepts thoroughly enough that this interview-answer is my self-contained study source for the item.
+- Whenever teaching, a deeper reconstruction, a correction, or a substantive follow-up/variant produces durable knowledge not already present, immediately fold it into the appropriate existing interview-answer section in the same session. Do not create a reconstruction/repair section and do not leave the knowledge only in the session note.
+- Create/update a lesson only for genuinely cross-item material that would otherwise be duplicated; never use a lesson as a substitute for the interview-answer's `Learn the Concepts` depth.
 - Preserve LaTeX math source exactly using `$...$` / `$$...$$`.
 - Keep the answer at the bank's required Staff depth and preserve canonical wording.
 
@@ -620,7 +638,7 @@ Read the 2027 Search+Recs master, roadmap, and relevant bank.
 Run today's IDs cold:
 attempt → probing → diagnose → visible repair for substantive gaps → reconstruction only if needed → changed-constraint/vertical transfer → mastery rating → cold re-test plan.
 
-Follow the website-compatible artifact contract exactly: create a NEW concise session note for attempts/repairs/mastery/review evidence; create/update the one-item durable interview-answer for each seriously covered knowledge ID with no live progress fields or Mastery Record; create a lesson only for substantive reusable teaching; quote all dates; use no H1 in artifact bodies; preserve LaTeX as `$...$` / `$$...$$`.
+Follow the website-compatible artifact contract exactly: create a NEW concise session note for attempts/repairs/mastery/review evidence; create/update the one-item durable interview-answer for each seriously covered knowledge ID using exactly `Canonical Staff-Depth Question` → `Mastery Answer` → mandatory thorough `Learn the Concepts` → `Material Follow-ups / Scenario Variants`; require `Learn the Concepts` even after a perfect cold answer; fold every substantive teaching/deeper reconstruction/correction/follow-up into those existing sections in the same session; create a separate lesson only for genuinely cross-item reusable material; quote all dates; use no H1 in artifact bodies; preserve LaTeX as `$...$` / `$$...$$`.
 
 Today: [WEEK / IDs]
 ```

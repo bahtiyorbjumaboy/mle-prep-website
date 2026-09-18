@@ -76,27 +76,39 @@ Required body structure:
 
 ## Mastery Answer
 
+## Learn the Concepts
+
 ## Required / Important Follow-ups
-
-## Plain-English Explanation
-
-## Reasoning Chain
-
-## Interview Compression
 ```
+
+Content contract:
+
+- **`## Mastery Answer` is the interview answer.** Keep it polished, direct, technically rigorous, and at the bank's required depth. It should be suitable to give aloud while still covering the assumptions, derivation/trade-offs, failure modes, and evaluation points required by the canonical prompt.
+- **`## Learn the Concepts` is mandatory for every interview-answer artifact, even when the learner answers the question perfectly cold.** It is not a remediation-only section. Make it a thorough self-study treatment of the concepts the question is testing so the learner does not need a second lesson file to learn this item.
+- The `Learn the Concepts` section should include, when relevant: first-principles motivation; precise definitions; derivation/mechanism; worked or quantitative examples; assumptions; trade-offs; failure modes; evaluation semantics; implementation/system connections; debugging; and changed-constraint reasoning. Include only material that genuinely supports this item.
+- **`## Required / Important Follow-ups` contains durable answers/explanations for canonical follow-ups and substantive interviewer probes.** Do not merely list questions when the session established useful answer content.
+- Do **not** add `Plain-English Explanation`, `Reasoning Chain`, `Interview Compression`, `Mastery Record`, reconstruction-log, repair-log, or review-plan sections.
+
+Durable-update rule:
+
+- The interview-answer file is the canonical study source for this knowledge item and must become more complete as understanding improves.
+- If a session teaches a substantive concept, asks for a deeper reconstruction than the file currently contains, resolves an important misconception, derives something useful, or answers a meaningful follow-up, **update the existing interview-answer in the same session**. Do not leave that knowledge only in the chat or session note.
+- Fold new durable content into the existing sections: update `Mastery Answer` when the interview answer itself should improve; extend `Learn the Concepts` for deeper teaching/derivation/mechanism; extend `Required / Important Follow-ups` for follow-up knowledge.
+- Reconstruction evidence itself (attempts, mistakes, dates, mastery) belongs only in the session note. The **knowledge exposed by the reconstruction** belongs in the durable interview-answer.
+- A separate lesson is **not** the default home for question-specific teaching. Do not create a lesson merely because the learner needed teaching or because `Learn the Concepts` is long. A lesson is justified only for genuinely reusable cross-item material that would otherwise be duplicated across multiple knowledge/coding artifacts. Even then, all material needed to understand and defend this canonical item must remain self-contained in its interview-answer.
 
 Rules:
 
 - Copy the exact canonical question from the authoritative bank; do not paraphrase it.
-- Keep the artifact reusable and polished rather than chronological.
-- When new learning improves the answer, update the durable explanation in place.
+- Keep the artifact reusable, polished, and non-chronological.
+- Preserve an existing `created` date; update `updated` whenever durable content changes.
 - Do not append attempts, repair history, mastery state, review dates, or session evidence here; those belong in the session note.
 
-## 5. Lesson artifact — concept-scoped, many-to-many
+## 5. Lesson artifact — optional cross-item teaching only
 
-A lesson is a reusable teaching unit, not a question answer and not a progress record. Create/update one only when the teaching is substantive enough to reuse.
+A lesson is an optional reusable teaching unit for material that genuinely spans multiple canonical items. It is not the default teaching artifact for a knowledge question: the question's mandatory `Learn the Concepts` section owns all question-specific conceptual depth.
 
-A lesson may support one or many knowledge/coding items, and an item may link to multiple lessons.
+Create/update a lesson only when the material is meaningfully reusable across multiple knowledge/coding items and centralizing it prevents real duplication. A lesson may support one or many items, and an item may link to multiple lessons.
 
 Preferred location:
 
@@ -123,8 +135,10 @@ Rules:
 
 - `items` must be a non-empty YAML list of canonical keys.
 - Do not force one lesson per curriculum item.
+- Do not create a lesson merely because substantive teaching occurred; that teaching belongs in the interview-answer `Learn the Concepts` section first.
+- Do not use a lesson to offload material required to understand or defend a canonical question. Interview answers must remain self-contained.
 - Do not create trivial one-paragraph lesson stubs merely to satisfy the format.
-- Do not duplicate the canonical question/answer file verbatim. Teach the underlying concept with the structure best suited to it.
+- Do not duplicate canonical interview answers verbatim. Teach only the genuinely cross-item reusable concept.
 - The Markdown body must begin at H2; do not repeat `title` as an H1.
 - Useful sections may include mental model, derivation, worked example, failure modes, implementation notes, and interview connections.
 - No mastery/progress/attempt history belongs in a lesson.
@@ -257,6 +271,8 @@ Before finishing any session that writes artifacts, verify:
 - all date values are quoted strings;
 - no artifact body contains an H1;
 - each interview answer maps to exactly one knowledge item;
+- every interview answer contains `Mastery Answer`, mandatory thorough `Learn the Concepts`, and `Required / Important Follow-ups`;
+- any substantive teaching/deeper reconstruction/follow-up knowledge discovered this session has been folded into the existing interview-answer sections;
 - each coding review maps to exactly one coding item;
 - lesson `items` is a non-empty canonical-key list;
 - no durable artifact contains live mastery/progress fields;
@@ -296,10 +312,12 @@ For each question:
 Follow the website-compatible study artifact contract above.
 
 - Create one NEW session-note file for this session; put attempts, reconstruction evidence, repairs, observed mastery, and next-review planning there.
-- For every knowledge question seriously covered, create or update its one-item interview-answer file as a durable artifact only; do NOT put status/mastery/review/attempt history in it.
-- Create/update lesson files only for substantive teaching that is reusable beyond this session; lessons may map to multiple items.
+- For every knowledge question seriously covered, create or update its one-item interview-answer with exactly these durable sections: `Canonical Interview Question`, `Mastery Answer`, mandatory thorough `Learn the Concepts`, and `Required / Important Follow-ups`.
+- `Learn the Concepts` is required even when my cold answer is already correct/complete. It must teach the underlying concepts thoroughly enough that this interview-answer is my self-contained study source for the item.
+- Whenever teaching, a deeper reconstruction, a correction, or a substantive follow-up produces durable knowledge not already present, immediately fold it into the appropriate existing interview-answer section in the same session. Do not create a reconstruction/repair section and do not leave the knowledge only in the session note.
+- Create/update a lesson only for genuinely cross-item material that would otherwise be duplicated; never use a lesson as a substitute for the interview-answer's `Learn the Concepts` depth.
 - Preserve LaTeX math source exactly using `$...$` / `$$...$$`.
-- Keep interview answers concise, technically rigorous, and faithful to the canonical bank wording.
+- Keep interview answers technically rigorous, self-contained for study, and faithful to the canonical bank wording.
 
 Start with the first scheduled question.
 ```

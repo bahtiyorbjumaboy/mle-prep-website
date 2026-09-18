@@ -45,23 +45,20 @@ describe('study artifact contract', () => {
     expect(invalidDate.errors.join('\n')).toMatch(/created is required as a valid ISO/);
   });
 
-  it('associates durable and session artifacts without flattening canonical identity', async () => {
+  it('associates durable answers and reviews without flattening canonical identity', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ml-os-artifacts-'));
     const write = async (name: string, value: string) => { const target=path.join(root,name); await fs.mkdir(path.dirname(target),{recursive:true}); await fs.writeFile(target,value); };
     await write('curriculum/2027/sources/Bank_2027_Ranking_Recommendation.md', '## R01: Explain multi-stage recommendation\n');
     await write('curriculum/2027/sources/Coding_Set.md', '## REC-05: Implement two-tower retrieval\n');
     await write('curriculum/2027/interview-answers/recommendation/R01.md', '---\ntype: interview-answer\nitem: "2027:R01"\ntitle: "Multi-stage recommendation"\ncreated: "2026-09-17"\nupdated: "2026-09-17"\n---\n\n## Answer\n');
     await write('curriculum/2027/coding-reviews/recommendation/REC-05.md', '---\ntype: coding-review\nitem: "2027:REC-05"\ntitle: "Two-tower review"\ncreated: "2026-09-17"\nupdated: "2026-09-17"\n---\n\n## Review\n');
-    await write('curriculum/2027/lessons/multi-stage.md', '---\ntype: lesson\nid: "multi-stage"\ntitle: "Multi-stage lesson"\nitems:\n  - "2027:R01"\n  - "2027:REC-05"\ncreated: "2026-09-17"\nupdated: "2026-09-17"\n---\n\n## Lesson\n');
-    await write('curriculum/sprint/notes/session.md', '---\ntype: session-note\ntitle: "Sprint evidence"\ndate: "2026-09-17"\ncurriculum: "sprint"\nsession_type: "theory"\nitems:\n  - "2027:R01"\nobserved_mastery:\n  "2027:R01": "Learned"\n---\n\n## Evidence\n');
     const index = await buildIndex(root);
     expect(index.errors).toEqual([]);
     const knowledge: any = index.knowledgeItems.find((x: any) => x.id === 'R01');
     const coding: any = index.codingItems.find((x: any) => x.id === 'REC-05');
     expect(knowledge.canonicalKey).toBe('2027:ranking-recommendation:R01');
     expect(knowledge.interviewAnswer.title).toBe('Multi-stage recommendation');
-    expect(knowledge.lessons).toHaveLength(1); expect(knowledge.sessionNotes).toHaveLength(1);
-    expect(coding.codingReview.title).toBe('Two-tower review'); expect(coding.lessons).toHaveLength(1);
+    expect(coding.codingReview.title).toBe('Two-tower review');
     await write('curriculum/2027/interview-answers/recommendation/R01-duplicate.md', '---\ntype: interview-answer\nitem: "2027:R01"\ntitle: "Duplicate"\ncreated: "2026-09-17"\nupdated: "2026-09-17"\n---\n\n## Duplicate\n');
     const duplicateIndex = await buildIndex(root);
     expect(duplicateIndex.errors.join('\n')).toMatch(/duplicate interview answer for 2027:ranking-recommendation:R01/);

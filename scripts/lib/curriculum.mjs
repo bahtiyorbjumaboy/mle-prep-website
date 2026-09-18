@@ -147,7 +147,7 @@ async function walkMarkdown(root) {
 }
 
 export async function buildIndex(root = process.cwd()) {
-  const sources = [], knowledgeItems = [], codingItems = [], roadmapWeeks = [], interviewAnswers = [], codingReviews = [], lessons = [], notes = [], warnings = [], errors = [];
+  const sources = [], knowledgeItems = [], codingItems = [], roadmapWeeks = [], interviewAnswers = [], codingReviews = [], warnings = [], errors = [];
   for (const curriculum of Object.keys(CURRICULA)) {
     const base = path.join(root, 'curriculum', curriculum);
     for (const file of await walkMarkdown(path.join(base, 'sources'))) {
@@ -159,7 +159,7 @@ export async function buildIndex(root = process.cwd()) {
         knowledgeItems.push(...result.knowledge); codingItems.push(...result.coding); roadmapWeeks.push(...result.weeks); warnings.push(...result.warnings);
       } catch (error) { errors.push(`${relativePath}: malformed Markdown/frontmatter: ${error.message}`); }
     }
-    for (const kind of ['interview-answers', 'coding-reviews', 'lessons', 'notes']) {
+    for (const kind of ['interview-answers', 'coding-reviews']) {
       for (const file of await walkMarkdown(path.join(base, kind))) {
         const relativePath = path.relative(root, file).split(path.sep).join('/');
         try {
@@ -168,9 +168,7 @@ export async function buildIndex(root = process.cwd()) {
           errors.push(...artifact.errors);
           delete artifact.errors;
           if (kind === 'interview-answers') interviewAnswers.push(artifact);
-          else if (kind === 'coding-reviews') codingReviews.push(artifact);
-          else if (kind === 'lessons') lessons.push(artifact);
-          else notes.push(artifact);
+          else codingReviews.push(artifact);
         } catch (error) { errors.push(`${relativePath}: malformed frontmatter: ${error.message}`); }
       }
     }
@@ -179,17 +177,15 @@ export async function buildIndex(root = process.cwd()) {
   dedupeByKey(knowledgeItems, warnings); dedupeByKey(codingItems, warnings);
   const all = [...knowledgeItems, ...codingItems];
   for (const item of all) {
-    item.lessons = [];
-    item.sessionNotes = [];
     if ('bank' in item) item.interviewAnswer = null;
     else item.codingReview = null;
   }
   associateRoadmap(all, roadmapWeeks, warnings);
-  associateArtifacts({ all, interviewAnswers, codingReviews, lessons, notes, errors });
+  associateArtifacts({ all, interviewAnswers, codingReviews, errors });
   const index = {
-    schemaVersion: 2, generatedAt: new Date().toISOString(), curricula: Object.values(CURRICULA).filter((c) => sources.some((s) => s.curriculum === c.id)),
+    schemaVersion: 3, generatedAt: new Date().toISOString(), curricula: Object.values(CURRICULA).filter((c) => sources.some((s) => s.curriculum === c.id)),
     knowledgeItems, codingItems, roadmapWeeks: roadmapWeeks.sort((a,b) => a.curriculum.localeCompare(b.curriculum) || a.weekNumber-b.weekNumber),
-    interviewAnswers, codingReviews, lessons, notes, sources, warnings, errors,
+    interviewAnswers, codingReviews, sources, warnings, errors,
   };
   return index;
 }
@@ -201,7 +197,7 @@ export function parseArtifact({ curriculum, kind, relativePath, raw }) {
   const parsed = matter(raw);
   const data = parsed.data || {};
   const errors = [];
-  const expectedType = { 'interview-answers': 'interview-answer', 'coding-reviews': 'coding-review', lessons: 'lesson', notes: 'session-note' }[kind];
+  const expectedType = { 'interview-answers': 'interview-answer', 'coding-reviews': 'coding-review' }[kind];
   const prefix = `${relativePath}:`;
   if (data.type !== expectedType) errors.push(`${prefix} type must be "${expectedType}"`);
   if (typeof data.title !== 'string' || !data.title.trim()) errors.push(`${prefix} title is required`);
@@ -209,41 +205,24 @@ export function parseArtifact({ curriculum, kind, relativePath, raw }) {
   if (h1 >= 0) errors.push(`${prefix}${h1 + frontmatterLineCount(raw) + 1}: artifact body must not contain an H1; begin at H2 or lower`);
   if (data.tags !== undefined && (!Array.isArray(data.tags) || data.tags.some((tag) => typeof tag !== 'string'))) errors.push(`${prefix} tags must be a string array when present`);
 
-  const durable = kind !== 'notes';
-  if (durable) {
-    for (const field of ['created', 'updated']) validateQuotedDate(raw, data, field, prefix, errors);
-    for (const field of FORBIDDEN_PROGRESS_FIELDS) if (Object.hasOwn(data, field)) errors.push(`${prefix} durable ${expectedType} must not contain live progress field "${field}"`);
-  } else {
-    validateQuotedDate(raw, data, 'date', prefix, errors);
-    if (data.curriculum !== curriculum) errors.push(`${prefix} curriculum must match its directory (expected "${curriculum}")`);
-    if (typeof data.session_type !== 'string' || !data.session_type) errors.push(`${prefix} session_type is required`);
-    validateEvidenceDates(data.next_review, `${prefix} next_review`, errors);
-  }
+  for (const field of ['created', 'updated']) validateQuotedDate(raw, data, field, prefix, errors);
+  for (const field of FORBIDDEN_PROGRESS_FIELDS) if (Object.hasOwn(data, field)) errors.push(`${prefix} durable ${expectedType} must not contain live progress field "${field}"`);
   if (kind === 'interview-answers' && /^##\s+Mastery Record\b/im.test(parsed.content)) errors.push(`${prefix} interview answers must not contain a "## Mastery Record" section`);
-  if (curriculum === 'sprint' && durable) errors.push(`${prefix} sprint may not own durable ${expectedType} artifacts`);
+  if (curriculum === 'sprint') errors.push(`${prefix} sprint may not own durable ${expectedType} artifacts`);
 
   let declaredItems = [];
-  if (kind === 'lessons' || kind === 'notes') {
-    if (!Array.isArray(data.items) || data.items.length === 0 || data.items.some((item) => typeof item !== 'string' || !item.trim())) errors.push(`${prefix} items must be a non-empty string array`);
-    else declaredItems = [...new Set(data.items)];
-  } else {
-    if (typeof data.item !== 'string' || !data.item.trim()) errors.push(`${prefix} item is required and must identify exactly one canonical item`);
-    else declaredItems = [data.item];
-  }
-  if (kind === 'lessons' && (typeof data.id !== 'string' || !data.id.trim())) errors.push(`${prefix} lesson id is required and must be stable`);
+  if (typeof data.item !== 'string' || !data.item.trim()) errors.push(`${prefix} item is required and must identify exactly one canonical item`);
+  else declaredItems = [data.item];
   validateArtifactLocation({ curriculum, kind, relativePath, declaredItems, errors });
 
   return {
-    curriculum, type: expectedType, id: kind === 'lessons' ? data.id || null : null,
+    curriculum, type: expectedType,
     slug: relativePath.replace(/^curriculum\//, '').replace(/\.mdx?$/, ''), path: relativePath,
     title: typeof data.title === 'string' ? data.title : path.basename(relativePath, path.extname(relativePath)),
     declaredItems, items: [], item: null,
     created: typeof data.created === 'string' ? data.created : null,
     updated: typeof data.updated === 'string' ? data.updated : null,
-    date: typeof data.date === 'string' ? data.date : null,
-    sessionType: typeof data.session_type === 'string' ? data.session_type : null,
     tags: Array.isArray(data.tags) ? data.tags : [],
-    evidence: kind === 'notes' ? { observedMastery: data.observed_mastery || null, sprintResult: data.sprint_result || null, nextReview: data.next_review || null } : null,
     markdown: parsed.content, errors,
   };
 }
@@ -253,12 +232,6 @@ function validateQuotedDate(raw, data, field, prefix, errors) {
   const yaml = raw.match(/^---\s*\r?\n([\s\S]*?)\r?\n---/)?.[1] || '';
   const match = yaml.match(new RegExp(`^${field}:\\s*(.+?)\\s*$`, 'm'));
   if (!match || !/^(?:"\d{4}-\d{2}-\d{2}"|'\d{4}-\d{2}-\d{2}')$/.test(match[1])) errors.push(`${prefix} ${field} must be a quoted ISO YYYY-MM-DD string`);
-}
-
-function validateEvidenceDates(value, label, errors) {
-  if (value == null) return;
-  if (!value || typeof value !== 'object' || Array.isArray(value)) { errors.push(`${label} must be an item-to-date mapping`); return; }
-  for (const [key, date] of Object.entries(value)) if (!isValidIsoDate(date)) errors.push(`${label}.${key} must be a valid ISO YYYY-MM-DD string`);
 }
 
 function isValidIsoDate(value) {
@@ -288,8 +261,8 @@ function validateArtifactLocation({ curriculum, kind, relativePath, declaredItem
   }
 }
 
-function associateArtifacts({ all, interviewAnswers, codingReviews, lessons, notes, errors }) {
-  const answerByItem = new Map(), reviewByItem = new Map(), lessonIds = new Map();
+function associateArtifacts({ all, interviewAnswers, codingReviews, errors }) {
+  const answerByItem = new Map(), reviewByItem = new Map();
   const associate = (artifact, target) => {
     artifact.items = artifact.declaredItems.map((declared) => {
       const item = resolveArtifactReference(all, declared, target);
@@ -307,15 +280,9 @@ function associateArtifacts({ all, interviewAnswers, codingReviews, lessons, not
     if (reviewByItem.has(item.canonicalKey)) errors.push(`${artifact.path}: duplicate coding review for ${item.canonicalKey}; already mapped by ${reviewByItem.get(item.canonicalKey)}`);
     else { reviewByItem.set(item.canonicalKey, artifact.path); item.codingReview = artifactRef(artifact); }
   }
-  for (const artifact of lessons) {
-    if (artifact.id && lessonIds.has(artifact.id)) errors.push(`${artifact.path}: duplicate lesson id "${artifact.id}"; already used by ${lessonIds.get(artifact.id)}`);
-    else if (artifact.id) lessonIds.set(artifact.id, artifact.path);
-    for (const item of associate(artifact, 'any')) item.lessons.push(artifactRef(artifact));
-  }
-  for (const artifact of notes) for (const item of associate(artifact, 'any')) item.sessionNotes.push(artifactRef(artifact));
 }
 
-function artifactRef(artifact) { return { slug: artifact.slug, path: artifact.path, title: artifact.title, type: artifact.type, updated: artifact.updated, date: artifact.date }; }
+function artifactRef(artifact) { return { slug: artifact.slug, path: artifact.path, title: artifact.title, type: artifact.type, updated: artifact.updated }; }
 
 export function resolveArtifactReference(items, declared, target = 'any') {
   const exact = items.find((item) => item.canonicalKey === declared);

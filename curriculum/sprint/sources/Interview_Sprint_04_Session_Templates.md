@@ -70,20 +70,30 @@ Body must use the 2027 Staff-depth durable sections and begin at H2:
 
 ## Mastery Answer
 
+## Learn the Concepts
+
 ## Material Follow-ups / Scenario Variants
-
-## Plain-English Model
-
-## Reasoning Chain
-
-## Staff Compression
 ```
+
+Content contract:
+
+- `Mastery Answer` is the polished interview-ready answer.
+- **`Learn the Concepts` is mandatory for every borrowed theory item even if the learner answers cold perfectly.** It must provide a thorough self-study treatment of the mechanisms, definitions/derivations, assumptions, quantitative examples, trade-offs, failure modes, evaluation semantics, implementation/serving implications, diagnosis, and changed-constraint reasoning relevant to the canonical question. The goal is that this one interview-answer file is sufficient for later learning/review of the item.
+- `Material Follow-ups / Scenario Variants` must preserve durable answer content from canonical follow-ups and substantive sprint probes/variants, not merely list the questions.
+- Do not add `Plain-English Model`, `Reasoning Chain`, `Staff Compression`, `Mastery Record`, reconstruction-log, repair-log, or review-plan sections.
+
+Durable-update rule:
+
+- When sprint teaching, a correction, deeper reconstruction, debugging discussion, or follow-up/variant produces useful knowledge not already present, **update the existing canonical 2027 interview-answer in the same session**.
+- Fold the knowledge into `Mastery Answer`, `Learn the Concepts`, or `Material Follow-ups / Scenario Variants`; do not add chronological repair/reconstruction sections.
+- Keep sprint result, mastery evidence, attempts, mistakes, dates, and next-review scheduling in the sprint session note/ledger only.
+- A separate lesson is not the default home for question-specific teaching. Create one only for genuinely cross-item reusable material; even then, keep the current question self-contained in its interview-answer.
 
 Do not include sprint result, mastery record, attempts, reconstruction evidence, repairs, or next-review scheduling in the interview-answer file.
 
-## 5. Lesson artifact → canonical 2027 lesson
+## 5. Lesson artifact → optional canonical 2027 cross-item lesson
 
-Create/update a lesson only for substantive reusable teaching.
+Create/update a lesson only for genuinely cross-item reusable teaching that would otherwise be duplicated. Question-specific conceptual teaching belongs in the interview-answer's mandatory `Learn the Concepts` section.
 
 Preferred location:
 
@@ -106,7 +116,7 @@ tags:
 ---
 ```
 
-A lesson is concept-scoped: it may map to multiple canonical 2027 items, and one item may have multiple lessons. `items` must be non-empty. Do not duplicate the interview answer verbatim. Do not put progress/attempt history in lessons. Body starts at H2, never H1.
+A lesson is cross-item concept-scoped: it may map to multiple canonical 2027 items, and one item may link to multiple lessons. `items` must be non-empty. Do not create a lesson merely because the learner needed teaching, and never move question-required depth out of the interview-answer. Do not duplicate interview answers verbatim. Do not put progress/attempt history in lessons. Body starts at H2, never H1.
 
 ## 6. Borrowed coding item → canonical 2027 coding review
 
@@ -191,6 +201,8 @@ Before finishing any sprint session that writes artifacts, verify:
 - all date values are quoted strings;
 - no artifact body contains an H1;
 - interview answers and coding reviews are one-item durable artifacts;
+- every theory interview answer contains `Mastery Answer`, mandatory thorough `Learn the Concepts`, and `Material Follow-ups / Scenario Variants`;
+- substantive teaching/deeper reconstruction/follow-up knowledge has been folded back into the canonical interview-answer in the same session;
 - lesson `items` is non-empty and canonical;
 - no reusable artifact contains live progress or sprint-result fields;
 - sprint evidence lives in the sprint session note / ledger;
@@ -207,7 +219,7 @@ Run each item cold. Probe objective, labels/data-generating process, retrieval/r
 
 Do not lecture first. End with mastery state and ledger update.
 
-Follow the website-compatible artifact contract above exactly: create a sprint session note for attempt/repair/mastery/review evidence; create/update the canonical one-item 2027 interview-answer as durable content with no status or Mastery Record; create/update lessons only for substantive reusable teaching; quote all dates; use no H1 in artifact bodies; preserve LaTeX as `$...$` / `$$...$$`.
+Follow the website-compatible artifact contract above exactly: create a sprint session note for attempt/repair/mastery/review evidence; create/update the canonical one-item 2027 interview-answer using exactly `Canonical Staff-Depth Question` → `Mastery Answer` → mandatory thorough `Learn the Concepts` → `Material Follow-ups / Scenario Variants`; require `Learn the Concepts` even after a perfect cold answer; fold all substantive teaching/deeper reconstruction/correction/follow-up knowledge back into those existing sections in the same session; create a separate lesson only for genuinely cross-item reusable material; quote all dates; use no H1 in artifact bodies; preserve LaTeX as `$...$` / `$$...$$`.
 ```
 
 # Template B — Ranking Coding

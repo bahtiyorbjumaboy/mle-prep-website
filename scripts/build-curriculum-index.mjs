@@ -6,7 +6,7 @@ const index = await buildIndex();
 const target = path.join(process.cwd(), 'generated', 'curriculum-index.json');
 await fs.mkdir(path.dirname(target), { recursive: true });
 await fs.writeFile(target, `${JSON.stringify(index, null, 2)}\n`);
-console.log(`Indexed ${index.knowledgeItems.length} knowledge items, ${index.codingItems.length} coding items, ${index.roadmapWeeks.length} weeks, ${index.interviewAnswers.length} interview answers, ${index.codingReviews.length} coding reviews, ${index.lessons.length} lessons, and ${index.notes.length} notes.`);
+console.log(`Indexed ${index.knowledgeItems.length} knowledge items, ${index.codingItems.length} coding items, ${index.roadmapWeeks.length} weeks, ${index.interviewAnswers.length} interview answers, and ${index.codingReviews.length} coding reviews.`);
 for (const warning of index.warnings) console.warn(`warning: ${warning}`);
 for (const error of index.errors) console.error(`error: ${error}`);
 if (index.errors.length) process.exitCode = 1;

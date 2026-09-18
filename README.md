@@ -1,6 +1,6 @@
 # ML Interview OS
 
-A static, source-driven workspace for a machine learning interview curriculum. It turns canonical Markdown into a dashboard, chronological roadmap, knowledge and coding browsers, review queue, lesson library, notes archive, searchable source library, and browser-local completion tracker.
+A static, source-driven workspace for a machine learning interview curriculum. It turns canonical Markdown into a dashboard, chronological roadmap, knowledge and coding browsers, durable answer and review libraries, searchable source library, and browser-local completion tracker.
 
 The project uses Astro, Starlight, TypeScript, and static generation. It requires no backend, database, authentication, or hosted content service.
 
@@ -33,13 +33,13 @@ The empty repository is a supported state. It renders instructions instead of de
 
 ```text
 curriculum/
-  2026/{sources,interview-answers,coding-reviews,lessons,notes}/
-  2027/{sources,interview-answers,coding-reviews,lessons,notes}/
-  sprint/{sources,notes}/
+  2026/{sources,interview-answers,coding-reviews}/
+  2027/{sources,interview-answers,coding-reviews}/
+  sprint/sources/
 generated/curriculum-index.json
-scripts/                       # indexing, validation, lesson scaffold
+scripts/                       # indexing and validation
 src/{components,layouts,lib,pages,styles}/
-templates/{lesson,note}.md
+templates/{interview-answer,coding-review}.md
 .github/workflows/deploy-pages.yml
 ```
 
@@ -52,10 +52,8 @@ Files under `curriculum/**/sources/` are canonical and are never changed by a bu
 | Source | Authoritative question bank, coding set, roadmap, or instruction document | Defines canonical items | No |
 | Interview answer | Durable reusable answer to one knowledge question | Exactly one knowledge item; at most one per item | No |
 | Coding review | Durable reusable solution review | Exactly one coding item; at most one per item | No |
-| Lesson | Concept-scoped teaching material | Many-to-many with knowledge and coding items | No |
-| Session note | Chronological evidence from a real study session | May reference several items | Historical evidence only |
 
-Current completion, mastery, attempts, and review dates live in the browser progress store. Durable answers, reviews, and lessons must not contain those fields. Session notes may preserve historical `observed_mastery`, `sprint_result`, and `next_review`; these never overwrite current browser state.
+Current completion, mastery, attempts, review dates, and short personal notes live in the browser progress store. Durable answers and reviews must not contain live-progress fields.
 
 ## Adding curriculum files
 
@@ -85,7 +83,7 @@ Knowledge IDs such as `A3` are not globally unique. Their keys include curriculu
 - `2026:bank02:A3`
 - `2027:ranking-recommendation:R08`
 
-Coding keys use a coding namespace, for example `2027:coding:REC-05`. Progress and lesson links use these stable keys, not mutable question wording. Ambiguous roadmap references are not guessed.
+Coding keys use a coding namespace, for example `2027:coding:REC-05`. Progress and artifact links use these stable keys, not mutable question wording. Ambiguous roadmap references are not guessed.
 
 Artifact frontmatter may use the concise unambiguous 2027 forms `2027:R01` and `2027:REC-05`; the index resolves them to internal bank/coding-qualified keys. A 2026 knowledge reference must always include its bank, such as `2026:bank01:A3`, because `A3` may also exist in another bank.
 
@@ -109,7 +107,7 @@ tags: [recommendation, ranking]
 ---
 ```
 
-Begin body headings at H2. One answer maps to exactly one knowledge item. See `templates/interview-answer.md`.
+Begin body headings at H2. One answer maps to exactly one knowledge item. Put reusable concept teaching in a `## Learn the Concept` section in the same file. See `templates/interview-answer.md`.
 
 ## Adding coding reviews
 
@@ -128,52 +126,9 @@ tags: [retrieval, embeddings]
 
 Begin body headings at H2. One review maps to exactly one coding problem. See `templates/coding-review.md`.
 
-## Adding lessons
+Interview-answer and coding-review Markdown supports headings, tables, task lists, fenced code, inline and display LaTeX math, and Mermaid fenced blocks. Math is processed through Astro's Unified pipeline with `remark-math` and `rehype-katex`; source LaTeX is passed through unchanged before rendering. Use `$...$` for inline math and `$$...$$` for display math. The KaTeX stylesheet is included globally.
 
-Generate a safe skeleton:
-
-```bash
-npm run new:lesson -- 2026:bank01:A3
-npm run new:lesson -- 2027:REC-05
-```
-
-The command refuses to overwrite a file and requires bank context for 2026 knowledge keys. Lessons are concept-scoped and many-to-many:
-
-```yaml
----
-type: lesson
-id: "least-squares-geometry"
-title: "Least Squares Geometry and the Pseudoinverse"
-items:
-  - "2026:bank01:A3"
-  - "2026:bank01:A4"
-created: "2026-09-17"
-updated: "2026-09-17"
-tags: [linear-algebra, least-squares]
----
-```
-
-Lesson Markdown supports headings, tables, task lists, fenced code, inline and display LaTeX math, and Mermaid fenced blocks. Math is processed through Astro's Unified pipeline with `remark-math` and `rehype-katex`; source LaTeX is passed through unchanged before rendering. Use `$...$` for inline math and `$$...$$` for display math. The KaTeX stylesheet is included globally. See `templates/lesson.md`. A lesson may map to multiple items, and an item may have multiple lessons.
-
-## Adding session notes
-
-Notes are personal session work and may map to several items:
-
-```yaml
----
-type: session-note
-title: "Least-squares practice session"
-items:
-  - "2026:bank01:A3"
-date: "2026-09-17"
-curriculum: "2026"
-session_type: "theory"
----
-```
-
-Put the file anywhere under the matching `curriculum/<id>/notes/` directory. Multiple notes can link to one item. See `templates/note.md`.
-
-The sprint is an overlay, not an owner of durable artifacts. A sprint session note may reference `2027:R01` and record historical sprint evidence, but its interview answer, coding review, and lessons remain under `curriculum/2027/`. Do not add `interview-answers/`, `coding-reviews/`, or `lessons/` under `curriculum/sprint/`.
+The sprint is an overlay, not an owner of durable artifacts. Borrowed sprint work updates the corresponding 2027 interview answer or coding review. Do not add `interview-answers/` or `coding-reviews/` under `curriculum/sprint/`.
 
 ## Progress persistence and portability
 
@@ -183,7 +138,7 @@ Use **Export progress** to download readable JSON, **Import** to validate and re
 
 ## Validation
 
-`npm run validate` detects duplicate canonical keys, unknown artifact references, duplicate interview answers/reviews, duplicate lesson IDs, malformed or unquoted dates, H1 artifact headings, forbidden live-progress fields, empty lesson mappings, sprint-owned durable artifacts, malformed frontmatter, and invalid progress fixtures. Non-fatal source ambiguity is printed with context. Tests cover parsing, identity, artifact relationships, contract violations, progress import, and real KaTeX output. The mandatory math fixture is `tests/fixtures/math-rendering.md`.
+`npm run validate` detects duplicate canonical keys, unknown artifact references, duplicate interview answers/reviews, malformed or unquoted dates, H1 artifact headings, forbidden live-progress fields, sprint-owned durable artifacts, malformed frontmatter, and invalid progress fixtures. Non-fatal source ambiguity is printed with context. Tests cover parsing, identity, artifact relationships, contract violations, progress import, and real KaTeX output. The mandatory math fixture is `tests/fixtures/math-rendering.md`.
 
 ## GitHub Pages deployment
 
@@ -212,4 +167,4 @@ Markdown is portable, Git-friendly, diffable, easy to author, and independent of
 
 ## Intentionally deferred
 
-Cloud/GitHub progress sync, automatic spaced-repetition scheduling, analytics, generated lessons, mock-interview history, and charts are extension points rather than first-version features. The local progress adapter and normalized index keep those additions possible without changing the Markdown authoring model.
+Cloud/GitHub progress sync, automatic spaced-repetition scheduling, analytics, mock-interview history, and charts are extension points rather than first-version features. The local progress adapter and normalized index keep those additions possible without changing the Markdown authoring model.

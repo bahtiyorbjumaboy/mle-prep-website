@@ -12,3 +12,7 @@ tags:
 ## Interview answer
 
 Write the durable, reusable answer here. Current mastery belongs in browser progress, not this file.
+
+## Learn the Concept
+
+Teach the underlying concept, mechanisms, trade-offs, and a representative example here.
