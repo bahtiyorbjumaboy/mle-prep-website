@@ -1,6 +1,6 @@
 # ML Interview OS
 
-A static, source-driven workspace for a machine learning interview curriculum. It turns canonical Markdown into a dashboard, chronological roadmap, knowledge and coding browsers, durable answer and review libraries, searchable source library, and browser-local completion tracker.
+A static, source-driven workspace for a machine learning interview curriculum. It turns canonical Markdown into a dashboard, knowledge and coding browsers, durable answer and coding-solution libraries, a searchable source library, and a browser-local completion tracker.
 
 The project uses Astro, Starlight, TypeScript, and static generation. It requires no backend, database, authentication, or hosted content service.
 
@@ -52,7 +52,7 @@ Files under `curriculum/**/sources/` are canonical and are never changed by a bu
 | Interview answer | Durable reusable answer to one knowledge question | Exactly one knowledge item; at most one per item | No |
 | Coding solution | Complete source-code solution | Filename identifies exactly one coding item; at most one per item | No |
 
-Current completion, mastery, attempts, review dates, and short personal notes live in the browser progress store. Durable interview answers and coding solutions must not contain live-progress state.
+Current completion, mastery, attempts, and short personal notes live in the browser progress store. Durable interview answers and coding solutions must not contain live-progress state.
 
 ## Adding curriculum files
 
@@ -123,7 +123,7 @@ Interview-answer Markdown supports headings, tables, task lists, fenced code, in
 
 ## Progress persistence and portability
 
-Interactive progress is stored in browser `localStorage` under a versioned key. Each record can contain completion, curriculum-specific mastery wording, attempt count, last-attempt date, next-review date, and a short personal note. This data is private to that browser and is not committed.
+Interactive progress is stored in browser `localStorage` under a versioned key. Each record can contain completion, curriculum-specific mastery wording, attempt count, last-attempt date, and a short personal note. This data is private to that browser and is not committed.
 
 Use **Export progress** to download readable JSON, **Import** to validate and replace local data, and **Reset** to clear it. Import preserves valid records, reports malformed ones, and safely retains unknown canonical keys for future curricula. Import overwrite and reset both require confirmation.
 

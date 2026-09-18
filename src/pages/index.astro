@@ -2,41 +2,34 @@
 import AppLayout from '@/layouts/AppLayout.astro';
 import EmptyState from '@/components/EmptyState.astro';
 import Badge from '@/components/Badge.astro';
-import { index, allItems, itemHref } from '@/lib/data';
+import { index, allItems } from '@/lib/data';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const link = (path: string) => `${base}${path}`;
 const knowledgeKeys = index.knowledgeItems.map((x) => x.canonicalKey);
 const codingKeys = index.codingItems.map((x) => x.canonicalKey);
+const allItemKeys = allItems.map((x) => x.canonicalKey);
 const knowledgeMap = Object.fromEntries(index.curricula.map((c) => [c.id, index.knowledgeItems.filter((x) => x.curriculum === c.id).map((x) => x.canonicalKey)]));
 const codingMap = Object.fromEntries(index.curricula.map((c) => [c.id, index.codingItems.filter((x) => x.curriculum === c.id).map((x) => x.canonicalKey)]));
-const studyPanels = index.curricula.map((curriculum) => { const week=index.roadmapWeeks.find((x)=>x.curriculum===curriculum.id); const ids=week?[...week.knowledgeItems,...week.codingItems]:[]; const items=ids.map((id)=>allItems.find((x)=>x.curriculum===curriculum.id&&x.id===id)).filter(Boolean).slice(0,6); return {curriculum,week,items}; });
 ---
 <AppLayout title="Dashboard">
   <header class="page-head">
-    <div><p class="eyebrow">Study dashboard</p><h1>Good work starts with a clear queue.</h1><p>Your curriculum, practice, and review progress in one focused workspace.</p></div>
+    <div><p class="eyebrow">Study dashboard</p><h1>Good work starts with a clear queue.</h1><p>Your curriculum and practice progress in one focused workspace.</p></div>
     {index.curricula.length > 0 && <div class="curriculum-tabs" aria-label="Active curriculum">{index.curricula.map((c, i) => <button data-curriculum-select={c.id} class:list={{active:i===0}}>{c.id}</button>)}</div>}
   </header>
   {allItems.length === 0 ? <EmptyState message="Copy your authoritative Markdown files into curriculum/2026/sources or curriculum/2027/sources. The dashboard will populate automatically after the next build." /> : <>
-    <section class="grid grid-4" aria-label="Progress overview">
+    <section class="grid grid-3" aria-label="Progress overview">
       <article class="card metric" data-count-items={JSON.stringify(knowledgeKeys)} data-count-map={JSON.stringify(knowledgeMap)}><div class="metric-label">Knowledge</div><div class="metric-value"><span data-done>0</span> <span style="color:var(--faint);font-size:.65em">/ <span data-total>{knowledgeKeys.length}</span></span></div><div class="metric-sub"><span>Completed</span><strong data-percent>0%</strong></div><div class="progress-track"><div class="progress-bar" data-bar style="width:0"></div></div></article>
       <article class="card metric" data-count-items={JSON.stringify(codingKeys)} data-count-map={JSON.stringify(codingMap)}><div class="metric-label">Coding</div><div class="metric-value"><span data-done>0</span> <span style="color:var(--faint);font-size:.65em">/ <span data-total>{codingKeys.length}</span></span></div><div class="metric-sub"><span>Completed</span><strong data-percent>0%</strong></div><div class="progress-track"><div class="progress-bar" data-bar style="width:0"></div></div></article>
-      <article class="card metric"><div class="metric-label">Mastered</div><div class="metric-value" data-mastered-count>0</div><div class="metric-sub"><span>Across all curricula</span><Badge tone="green">On track</Badge></div></article>
-      <article class="card metric"><div class="metric-label">Due for review</div><div class="metric-value" data-due-count>0</div><div class="metric-sub"><span>Today or overdue</span><a href={link('/review/')} style="color:var(--brand)">Open queue →</a></div></article>
+      <article class="card metric"><div class="metric-label">Mastered</div><div class="metric-value"><span data-mastered-count={JSON.stringify(allItemKeys)}>0</span> <span style="color:var(--faint);font-size:.65em">/ {allItemKeys.length}</span></div><div class="metric-sub"><span>Across all curricula</span><Badge tone="green">Completed</Badge></div></article>
     </section>
-    <div class="grid grid-2">
-      <section>
-        <div class="section-title"><h2>Continue studying</h2><a href={link('/roadmap/')}>View roadmap →</a></div>
-        {studyPanels.map((panel,i)=><div class="card card-pad" data-curriculum-panel={panel.curriculum.id} hidden={i!==0}><h3 style="margin-top:0">{panel.week?`Week ${panel.week.weekNumber} · ${panel.week.title}`:panel.curriculum.label}</h3>{panel.items.length ? <div class="item-list">{panel.items.map((item) => item && <a class="item-row" data-progress-key={item.canonicalKey} href={link(itemHref(item.canonicalKey))}><span class="item-id">{item.id}</span><span><span class="item-title">{'bank' in item ? item.titleOrQuestion : item.title}</span><span class="item-meta">{'bank' in item ? item.bank : item.track}</span></span><Badge><span data-status>Not started</span></Badge></a>)}</div> : <p class="lede">No roadmap items are scheduled yet for this curriculum.</p>}</div>)}
-      </section>
-      <section>
-        <div class="section-title"><h2>Progress & portability</h2><a href={link('/review/')}>Manage review →</a></div>
-        <div class="card card-pad"><p style="margin-top:0;color:var(--muted)">Progress is private to this browser. Export a readable JSON backup when moving between devices.</p><div class="button-row"><button class="button secondary" data-export>Export progress</button><label class="button secondary" for="progress-import">Import progress</label><input id="progress-import" data-import type="file" accept="application/json" hidden /><button class="button secondary danger" data-reset>Reset</button></div><div class="callout"><strong>No account required.</strong><br/><span style="color:var(--muted)">Canonical item keys keep your progress stable when wording changes.</span></div></div>
-      </section>
-    </div>
+    <section>
+      <div class="section-title"><h2>Progress & portability</h2></div>
+      <div class="card card-pad"><p style="margin-top:0;color:var(--muted)">Progress is private to this browser. Export a readable JSON backup when moving between devices.</p><div class="button-row"><button class="button secondary" data-export>Export progress</button><label class="button secondary" for="progress-import">Import progress</label><input id="progress-import" data-import type="file" accept="application/json" hidden /><button class="button secondary danger" data-reset>Reset</button></div><div class="callout"><strong>No account required.</strong><br/><span style="color:var(--muted)">Canonical item keys keep your progress stable when wording changes.</span></div></div>
+    </section>
     <div class="section-title"><h2>Quick access</h2></div>
     <section class="grid grid-3">
       <a class="card card-pad" href={link('/knowledge/')}><Badge tone="blue">KNOWLEDGE</Badge><h2>Question bank</h2><p class="lede">Search concepts, filter by domain, and track mastery.</p></a>
-      <a class="card card-pad" href={link('/coding/')}><Badge tone="blue">PRACTICE</Badge><h2>Coding queue</h2><p class="lede">Choose the next problem by track, level, or week.</p></a>
+      <a class="card card-pad" href={link('/coding/')}><Badge tone="blue">PRACTICE</Badge><h2>Coding problems</h2><p class="lede">Browse problems by track, level, or week.</p></a>
       <a class="card card-pad" href={link('/sources/')}><Badge tone="blue">SOURCE OF TRUTH</Badge><h2>Curriculum library</h2><p class="lede">Read the original Markdown exactly as committed.</p></a>
     </section>
   </>}

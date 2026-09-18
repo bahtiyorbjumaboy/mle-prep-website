@@ -5,7 +5,6 @@ const statuses = index.curricula.find((c) => c.id === curriculum)?.statuses || [
 ---
 <form class="progress-controls" data-progress-form data-item-key={itemKey}>
   <div class="field"><label>Mastery</label><select name="mastery">{statuses.map((status) => <option value={status}>{status}</option>)}</select></div>
-  <div class="field"><label>Next review</label><input type="date" name="nextReview" /></div>
   <div class="field"><label>Attempts</label><input type="number" name="attempts" min="0" value="0" /></div>
   <label class="check-field"><input type="checkbox" name="completed" /> Completed</label>
   <div class="field field-wide"><label>Personal note</label><textarea name="note" rows="2" placeholder="A short private note stored in this browser"></textarea></div>
