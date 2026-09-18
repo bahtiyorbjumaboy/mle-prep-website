@@ -14,9 +14,9 @@ const studyPanels = index.curricula.map((curriculum) => { const week=index.roadm
 <AppLayout title="Dashboard">
   <header class="page-head">
     <div><p class="eyebrow">Study dashboard</p><h1>Good work starts with a clear queue.</h1><p>Your curriculum, practice, and review progress in one focused workspace.</p></div>
-    {index.curricula.length > 0 && <div class="curriculum-tabs" aria-label="Active curriculum">{index.curricula.map((c, i) => <button data-curriculum-select={c.id} class:list={{active:i===0}}>{c.id === 'sprint' ? 'Sprint' : c.id}</button>)}</div>}
+    {index.curricula.length > 0 && <div class="curriculum-tabs" aria-label="Active curriculum">{index.curricula.map((c, i) => <button data-curriculum-select={c.id} class:list={{active:i===0}}>{c.id}</button>)}</div>}
   </header>
-  {allItems.length === 0 ? <EmptyState message="Copy your authoritative Markdown files into curriculum/2026/sources, curriculum/2027/sources, or curriculum/sprint/sources. The dashboard will populate automatically after the next build." /> : <>
+  {allItems.length === 0 ? <EmptyState message="Copy your authoritative Markdown files into curriculum/2026/sources or curriculum/2027/sources. The dashboard will populate automatically after the next build." /> : <>
     <section class="grid grid-4" aria-label="Progress overview">
       <article class="card metric" data-count-items={JSON.stringify(knowledgeKeys)} data-count-map={JSON.stringify(knowledgeMap)}><div class="metric-label">Knowledge</div><div class="metric-value"><span data-done>0</span> <span style="color:var(--faint);font-size:.65em">/ <span data-total>{knowledgeKeys.length}</span></span></div><div class="metric-sub"><span>Completed</span><strong data-percent>0%</strong></div><div class="progress-track"><div class="progress-bar" data-bar style="width:0"></div></div></article>
       <article class="card metric" data-count-items={JSON.stringify(codingKeys)} data-count-map={JSON.stringify(codingMap)}><div class="metric-label">Coding</div><div class="metric-value"><span data-done>0</span> <span style="color:var(--faint);font-size:.65em">/ <span data-total>{codingKeys.length}</span></span></div><div class="metric-sub"><span>Completed</span><strong data-percent>0%</strong></div><div class="progress-track"><div class="progress-bar" data-bar style="width:0"></div></div></article>

@@ -35,7 +35,6 @@ The empty repository is a supported state. It renders instructions instead of de
 curriculum/
   2026/{sources,interview-answers,coding-reviews}/
   2027/{sources,interview-answers,coding-reviews}/
-  sprint/sources/
 generated/curriculum-index.json
 scripts/                       # indexing and validation
 src/{components,layouts,lib,pages,styles}/
@@ -63,7 +62,6 @@ Copy files without renaming their internal wording:
 curriculum/2026/sources/01_2026_Generalist_MLE_Coding_Set_FINAL.md
 curriculum/2026/sources/Bank_01_Linear_Algebra_FINAL.md
 curriculum/2027/sources/03_2027_Search_Recs_STAFF_Roadmap_FINAL.md
-curriculum/sprint/sources/Interview_Sprint_02_3_Week_Roadmap.md
 ```
 
 Then run:
@@ -73,7 +71,7 @@ npm run validate
 npm run build
 ```
 
-The indexer recognizes question/problem headings, coding ID families, bank filenames, and roadmap `Week N` headings. It retains unparsed source content and reports useful warnings instead of inventing missing fields. A sprint is indexed as a separate overlay curriculum.
+The indexer recognizes question/problem headings, coding ID families, bank filenames, and roadmap `Week N` headings. It retains unparsed source content and reports useful warnings instead of inventing missing fields.
 
 ## Canonical IDs
 
@@ -128,8 +126,6 @@ Begin body headings at H2. One review maps to exactly one coding problem. See `t
 
 Interview-answer and coding-review Markdown supports headings, tables, task lists, fenced code, inline and display LaTeX math, and Mermaid fenced blocks. Math is processed through Astro's Unified pipeline with `remark-math` and `rehype-katex`; source LaTeX is passed through unchanged before rendering. Use `$...$` for inline math and `$$...$$` for display math. The KaTeX stylesheet is included globally.
 
-The sprint is an overlay, not an owner of durable artifacts. Borrowed sprint work updates the corresponding 2027 interview answer or coding review. Do not add `interview-answers/` or `coding-reviews/` under `curriculum/sprint/`.
-
 ## Progress persistence and portability
 
 Interactive progress is stored in browser `localStorage` under a versioned key. Each record can contain completion, curriculum-specific mastery wording, attempt count, last-attempt date, next-review date, and a short personal note. This data is private to that browser and is not committed.
@@ -138,7 +134,7 @@ Use **Export progress** to download readable JSON, **Import** to validate and re
 
 ## Validation
 
-`npm run validate` detects duplicate canonical keys, unknown artifact references, duplicate interview answers/reviews, malformed or unquoted dates, H1 artifact headings, forbidden live-progress fields, sprint-owned durable artifacts, malformed frontmatter, and invalid progress fixtures. Non-fatal source ambiguity is printed with context. Tests cover parsing, identity, artifact relationships, contract violations, progress import, and real KaTeX output. The mandatory math fixture is `tests/fixtures/math-rendering.md`.
+`npm run validate` detects duplicate canonical keys, unknown artifact references, duplicate interview answers/reviews, malformed or unquoted dates, H1 artifact headings, forbidden live-progress fields, malformed frontmatter, and invalid progress fixtures. Non-fatal source ambiguity is printed with context. Tests cover parsing, identity, artifact relationships, contract violations, progress import, and real KaTeX output. The mandatory math fixture is `tests/fixtures/math-rendering.md`.
 
 ## GitHub Pages deployment
 

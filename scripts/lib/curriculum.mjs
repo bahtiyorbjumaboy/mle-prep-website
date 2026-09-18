@@ -5,7 +5,6 @@ import matter from 'gray-matter';
 export const CURRICULA = {
   '2026': { id: '2026', label: '2026 Generalist MLE', statuses: ['Not started', 'Learning', 'Practiced', 'Interview-ready'] },
   '2027': { id: '2027', label: '2027 Search + Recs', statuses: ['Not started', 'Developing', 'Strong', 'Staff-ready'] },
-  sprint: { id: 'sprint', label: 'Interview Sprint', statuses: ['Not started', 'In progress', 'Ready'] },
 };
 
 export function slugify(value) {
@@ -208,8 +207,6 @@ export function parseArtifact({ curriculum, kind, relativePath, raw }) {
   for (const field of ['created', 'updated']) validateQuotedDate(raw, data, field, prefix, errors);
   for (const field of FORBIDDEN_PROGRESS_FIELDS) if (Object.hasOwn(data, field)) errors.push(`${prefix} durable ${expectedType} must not contain live progress field "${field}"`);
   if (kind === 'interview-answers' && /^##\s+Mastery Record\b/im.test(parsed.content)) errors.push(`${prefix} interview answers must not contain a "## Mastery Record" section`);
-  if (curriculum === 'sprint') errors.push(`${prefix} sprint may not own durable ${expectedType} artifacts`);
-
   let declaredItems = [];
   if (typeof data.item !== 'string' || !data.item.trim()) errors.push(`${prefix} item is required and must identify exactly one canonical item`);
   else declaredItems = [data.item];
