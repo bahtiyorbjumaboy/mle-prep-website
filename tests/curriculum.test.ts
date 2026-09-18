@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { buildIndex, canonicalCodingKey, canonicalKnowledgeKey, normalizeBank, parseArtifact, parseSource, resolveReference } from '../scripts/lib/curriculum.mjs';
+import { buildIndex, canonicalCodingKey, canonicalKnowledgeKey, normalizeBank, parseArtifact, parseCodingSolution, parseSource, resolveReference } from '../scripts/lib/curriculum.mjs';
 
 describe('curriculum identity', () => {
   it('qualifies repeated knowledge IDs by bank', () => {
@@ -41,24 +41,29 @@ describe('study artifact contract', () => {
     expect(artifact.errors.join('\n')).toMatch(/live progress field "mastery"/);
     expect(artifact.errors.join('\n')).toMatch(/must not contain an H1/);
     expect(artifact.errors.join('\n')).toMatch(/Mastery Record/);
-    const invalidDate = parseArtifact({ curriculum: '2027', kind: 'coding-reviews', relativePath: 'curriculum/2027/coding-reviews/recommendation/REC-05.md', raw: '---\ntype: coding-review\nitem: "2027:REC-05"\ntitle: "Review"\ncreated: "2026-02-30"\nupdated: "2026-09-17"\n---\n\n## Review\n' });
-    expect(invalidDate.errors.join('\n')).toMatch(/created is required as a valid ISO/);
   });
 
-  it('associates durable answers and reviews without flattening canonical identity', async () => {
+  it('derives coding-solution identity and language from the source file', () => {
+    const solution = parseCodingSolution({ curriculum: '2027', relativePath: 'curriculum/2027/coding-solutions/recommendation/REC-05.py', code: 'def solve():\n    pass\n' });
+    expect(solution).toMatchObject({ declaredItem: '2027:REC-05', language: 'python', extension: 'py' });
+    expect(solution.errors).toEqual([]);
+  });
+
+  it('associates durable answers and coding solutions without flattening canonical identity', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ml-os-artifacts-'));
     const write = async (name: string, value: string) => { const target=path.join(root,name); await fs.mkdir(path.dirname(target),{recursive:true}); await fs.writeFile(target,value); };
     await write('curriculum/2027/sources/Bank_2027_Ranking_Recommendation.md', '## R01: Explain multi-stage recommendation\n');
     await write('curriculum/2027/sources/Coding_Set.md', '## REC-05: Implement two-tower retrieval\n');
     await write('curriculum/2027/interview-answers/recommendation/R01.md', '---\ntype: interview-answer\nitem: "2027:R01"\ntitle: "Multi-stage recommendation"\ncreated: "2026-09-17"\nupdated: "2026-09-17"\n---\n\n## Answer\n');
-    await write('curriculum/2027/coding-reviews/recommendation/REC-05.md', '---\ntype: coding-review\nitem: "2027:REC-05"\ntitle: "Two-tower review"\ncreated: "2026-09-17"\nupdated: "2026-09-17"\n---\n\n## Review\n');
+    await write('curriculum/2027/coding-solutions/recommendation/REC-05.py', 'def retrieve():\n    return []\n');
     const index = await buildIndex(root);
     expect(index.errors).toEqual([]);
     const knowledge: any = index.knowledgeItems.find((x: any) => x.id === 'R01');
     const coding: any = index.codingItems.find((x: any) => x.id === 'REC-05');
     expect(knowledge.canonicalKey).toBe('2027:ranking-recommendation:R01');
     expect(knowledge.interviewAnswer.title).toBe('Multi-stage recommendation');
-    expect(coding.codingReview.title).toBe('Two-tower review');
+    expect(coding.codingSolution.title).toBe('Implement two-tower retrieval');
+    expect(index.codingSolutions[0]).toMatchObject({ item: '2027:coding:REC-05', language: 'python', code: 'def retrieve():\n    return []\n' });
     await write('curriculum/2027/interview-answers/recommendation/R01-duplicate.md', '---\ntype: interview-answer\nitem: "2027:R01"\ntitle: "Duplicate"\ncreated: "2026-09-17"\nupdated: "2026-09-17"\n---\n\n## Duplicate\n');
     const duplicateIndex = await buildIndex(root);
     expect(duplicateIndex.errors.join('\n')).toMatch(/duplicate interview answer for 2027:ranking-recommendation:R01/);

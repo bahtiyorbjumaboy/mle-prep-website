@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 3,
-  "generatedAt": "2026-09-18T15:21:09.226Z",
+  "schemaVersion": 4,
+  "generatedAt": "2026-09-18T16:48:18.163Z",
   "curricula": [
     {
       "id": "2026",
@@ -2306,7 +2306,13 @@
       "scheduledWeeks": [],
       "rawSection": "### R04 — Recommendation metrics and metric contracts\n**Depth:** D3\n\n**Prompt:** Derive/compare Precision@k, Recall@k, HitRate@k, MRR, MAP, DCG/NDCG, AUC/log-loss, calibration, coverage, novelty, diversity, watch-time/completion, conversion/revenue, and long-term metrics.\n\n**Mastery standard:** Can choose stage-appropriate metrics and define edge-case semantics before evaluation.",
       "sourceLine": 36,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2027/interview-answers/recommendation/R04_interview-answer",
+        "path": "curriculum/2027/interview-answers/recommendation/R04_interview-answer.md",
+        "title": "Recommendation Metrics and Metric Contracts",
+        "type": "interview-answer",
+        "updated": "2026-09-18"
+      }
     },
     {
       "canonicalKey": "2027:search-ir:R05",
@@ -4165,7 +4171,7 @@
       "sourceAnchor": "dsa-01-two-sum",
       "rawSection": "## DSA-01 — Two Sum ★\n**First exposure:** Week 1  \n**Level:** L1  \n**Time box:** 15 min\n**Format:** LIVE  \n\n**Interview prompt.** Given an integer array `nums` and integer `target`, return the indices of two distinct elements whose values sum to `target`. Assume exactly one valid pair exists. Solve in one pass.\n\n**Core concepts.** hash map; complement invariant; check-before-insert.\n\n**Complexity / resource target.** O(n) time, O(n) space.\n\n**Follow-ups / edge cases.** duplicates; streaming input.",
       "sourceLine": 152,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-02",
@@ -4186,7 +4192,7 @@
       "sourceAnchor": "dsa-02-group-anagrams",
       "rawSection": "## DSA-02 — Group Anagrams\n**First exposure:** Week 1  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Given a list of strings, group strings that contain the same characters with the same multiplicities. The order of groups and strings within groups does not matter.\n\n**Core concepts.** canonical hash keys; count tuples vs sorting.\n\n**Complexity / resource target.** O(total characters) with fixed-alphabet counts.\n\n**Follow-ups / edge cases.** Unicode; stable output ordering.",
       "sourceLine": 166,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-03",
@@ -4207,7 +4213,7 @@
       "sourceAnchor": "dsa-03-product-except-self",
       "rawSection": "## DSA-03 — Product Except Self\n**First exposure:** Week 2  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Given an integer array `nums`, return `out` where `out[i]` is the product of every element except `nums[i]`. Do not use division and run in O(n).\n\n**Core concepts.** prefix/suffix products; two-pass construction.\n\n**Complexity / resource target.** O(n) time, O(1) auxiliary space excluding output.\n\n**Follow-ups / edge cases.** zero values; overflow discussion.",
       "sourceLine": 180,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-04",
@@ -4228,7 +4234,7 @@
       "sourceAnchor": "dsa-04-longest-consecutive-sequence",
       "rawSection": "## DSA-04 — Longest Consecutive Sequence\n**First exposure:** Week 14  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Given an unsorted integer array, return the length of the longest set of consecutive values.\n\n**Core concepts.** set membership; start only at run heads; amortization.\n\n**Complexity / resource target.** O(n) expected time, O(n) space.\n\n**Follow-ups / edge cases.** duplicates; return the sequence.",
       "sourceLine": 194,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-05",
@@ -4249,7 +4255,7 @@
       "sourceAnchor": "dsa-05-container-with-most-water",
       "rawSection": "## DSA-05 — Container With Most Water ★\n**First exposure:** Week 2  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given heights `h[i]`, choose two indices that maximize the contained area. Return the maximum area.\n\n**Core concepts.** two pointers; exhaustion/correctness argument.\n\n**Complexity / resource target.** O(n) time, O(1) space.\n\n**Follow-ups / edge cases.** prove why moving the shorter side is safe.",
       "sourceLine": 208,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-06",
@@ -4270,7 +4276,7 @@
       "sourceAnchor": "dsa-06-three-sum",
       "rawSection": "## DSA-06 — Three Sum ★\n**First exposure:** Week 3  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given an integer array, return all unique triplets whose values sum to zero.\n\n**Core concepts.** sort + two pointers; duplicate skipping.\n\n**Complexity / resource target.** O(n^2) time after sort.\n\n**Follow-ups / edge cases.** general target; k-sum decomposition.",
       "sourceLine": 222,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-07",
@@ -4291,7 +4297,7 @@
       "sourceAnchor": "dsa-07-longest-substring-without-repeats",
       "rawSection": "## DSA-07 — Longest Substring Without Repeats ★\n**First exposure:** Week 3  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given a string, return the length of the longest substring containing no repeated characters.\n\n**Core concepts.** variable sliding window; shrink-while-invalid.\n\n**Complexity / resource target.** O(n) time.\n\n**Follow-ups / edge cases.** last-seen jump; fixed-window warm-up.",
       "sourceLine": 236,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-08",
@@ -4312,7 +4318,7 @@
       "sourceAnchor": "dsa-08-minimum-size-subarray-sum",
       "rawSection": "## DSA-08 — Minimum-Size Subarray Sum\n**First exposure:** Week 4  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Given positive integers `nums` and positive integer `target`, return the minimum length of a contiguous subarray whose sum is at least `target`, or 0 if none exists.\n\n**Core concepts.** sliding window; shrink-while-valid; positivity assumption.\n\n**Complexity / resource target.** O(n) time.\n\n**Follow-ups / edge cases.** why negative values break the method.",
       "sourceLine": 250,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-09",
@@ -4333,7 +4339,7 @@
       "sourceAnchor": "dsa-09-first-and-last-position",
       "rawSection": "## DSA-09 — First and Last Position\n**First exposure:** Week 4  \n**Level:** L1/L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Given a sorted array containing duplicates and a target, return the first and last index of the target, or `[-1,-1]`.\n\n**Core concepts.** lower/upper bounds; binary-search invariants.\n\n**Complexity / resource target.** O(log n) time.\n\n**Follow-ups / edge cases.** insertion point; half-open intervals.",
       "sourceLine": 264,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-10",
@@ -4354,7 +4360,7 @@
       "sourceAnchor": "dsa-10-binary-search-on-the-answer",
       "rawSection": "## DSA-10 — Binary Search on the Answer ★\n**First exposure:** Week 5  \n**Level:** L3  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Given nonnegative `nums` and integer `k`, split `nums` into `k` nonempty contiguous subarrays so that the largest subarray sum is minimized. Return that minimum.\n\n**Core concepts.** monotonic feasibility predicate; search bounds.\n\n**Complexity / resource target.** O(n log(sum(nums))).\n\n**Follow-ups / edge cases.** prove monotonicity; infeasible k.",
       "sourceLine": 278,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-11",
@@ -4375,7 +4381,7 @@
       "sourceAnchor": "dsa-11-valid-parentheses",
       "rawSection": "## DSA-11 — Valid Parentheses\n**First exposure:** Week 5  \n**Level:** L1  \n**Time box:** 15 min\n**Format:** LIVE  \n\n**Interview prompt.** Given a string containing `()[]{}`, return whether it is well formed.\n\n**Core concepts.** stack; nesting invariant; early rejection.\n\n**Complexity / resource target.** O(n) time, O(n) space.\n\n**Follow-ups / edge cases.** minimum deletions to balance.",
       "sourceLine": 292,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-12",
@@ -4396,7 +4402,7 @@
       "sourceAnchor": "dsa-12-daily-temperatures",
       "rawSection": "## DSA-12 — Daily Temperatures ★\n**First exposure:** Week 6  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given daily temperatures, return for each day the number of days until a warmer temperature, or 0 if none exists.\n\n**Core concepts.** monotonic stack; indices; amortized analysis.\n\n**Complexity / resource target.** O(n) time.\n\n**Follow-ups / edge cases.** next greater element; circular variant.",
       "sourceLine": 306,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-13",
@@ -4417,7 +4423,7 @@
       "sourceAnchor": "dsa-13-linked-list-cycle",
       "rawSection": "## DSA-13 — Linked-List Cycle\n**First exposure:** Week 6  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Given the head of a singly linked list, determine whether a cycle exists and, if so, return the node where it begins.\n\n**Core concepts.** Floyd pointers; phase-two proof.\n\n**Complexity / resource target.** O(n) time, O(1) space.\n\n**Follow-ups / edge cases.** cycle length.",
       "sourceLine": 320,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-14",
@@ -4438,7 +4444,7 @@
       "sourceAnchor": "dsa-14-reverse-linked-list-reverse-sublist",
       "rawSection": "## DSA-14 — Reverse Linked List / Reverse Sublist\n**First exposure:** Week 7  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Reverse a singly linked list iteratively. Then reverse only nodes from positions `m` through `n` inclusive and return the new head.\n\n**Core concepts.** pointer rewiring; dummy head; reconnection.\n\n**Complexity / resource target.** O(n) time, O(1) space.\n\n**Follow-ups / edge cases.** recursive full-list reversal and stack cost.",
       "sourceLine": 334,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-15",
@@ -4459,7 +4465,7 @@
       "sourceAnchor": "dsa-15-subsets-with-duplicates",
       "rawSection": "## DSA-15 — Subsets With Duplicates\n**First exposure:** Week 7  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Return all subsets of a list. Then support duplicate input values without returning duplicate subsets.\n\n**Core concepts.** backtracking; choose/explore/unchoose; duplicate skipping.\n\n**Complexity / resource target.** O(2^n) output-sensitive.\n\n**Follow-ups / edge cases.** iterative generation.",
       "sourceLine": 348,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-16",
@@ -4480,7 +4486,7 @@
       "sourceAnchor": "dsa-16-combination-sum",
       "rawSection": "## DSA-16 — Combination Sum ★\n**First exposure:** Week 8  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given distinct positive candidate values and a target, return all unique combinations summing to the target; each candidate may be used repeatedly.\n\n**Core concepts.** backtracking; start-index invariant; pruning.\n\n**Complexity / resource target.** output-sensitive exponential.\n\n**Follow-ups / edge cases.** each candidate usable once.",
       "sourceLine": 362,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-17",
@@ -4501,7 +4507,7 @@
       "sourceAnchor": "dsa-17-maximum-depth-balanced-tree",
       "rawSection": "## DSA-17 — Maximum Depth + Balanced Tree\n**First exposure:** Week 8  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** For a binary tree, return its maximum depth and determine whether it is height-balanced.\n\n**Core concepts.** tree DFS; return information upward.\n\n**Complexity / resource target.** O(n) optimized.\n\n**Follow-ups / edge cases.** diameter; naive O(n^2) balance check.",
       "sourceLine": 376,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-18",
@@ -4522,7 +4528,7 @@
       "sourceAnchor": "dsa-18-level-order-traversal",
       "rawSection": "## DSA-18 — Level-Order Traversal\n**First exposure:** Week 9  \n**Level:** L1  \n**Time box:** 15 min\n**Format:** LIVE  \n\n**Interview prompt.** Return a binary tree's level-order traversal as a list of levels.\n\n**Core concepts.** BFS; queue; level boundaries.\n\n**Complexity / resource target.** O(n) time.\n\n**Follow-ups / edge cases.** zigzag traversal.",
       "sourceLine": 390,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-19",
@@ -4543,7 +4549,7 @@
       "sourceAnchor": "dsa-19-number-of-islands",
       "rawSection": "## DSA-19 — Number of Islands ★\n**First exposure:** Week 9  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given a binary grid, count 4-directionally connected components of land.\n\n**Core concepts.** grid DFS/BFS; visited state; bounds.\n\n**Complexity / resource target.** O(rows*cols).\n\n**Follow-ups / edge cases.** largest island; mutation vs visited set.",
       "sourceLine": 404,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-20",
@@ -4564,7 +4570,7 @@
       "sourceAnchor": "dsa-20-grid-shortest-path",
       "rawSection": "## DSA-20 — Grid Shortest Path\n**First exposure:** Week 10  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Given an unweighted obstacle grid, return the shortest path length from the top-left cell to the bottom-right cell using 4-directional moves, or -1 if unreachable.\n\n**Core concepts.** BFS shortest path; visited-at-enqueue.\n\n**Complexity / resource target.** O(rows*cols).\n\n**Follow-ups / edge cases.** return the path; bidirectional BFS discussion.",
       "sourceLine": 418,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-21",
@@ -4585,7 +4591,7 @@
       "sourceAnchor": "dsa-21-connected-components",
       "rawSection": "## DSA-21 — Connected Components\n**First exposure:** Week 11  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Given `n` nodes and an undirected edge list, return the number of connected components.\n\n**Core concepts.** adjacency construction; graph traversal from all roots.\n\n**Complexity / resource target.** O(V+E).\n\n**Follow-ups / edge cases.** implicit graph recognition; solve the same problem with DSU/Union-Find and explain path compression plus union by rank/size.",
       "sourceLine": 432,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-22",
@@ -4606,7 +4612,7 @@
       "sourceAnchor": "dsa-22-course-schedule-topological-sort",
       "rawSection": "## DSA-22 — Course Schedule / Topological Sort ★\n**First exposure:** Week 11  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given courses and prerequisite pairs, determine whether all courses can be completed. If so, return one valid order.\n\n**Core concepts.** indegree; Kahn's algorithm; cycle detection.\n\n**Complexity / resource target.** O(V+E).\n\n**Follow-ups / edge cases.** DFS three-color solution.",
       "sourceLine": 446,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-23",
@@ -4627,7 +4633,7 @@
       "sourceAnchor": "dsa-23-top-k-frequent-elements",
       "rawSection": "## DSA-23 — Top-K Frequent Elements ★\n**First exposure:** Week 12  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Given an integer array and `k`, return the `k` most frequent values.\n\n**Core concepts.** frequency map; min-heap; buckets.\n\n**Complexity / resource target.** O(n log k) heap solution.\n\n**Follow-ups / edge cases.** streaming top-k.",
       "sourceLine": 460,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-24",
@@ -4648,7 +4654,7 @@
       "sourceAnchor": "dsa-24-merge-intervals",
       "rawSection": "## DSA-24 — Merge Intervals\n**First exposure:** Week 12  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Given intervals `[start,end]`, merge all overlapping intervals.\n\n**Core concepts.** sort + sweep; interval invariant.\n\n**Complexity / resource target.** O(n log n).\n\n**Follow-ups / edge cases.** insert interval; endpoint semantics.",
       "sourceLine": 474,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-25",
@@ -4669,7 +4675,7 @@
       "sourceAnchor": "dsa-25-subarray-sum-equals-k",
       "rawSection": "## DSA-25 — Subarray Sum Equals K ★\n**First exposure:** Week 13  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given an integer array and integer `k`, return the number of contiguous subarrays whose sum equals `k`.\n\n**Core concepts.** prefix sum + frequency map; `{0:1}` identity.\n\n**Complexity / resource target.** O(n) expected time.\n\n**Follow-ups / edge cases.** contrast with sliding window.",
       "sourceLine": 488,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DSA-26",
@@ -4690,7 +4696,7 @@
       "sourceAnchor": "dsa-26-dynamic-programming-synthesis",
       "rawSection": "## DSA-26 — Dynamic Programming Synthesis ★\n**First exposure:** Week 13  \n**Level:** L3  \n**Time box:** 45 min\n**Format:** EXTENDED_DRILL  \n\n**Interview prompt.** In one extended sitting: (1) solve maximum non-adjacent sum; (2) solve unique grid paths, then obstacles, then minimum path sum; (3) implement edit distance.\n\n**Core concepts.** state definition; recurrence; base cases; update order; rolling memory.\n\n**Complexity / resource target.** problem-dependent; target O(n) or O(mn).\n\n**Follow-ups / edge cases.** LCS recurrence; reconstruct edit sequence.\n\n---",
       "sourceLine": 502,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:SQL-01",
@@ -4711,7 +4717,7 @@
       "sourceAnchor": "sql-01-aggregation-conversion",
       "rawSection": "## SQL-01 — Aggregation / Conversion\n**First exposure:** Week 2  \n**Level:** L1  \n**Time box:** 15 min\n**Format:** LIVE  \n\n**Interview prompt.** Using `users` and `orders`, return one row per country with 2026 signups, users with at least one qualifying order, conversion rate, and paid-search signup share. Keep countries with at least 100 signups.\n\n**Core concepts.** conditional aggregation; HAVING; COUNT(DISTINCT); left joins.\n\n**Complexity / resource target.** single grouped scan after joins.\n\n**Follow-ups / edge cases.** FILTER syntax; zero-conversion countries.",
       "sourceLine": 520,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:SQL-02",
@@ -4732,7 +4738,7 @@
       "sourceAnchor": "sql-02-join-grain-and-fan-out",
       "rawSection": "## SQL-02 — Join Grain and Fan-Out ★\n**First exposure:** Week 4  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Using `orders`, `order_items`, and `items`, return per-user spend and distinct items purchased, then per-category spend and distinct buyers. Exclude cancelled/returned orders.\n\n**Core concepts.** table grain; fan-out; pre-aggregation; COUNT(DISTINCT).\n\n**Complexity / resource target.** reason about cardinality before complexity.\n\n**Follow-ups / edge cases.** construct a 2x overcount example.",
       "sourceLine": 534,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:SQL-03",
@@ -4753,7 +4759,7 @@
       "sourceAnchor": "sql-03-latest-record-per-entity",
       "rawSection": "## SQL-03 — Latest Record Per Entity\n**First exposure:** Week 6  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Return each user's most recent qualifying order with total value. Then return the latest prediction for every `(user_id,item_id)`. Solve the first part once with `ROW_NUMBER()` and once without it.\n\n**Core concepts.** window ranking; deterministic ties; filtering order.\n\n**Complexity / resource target.** window + sort per partition.\n\n**Follow-ups / edge cases.** ROW_NUMBER vs RANK; correlated subquery.",
       "sourceLine": 548,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:SQL-04",
@@ -4774,7 +4780,7 @@
       "sourceAnchor": "sql-04-top-n-per-group",
       "rawSection": "## SQL-04 — Top-N Per Group\n**First exposure:** Week 8  \n**Level:** L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Return the top 3 sold items in every category over a time window, including rank and units sold. Then change the tie semantics so tied items share rank.\n\n**Core concepts.** ROW_NUMBER/RANK/DENSE_RANK; partitioned ordering.\n\n**Complexity / resource target.** group + window sort.\n\n**Follow-ups / edge cases.** top 3 plus ties.",
       "sourceLine": 562,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:SQL-05",
@@ -4795,7 +4801,7 @@
       "sourceAnchor": "sql-05-sessionization",
       "rawSection": "## SQL-05 — Sessionization ★\n**First exposure:** Week 10  \n**Level:** L3  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Ignore the stored session ID. Define a session as a maximal sequence of user events where consecutive events are at most 30 minutes apart. Assign session numbers and return session start/end, event count, purchase flag, and gap from the previous session.\n\n**Core concepts.** LAG; new-session flag; cumulative SUM; gaps-and-islands.\n\n**Complexity / resource target.** sort per user.\n\n**Follow-ups / edge cases.** incremental nightly version.",
       "sourceLine": 576,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:SQL-06",
@@ -4816,7 +4822,7 @@
       "sourceAnchor": "sql-06-rolling-time-windows",
       "rawSection": "## SQL-06 — Rolling Time Windows ★\n**First exposure:** Week 12  \n**Level:** L3  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Produce one row per user per calendar day from first purchase through the dataset end date with daily purchases, rolling 7-day purchases, rolling 30-day spend, and change in rolling 7-day count. Include inactive days.\n\n**Core concepts.** date spine; RANGE vs ROWS; densification; LAG.\n\n**Complexity / resource target.** calendar expansion + windows.\n\n**Follow-ups / edge cases.** rolling distinct counts.",
       "sourceLine": 590,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:SQL-07",
@@ -4837,7 +4843,7 @@
       "sourceAnchor": "sql-07-deduplication-null-semantics",
       "rawSection": "## SQL-07 — Deduplication / NULL Semantics\n**First exposure:** Week 14  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Deduplicate exact and near-duplicate events, then return users who never clicked and items with impressions but no clicks.\n\n**Core concepts.** ROW_NUMBER dedup; NOT EXISTS; anti-join; three-valued logic.\n\n**Complexity / resource target.** sort/partition for dedup.\n\n**Follow-ups / edge cases.** exact NOT IN failure example.",
       "sourceLine": 604,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:SQL-08",
@@ -4858,7 +4864,7 @@
       "sourceAnchor": "sql-08-ordered-funnel",
       "rawSection": "## SQL-08 — Ordered Funnel ★\n**First exposure:** Week 15  \n**Level:** L3  \n**Time box:** 35 min\n**Format:** LIVE  \n\n**Interview prompt.** For a given day, compute `search → impression → click → add_to_cart → purchase` where each stage must occur after the previous stage in the same session and within 30 minutes. Return counts and step conversion rates, then split by acquisition channel.\n\n**Core concepts.** ordered events; conditional timestamps; user/session grain.\n\n**Complexity / resource target.** depends on self-join/window design.\n\n**Follow-ups / edge cases.** sessions spanning midnight; first vs latest qualifying prior event.",
       "sourceLine": 618,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:SQL-09",
@@ -4879,7 +4885,7 @@
       "sourceAnchor": "sql-09-ml-serving-log-analysis",
       "rawSection": "## SQL-09 — ML / Serving Log Analysis ★\n**First exposure:** Week 16  \n**Level:** L3  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Using impressions, clicks, predictions, and experiment assignments: compute CTR by model version and position bucket; compute clean per-variant CTR/cart rate excluding multi-assigned users; find high-score items with >=100 impressions and zero clicks.\n\n**Core concepts.** left-join denominators; experiment hygiene; NTILE; user vs impression grain.\n\n**Complexity / resource target.** group/window heavy.\n\n**Follow-ups / edge cases.** position bias; confounding between model versions.\n\n---",
       "sourceLine": 632,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:NP-01",
@@ -4900,7 +4906,7 @@
       "sourceAnchor": "np-01-shapes-axes-broadcasting",
       "rawSection": "## NP-01 — Shapes, Axes, Broadcasting ★\n**First exposure:** Week 1  \n**Level:** L1  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** Given arrays of shapes `(B,D)`, `(D,)`, `(B,1)`, and boolean masks, predict the output shape or error for additions, reductions, matmul, masking, and normalization expressions. Then implement row normalization, column standardization, masked mean, and weighted row mean.\n\n**Core concepts.** broadcasting; axis; keepdims; boolean indexing.\n\n**Complexity / resource target.** vectorized O(BD) operations.\n\n**Follow-ups / edge cases.** views vs copies; zero denominators.",
       "sourceLine": 650,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:NP-02",
@@ -4921,7 +4927,7 @@
       "sourceAnchor": "np-02-batched-cosine-similarity-top-k",
       "rawSection": "## NP-02 — Batched Cosine Similarity + Top-K ★\n**First exposure:** Week 2  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given `Q(m,d)` and `X(n,d)`, return `(m,k)` candidate indices and cosine scores for the top-k candidates per query without Python loops over queries/candidates. Support chunking when the full score matrix does not fit memory.\n\n**Core concepts.** normalization; matmul; argpartition; stable top-k.\n\n**Complexity / resource target.** O(mnd) scoring.\n\n**Follow-ups / edge cases.** ties; k>n; zero vectors; ANN threshold.\n\n**Required mastery tests.** Nonzero normalized rows have unit norm within tolerance; top-k agrees with a full-sort reference on a small fixture.",
       "sourceLine": 664,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:NP-03",
@@ -4942,7 +4948,7 @@
       "sourceAnchor": "np-03-vectorized-confusion-matrix",
       "rawSection": "## NP-03 — Vectorized Confusion Matrix\n**First exposure:** Week 5  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given integer `y_true` and `y_pred` over `C` classes, build the `(C,C)` confusion matrix without a Python loop and compute per-class precision/recall/F1 plus micro/macro F1.\n\n**Core concepts.** bincount/add.at; row/column sums; zero division.\n\n**Complexity / resource target.** O(n+C^2).\n\n**Follow-ups / edge cases.** multilabel extension.",
       "sourceLine": 680,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:NP-04",
@@ -4963,7 +4969,7 @@
       "sourceAnchor": "np-04-de-loop-a-slow-function",
       "rawSection": "## NP-04 — De-loop a Slow Function\n**First exposure:** Week 9  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** You are given correct but slow nested-loop code that scores ragged user-item candidate lists with dot products and softmax. Vectorize it, preserve output order, and prove equivalence with a tolerance.\n\n**Core concepts.** gather; matmul/einsum; ragged batching; allclose.\n\n**Complexity / resource target.** same asymptotic math, lower Python overhead.\n\n**Follow-ups / edge cases.** padding vs flat segments; float32.",
       "sourceLine": 694,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:NP-05",
@@ -4984,7 +4990,7 @@
       "sourceAnchor": "np-05-padding-masking-pooling",
       "rawSection": "## NP-05 — Padding / Masking / Pooling ★\n**First exposure:** Week 12  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given variable-length sequences of d-dimensional vectors, construct a padded `(B,T,d)` array and `(B,T)` mask, then compute masked mean and mean over the last five real positions.\n\n**Core concepts.** padding; masking; masked denominators.\n\n**Complexity / resource target.** O(total real elements + BTd).\n\n**Follow-ups / edge cases.** zero-length sequences; masked max.",
       "sourceLine": 708,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PD-01",
@@ -5005,7 +5011,7 @@
       "sourceAnchor": "pd-01-feature-construction",
       "rawSection": "## PD-01 — Feature Construction\n**First exposure:** Week 3  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** From `events` and `items`, build one row per user with counts, distinct sessions/items, purchase count/spend, clicked-item mean price, top clicked category with deterministic tiebreak, and recency features.\n\n**Core concepts.** groupby.agg; nunique; merge validation; deterministic tie handling.\n\n**Complexity / resource target.** roughly O(n log n) if sorting.\n\n**Follow-ups / edge cases.** transform vs agg; shape assertions.",
       "sourceLine": 722,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PD-02",
@@ -5026,7 +5032,7 @@
       "sourceAnchor": "pd-02-latest-record-as-of-join",
       "rawSection": "## PD-02 — Latest Record + As-Of Join\n**First exposure:** Week 7  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given historical profile updates and orders, attach to every order the profile state that was current at the order timestamp; separately return latest profile per user.\n\n**Core concepts.** merge_asof; sorted keys; temporal semantics.\n\n**Complexity / resource target.** O(n log n) dominated by sort.\n\n**Follow-ups / edge cases.** exact boundary; searchsorted implementation.",
       "sourceLine": 736,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PD-03",
@@ -5047,7 +5053,7 @@
       "sourceAnchor": "pd-03-point-in-time-feature-construction",
       "rawSection": "## PD-03 — Point-in-Time Feature Construction ★\n**First exposure:** Week 10  \n**Level:** L3  \n**Time box:** 35 min\n**Format:** LIVE  \n\n**Interview prompt.** For each label row `(user_id,label_ts)`, compute 1/7/30-day event counts, 30-day amount, days since previous event, and distinct event types using only events strictly before `label_ts`. Preserve label-row order.\n\n**Core concepts.** strict temporal boundary; rolling/searchsorted; leakage.\n\n**Complexity / resource target.** better than O(labels*events).\n\n**Follow-ups / edge cases.** late-arriving data; timezone semantics.\n\n**Required mastery test.** For every label row, assert that every event used satisfies `event_ts < label_ts`.",
       "sourceLine": 750,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PD-04",
@@ -5068,7 +5074,7 @@
       "sourceAnchor": "pd-04-rolling-features-per-group",
       "rawSection": "## PD-04 — Rolling Features Per Group\n**First exposure:** Week 13  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given sparse daily user activity, produce dense per-user daily rows with rolling 7-day count, 28-day spend, a rolling ratio, and first-active-day flag.\n\n**Core concepts.** resample/reindex; rolling offset windows; safe division.\n\n**Complexity / resource target.** memory trade-off from densification.\n\n**Follow-ups / edge cases.** rolling(7) vs rolling('7D').",
       "sourceLine": 766,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PY-01",
@@ -5089,7 +5095,7 @@
       "sourceAnchor": "py-01-standard-library-event-processing",
       "rawSection": "## PY-01 — Standard-Library Event Processing\n**First exposure:** Week 15  \n**Level:** L2  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Using only Python's standard library, process unsorted JSONL events plus an item-category CSV to produce user sessions, top clicked categories, highest spender, and malformed-line count. Explain what can and cannot be streamed.\n\n**Core concepts.** json/csv; Counter/defaultdict; heapq; generators; defensive parsing.\n\n**Complexity / resource target.** depends on buffering/sorting.\n\n**Follow-ups / edge cases.** sorted-input variant; parallelization; expose one iterator/generator interface and define exception behavior for malformed records.",
       "sourceLine": 780,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PY-02",
@@ -5110,7 +5116,7 @@
       "sourceAnchor": "py-02-fit-transform-component",
       "rawSection": "## PY-02 — Fit / Transform Component ★\n**First exposure:** Week 15  \n**Level:** L2  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Implement `FeatureTransformer.fit`, `transform`, and `fit_transform` for numeric standardization/imputation/missing flags and categorical one-hot encoding with unknown buckets. Expose stable `feature_names_`.\n\n**Core concepts.** stateful preprocessing; stable schema; train/inference contract.\n\n**Complexity / resource target.** O(rows*features).\n\n**Follow-ups / edge cases.** second fit resets state; serialization; partial_fit; dataclass/class invariants; context-managed persistence or resource handling; API error contracts.\n\n---",
       "sourceLine": 794,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:ML-01",
@@ -5131,7 +5137,7 @@
       "sourceAnchor": "ml-01-cosine-similarity-retrieval",
       "rawSection": "## ML-01 — Cosine Similarity + Retrieval\n**First exposure:** Week 1  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given one query vector and `n` candidate vectors, return top-k by cosine similarity. First write the arithmetic directly; then vectorize and batch multiple queries.\n\n**Core concepts.** cosine formula; norms; top-k selection; precomputation.\n\n**Complexity / resource target.** O(nd) scoring.\n\n**Follow-ups / edge cases.** zero vectors; unit-normalized candidates.",
       "sourceLine": 812,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:ML-02",
@@ -5152,7 +5158,7 @@
       "sourceAnchor": "ml-02-classification-metrics-roc-pr-auc",
       "rawSection": "## ML-02 — Classification Metrics + ROC/PR AUC ★\n**First exposure:** Week 3  \n**Level:** L2/L3  \n**Time box:** 35 min\n**Format:** LIVE  \n\n**Interview prompt.** Given binary labels and scores, implement confusion matrix, precision, recall, F1, ROC-AUC, and average precision/PR-AUC without sklearn. Handle tied scores correctly.\n\n**Core concepts.** threshold metrics; rank/sweep AUC; imbalance.\n\n**Complexity / resource target.** O(n log n).\n\n**Follow-ups / edge cases.** zero positives; all scores equal.",
       "sourceLine": 826,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:ML-03",
@@ -5173,7 +5179,7 @@
       "sourceAnchor": "ml-03-leakage-safe-splitting",
       "rawSection": "## ML-03 — Leakage-Safe Splitting ★\n**First exposure:** Week 4  \n**Level:** L3  \n**Time box:** 35 min\n**Format:** LIVE  \n\n**Interview prompt.** Implement grouped split, temporal split with embargo, deterministic hash-based group assignment, and a checker that reports violated leakage invariants.\n\n**Core concepts.** group leakage; temporal leakage; reproducibility; hashing.\n\n**Complexity / resource target.** O(n) plus sorting for temporal.\n\n**Follow-ups / edge cases.** one giant group; boundary ties.\n\n**Required mastery tests.** No group overlap; temporal ordering invariant; deterministic repeatability; stable hash assignment for existing groups when new groups arrive.",
       "sourceLine": 840,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:ML-04",
@@ -5194,7 +5200,7 @@
       "sourceAnchor": "ml-04-stable-softmax-cross-entropy",
       "rawSection": "## ML-04 — Stable Softmax / Cross-Entropy ★\n**First exposure:** Week 6  \n**Level:** L2  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Implement `softmax`, `logsumexp`, multiclass cross-entropy from logits, BCE-with-logits, and a stable sigmoid. Demonstrate inputs that break naive implementations.\n\n**Core concepts.** numerical stability; max subtraction; fused loss.\n\n**Complexity / resource target.** O(BC).\n\n**Follow-ups / edge cases.** ±1e4 logits; wrong axis.",
       "sourceLine": 856,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:ML-05",
@@ -5215,7 +5221,7 @@
       "sourceAnchor": "ml-05-k-means",
       "rawSection": "## ML-05 — K-Means\n**First exposure:** Week 9  \n**Level:** L2  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Implement Lloyd's k-means algorithm including initialization, assignment, update, convergence, max iterations, and deterministic seeding.\n\n**Core concepts.** clustering objective; vectorized distance; empty clusters.\n\n**Complexity / resource target.** O(nkd) per iteration.\n\n**Follow-ups / edge cases.** k>n; identical points.",
       "sourceLine": 870,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:ML-06",
@@ -5236,7 +5242,7 @@
       "sourceAnchor": "ml-06-logistic-regression-from-scratch",
       "rawSection": "## ML-06 — Logistic Regression From Scratch ★\n**First exposure:** Week 10  \n**Level:** L3  \n**Time box:** 35 min\n**Format:** LIVE  \n\n**Interview prompt.** Warm up with linear-regression gradient descent, then implement binary logistic regression with intercept, stable BCE, L2, mini-batches, loss history, `predict_proba`, and thresholded prediction.\n\n**Core concepts.** gradient derivation; vectorization; regularization.\n\n**Complexity / resource target.** O(nd) per batch/iteration.\n\n**Follow-ups / edge cases.** perfect separation; unscaled features; diverging LR.",
       "sourceLine": 884,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:ML-07",
@@ -5257,7 +5263,7 @@
       "sourceAnchor": "ml-07-negative-sampling",
       "rawSection": "## ML-07 — Negative Sampling ★\n**First exposure:** Week 13  \n**Level:** L2/L3  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Given positive user-item interactions and a large catalog, generate deterministic negatives using uniform and popularity-weighted sampling while excluding known positives.\n\n**Core concepts.** rejection/exclusion; sampling distribution; false negatives.\n\n**Complexity / resource target.** expected O(P*n_neg) plus sampler setup.\n\n**Follow-ups / edge cases.** near-full-catalog users; hard-negative follow-up.",
       "sourceLine": 898,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:ML-08",
@@ -5278,7 +5284,7 @@
       "sourceAnchor": "ml-08-calibration-ece",
       "rawSection": "## ML-08 — Calibration / ECE\n**First exposure:** Week 15  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Given probabilities and labels, compute reliability bins, observed positive rate, mean predicted probability, ECE, MCE, and a quantile-binning alternative.\n\n**Core concepts.** calibration; binning; weighted denominators.\n\n**Complexity / resource target.** O(n+b), O(n log n) for quantiles.\n\n**Follow-ups / edge cases.** empty bins; identical probabilities.",
       "sourceLine": 912,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:ML-09",
@@ -5299,7 +5305,7 @@
       "sourceAnchor": "ml-09-bootstrap-ci-permutation-test",
       "rawSection": "## ML-09 — Bootstrap CI + Permutation Test\n**First exposure:** Week 17  \n**Level:** L2  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Given user-level control/treatment metrics, compute a percentile bootstrap CI for difference in means, a two-sided permutation-test p-value, and a bootstrap CI for a ratio metric.\n\n**Core concepts.** resampling unit; randomization inference; ratio metrics.\n\n**Complexity / resource target.** O(Rn) resampling.\n\n**Follow-ups / edge cases.** unequal groups; deterministic seed.\n\n---",
       "sourceLine": 926,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PT-01",
@@ -5320,7 +5326,7 @@
       "sourceAnchor": "pt-01-nn-module-shapes",
       "rawSection": "## PT-01 — nn.Module + Shapes\n**First exposure:** Week 7  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Implement an MLP classifier with one categorical embedding, continuous features, two hidden layers, ReLU, dropout, and C-way logits. Annotate every intermediate shape.\n\n**Core concepts.** Module structure; embeddings; concat; logits.\n\n**Complexity / resource target.** forward O(B*parameters used).\n\n**Follow-ups / edge cases.** batch size 1; out-of-range ids.",
       "sourceLine": 944,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PT-02",
@@ -5341,7 +5347,7 @@
       "sourceAnchor": "pt-02-training-validation-loop",
       "rawSection": "## PT-02 — Training / Validation Loop ★\n**First exposure:** Week 11  \n**Level:** L2/L3  \n**Time box:** 35 min\n**Format:** EXTENDED_DRILL  \n\n**Interview prompt.** Write a complete Dataset/DataLoader, training loop, validation loop, loss, optimizer, epoch metrics, and best-checkpoint tracking. Explain what breaks if each lifecycle call is omitted.\n\n**Core concepts.** autograd lifecycle; train/eval; no_grad; devices.\n\n**Complexity / resource target.** standard epoch cost.\n\n**Follow-ups / edge cases.** short final batch; loss.item; empty validation.\n\n**Required mastery test.** Two evaluation passes on identical data are identical when stochastic training-only layers are present.",
       "sourceLine": 958,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PT-03",
@@ -5362,7 +5368,7 @@
       "sourceAnchor": "pt-03-losses-masking",
       "rawSection": "## PT-03 — Losses + Masking ★\n**First exposure:** Week 14  \n**Level:** L2  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Compute CE using `F.cross_entropy`, `log_softmax+nll_loss`, and a manual logsumexp implementation; then compute masked sequence loss using both ignore-index and explicit masks.\n\n**Core concepts.** stable losses; masked denominators; class weights.\n\n**Complexity / resource target.** O(BTC).\n\n**Follow-ups / edge cases.** all-padding sequence; weighted reduction.",
       "sourceLine": 974,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PT-04",
@@ -5383,7 +5389,7 @@
       "sourceAnchor": "pt-04-tensor-surgery-silent-shape-bugs",
       "rawSection": "## PT-04 — Tensor Surgery / Silent Shape Bugs ★\n**First exposure:** Week 16  \n**Level:** L2  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Implement batched matmul, einsum, embedding lookup, masked pooling, and a causal mask; then diagnose a pairwise-distance function that silently broadcasts incorrectly for particular shapes.\n\n**Core concepts.** shape reasoning; unsqueeze; mask-before-softmax.\n\n**Complexity / resource target.** problem-dependent vectorized cost.\n\n**Follow-ups / edge cases.** B==K silent coincidence.",
       "sourceLine": 988,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PT-05",
@@ -5404,7 +5410,7 @@
       "sourceAnchor": "pt-05-gradient-accumulation-clipping-scheduler",
       "rawSection": "## PT-05 — Gradient Accumulation / Clipping / Scheduler\n**First exposure:** Week 16  \n**Level:** L2  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Modify a training loop to emulate a larger batch with microbatches, add global-norm clipping, and apply warmup + cosine scheduling at the correct cadence.\n\n**Core concepts.** loss scaling; deferred optimizer step; scheduling.\n\n**Complexity / resource target.** same total examples; less activation memory.\n\n**Follow-ups / edge cases.** partial final accumulation; BatchNorm caveat.",
       "sourceLine": 1002,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PT-06",
@@ -5425,7 +5431,7 @@
       "sourceAnchor": "pt-06-custom-dataset-collate-variable-lengths",
       "rawSection": "## PT-06 — Custom Dataset / Collate / Variable Lengths\n**First exposure:** Week 17  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Build a Dataset and custom `collate_fn` for variable-length sequences that pads examples, returns masks and labels/metadata, and supports device transfer.\n\n**Core concepts.** irregular batching; padding; collate logic.\n\n**Complexity / resource target.** O(total batch tokens).\n\n**Follow-ups / edge cases.** empty sequence; sorting/bucketing by length.",
       "sourceLine": 1016,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:PT-07",
@@ -5446,7 +5452,7 @@
       "sourceAnchor": "pt-07-reproducibility-checkpoint-resume",
       "rawSection": "## PT-07 — Reproducibility / Checkpoint Resume ★\n**First exposure:** Week 17  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** Implement deterministic setup and checkpoint/resume of model, optimizer, scheduler, epoch/step, and relevant RNG state. Verify resumed training matches expected behavior within stated limits.\n\n**Core concepts.** state serialization; RNG; deterministic kernels.\n\n**Complexity / resource target.** checkpoint I/O proportional to state.\n\n**Follow-ups / edge cases.** nondeterministic kernels; changed dataloader order.\n\n---",
       "sourceLine": 1030,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DBG-01",
@@ -5467,7 +5473,7 @@
       "sourceAnchor": "dbg-01-leaking-pipeline",
       "rawSection": "## DBG-01 — Leaking Pipeline ★\n**First exposure:** Week 1  \n**Level:** L1/L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** You receive a training pipeline with suspiciously high validation performance. Find and fix three leaks: preprocessing fit before the split, target encoding that sees the row's own target, and a recency feature computed with future information. Write tests that expose each leak.\n\n**Core concepts.** data leakage; temporal leakage; target leakage.\n\n**Complexity / resource target.** diagnostic rather than asymptotic.\n\n**Follow-ups / edge cases.** which leak survives grouped/temporal splits.\n\n**Required mastery test.** Demonstrate that the regression test fails on the supplied broken version and passes after the fix.",
       "sourceLine": 1048,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DBG-02",
@@ -5488,7 +5494,7 @@
       "sourceAnchor": "dbg-02-misaligned-labels-duplicate-rows",
       "rawSection": "## DBG-02 — Misaligned Labels / Duplicate Rows\n**First exposure:** Week 5  \n**Level:** L1/L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** You receive code that shuffles X and y independently, deduplicates after splitting, and creates a tiny-positive validation fold. Diagnose the resulting metric behavior and fix the pipeline.\n\n**Core concepts.** row identity; split integrity; stratification; duplicates.\n\n**Complexity / resource target.** diagnostic.\n\n**Follow-ups / edge cases.** why misalignment can still appear above chance.\n\n**Required mastery test.** Demonstrate that the regression test fails on the supplied broken version and passes after the fix.",
       "sourceLine": 1064,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DBG-03",
@@ -5509,7 +5515,7 @@
       "sourceAnchor": "dbg-03-axis-broadcasting",
       "rawSection": "## DBG-03 — Axis / Broadcasting ★\n**First exposure:** Week 8  \n**Level:** L1/L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** A NumPy scoring function returns plausible but wrong results because softmax uses the wrong axis, row weights broadcast along the wrong dimension, and a global mean collapses structure. Find, fix, and test all three.\n\n**Core concepts.** shape invariants; row equivariance; keepdims.\n\n**Complexity / resource target.** diagnostic.\n\n**Follow-ups / edge cases.** construct a shape where the bug becomes an error.\n\n**Required mastery test.** Demonstrate that the regression test fails on the supplied broken version and passes after the fix.",
       "sourceLine": 1080,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DBG-04",
@@ -5530,7 +5536,7 @@
       "sourceAnchor": "dbg-04-nans-numerical-failure",
       "rawSection": "## DBG-04 — NaNs / Numerical Failure ★\n**First exposure:** Week 11  \n**Level:** L1/L2  \n**Time box:** 20 min\n**Format:** LIVE  \n\n**Interview prompt.** A training loss becomes NaN. Instrument the computation to identify the first non-finite tensor among unstable softmax, `log(0)`, zero-norm normalization, and an excessive learning rate. Fix the root cause and add regression tests.\n\n**Core concepts.** finite checks; overflow; 0/0; learning-rate diagnosis.\n\n**Complexity / resource target.** diagnostic.\n\n**Follow-ups / edge cases.** why clipping can mask rather than fix.\n\n**Required mastery test.** Demonstrate that the regression test fails on the supplied broken version and passes after the fix.",
       "sourceLine": 1096,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DBG-05",
@@ -5551,7 +5557,7 @@
       "sourceAnchor": "dbg-05-pytorch-state-lifecycle",
       "rawSection": "## DBG-05 — PyTorch State / Lifecycle ★\n**First exposure:** Week 14  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** A PyTorch train/eval script has poor validation, growing GPU memory, and occasional device errors. Find lifecycle bugs involving `eval`, `no_grad`, graph retention, gradient zeroing, and device placement.\n\n**Core concepts.** framework state; graph lifecycle; devices.\n\n**Complexity / resource target.** diagnostic.\n\n**Follow-ups / edge cases.** determinism test and memory trace.\n\n**Required mastery test.** Demonstrate that the regression test fails on the supplied broken version and passes after the fix.",
       "sourceLine": 1112,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DBG-06",
@@ -5572,7 +5578,7 @@
       "sourceAnchor": "dbg-06-evaluation-bugs",
       "rawSection": "## DBG-06 — Evaluation Bugs ★\n**First exposure:** Week 16  \n**Level:** L2  \n**Time box:** 25 min\n**Format:** LIVE  \n\n**Interview prompt.** An evaluation function applies a 0.5 threshold to logits, averages per-batch precision, uses the wrong recall denominator, and evaluates on an oversampled validation population. Fix it and write hand-computed tests.\n\n**Core concepts.** metric semantics; aggregation; base rates.\n\n**Complexity / resource target.** diagnostic.\n\n**Follow-ups / edge cases.** which bugs inflate vs deflate metrics.\n\n**Required mastery test.** Demonstrate that the regression test fails on the supplied broken version and passes after the fix.",
       "sourceLine": 1128,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2026:coding:DBG-07",
@@ -5593,7 +5599,7 @@
       "sourceAnchor": "dbg-07-extend-existing-evaluator",
       "rawSection": "## DBG-07 — Extend Existing Evaluator\n**First exposure:** Week 17  \n**Level:** L2/L3  \n**Time box:** 30 min\n**Format:** LIVE  \n\n**Interview prompt.** Given a tested ranking evaluator with `add_query`, `compute`, and `reset`, add per-segment metrics, arbitrary `recall@k`, and streaming accumulation where mathematically possible without breaking existing tests.\n\n**Core concepts.** backward compatibility; unfamiliar code; streaming state.\n\n**Complexity / resource target.** depends on metric state.\n\n**Follow-ups / edge cases.** which ranking metrics require global state.\n\n**Required mastery test.** Preserve the existing evaluator regression suite unchanged and passing; add specification-derived tests for the new segment metrics, arbitrary `recall@k`, and streaming behavior that fail before the extension is implemented and pass afterward.\n\n---",
       "sourceLine": 1144,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-01",
@@ -5617,7 +5623,12 @@
       "sourceAnchor": "rec-01-ranking-metrics-suite",
       "rawSection": "## REC-01 — Ranking Metrics Suite\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement Precision@k, Recall@k, HitRate@k, MRR, MAP, DCG/IDCG/NDCG with graded relevance and configurable no-relevant-item policy.\n\n**Core concepts:** ranking metrics; evaluator contracts\n\n**Required mastery output/test:** Ideal ranking gives NDCG=1; irrelevant items beyond k do not change @k; edge-case semantics documented.",
       "sourceLine": 18,
-      "codingReview": null
+      "codingSolution": {
+        "slug": "2027/coding-solutions/recommendation/REC-01",
+        "path": "curriculum/2027/coding-solutions/recommendation/REC-01.py",
+        "title": "Ranking Metrics Suite",
+        "language": "python"
+      }
     },
     {
       "canonicalKey": "2027:coding:REC-02",
@@ -5642,7 +5653,7 @@
       "sourceAnchor": "rec-02-point-in-time-recommendation-dataset",
       "rawSection": "## REC-02 — Point-in-Time Recommendation Dataset\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Build training examples from impressions/click/watch/cart/purchase events with temporal joins, attribution windows, deduplication, exposure-aware negatives, and temporal split.\n\n**Core concepts:** data correctness; leakage; labels\n\n**Required mastery output/test:** Tests fail on future leakage, late events, duplicates, click-without-impression, and window boundaries.",
       "sourceLine": 28,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-03",
@@ -5666,7 +5677,7 @@
       "sourceAnchor": "rec-03-implicit-matrix-factorization",
       "rawSection": "## REC-03 — Implicit Matrix Factorization\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement weighted implicit MF or BPR-style MF and compare to popularity.\n\n**Core concepts:** MF; implicit objectives\n\n**Required mastery output/test:** Synthetic low-rank data improves over popularity; cold-start behavior documented.",
       "sourceLine": 38,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-04",
@@ -5690,7 +5701,7 @@
       "sourceAnchor": "rec-04-negative-sampling-lab",
       "rawSection": "## REC-04 — Negative Sampling Lab\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement uniform, popularity, in-batch, hard-negative, and false-negative masking strategies with diagnostics.\n\n**Core concepts:** sampling bias; false negatives\n\n**Required mastery output/test:** Report realized distributions and show one over-hard-negative failure.",
       "sourceLine": 48,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-05",
@@ -5714,7 +5725,7 @@
       "sourceAnchor": "rec-05-two-tower-retrieval",
       "rawSection": "## REC-05 — Two-Tower Retrieval\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement user/query and item towers with normalized embeddings, temperature-scaled logits, in-batch negatives, and duplicate-positive masking.\n\n**Core concepts:** two-tower; contrastive retrieval\n\n**Required mastery output/test:** Synthetic pairs learn correct top-k; embedding norms and Recall@k reported.",
       "sourceLine": 58,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-06",
@@ -5738,7 +5749,7 @@
       "sourceAnchor": "rec-06-ann-candidate-benchmark",
       "rawSection": "## REC-06 — ANN Candidate Benchmark\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement exact top-k plus simplified IVF-like and graph/HNSW-like retrieval, then benchmark recall/latency/memory.\n\n**Core concepts:** ANN; retrieval systems\n\n**Required mastery output/test:** Produce recall@k vs p95 latency/memory curves and update/delete notes.",
       "sourceLine": 68,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-07",
@@ -5761,7 +5772,7 @@
       "sourceAnchor": "rec-07-multi-channel-candidate-fan-out",
       "rawSection": "## REC-07 — Multi-Channel Candidate Fan-Out\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Combine popularity, co-visitation, content, graph, and embedding sources with quotas, deduplication, attribution, and fallback.\n\n**Core concepts:** candidate blending\n\n**Required mastery output/test:** Show union and marginal recall; test source failure and quota behavior.",
       "sourceLine": 78,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-08",
@@ -5785,7 +5796,7 @@
       "sourceAnchor": "rec-08-pointwise-pairwise-ranker",
       "rawSection": "## REC-08 — Pointwise + Pairwise Ranker\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement a calibrated pointwise scorer and pairwise ranker; compare log-loss/AUC/NDCG and score semantics.\n\n**Core concepts:** LTR objectives; calibration\n\n**Required mastery output/test:** Show a case where better log-loss does not imply better NDCG.",
       "sourceLine": 88,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-09",
@@ -5809,7 +5820,7 @@
       "sourceAnchor": "rec-09-lambdamart-tree-ranker",
       "rawSection": "## REC-09 — LambdaMART / Tree Ranker\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Train/evaluate a tree-based ranking model with query/user grouping and ranking metrics; compare to pointwise baseline.\n\n**Core concepts:** LambdaMART; GBDT ranking\n\n**Required mastery output/test:** Correct group handling, feature importance caveats, and latency comparison documented.",
       "sourceLine": 98,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-10",
@@ -5833,7 +5844,7 @@
       "sourceAnchor": "rec-10-feature-cross-ranker",
       "rawSection": "## REC-10 — Feature-Cross Ranker\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement a compact DCN/DLRM-style ranker with sparse embeddings, dense features, and explicit interactions.\n\n**Core concepts:** feature interaction; sparse+dense\n\n**Required mastery output/test:** Ablate cross component; report parameter count, latency, and segment metrics.",
       "sourceLine": 108,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-11",
@@ -5857,7 +5868,7 @@
       "sourceAnchor": "rec-11-multi-task-ranking-with-expert-sharing",
       "rawSection": "## REC-11 — Multi-Task Ranking with Expert Sharing\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement shared-bottom and simplified MMoE/PLE-style rankers for two or more objectives.\n\n**Core concepts:** multi-task ranking; negative transfer\n\n**Required mastery output/test:** Construct conflicting tasks and show whether expert sharing mitigates negative transfer.",
       "sourceLine": 118,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-12",
@@ -5881,7 +5892,7 @@
       "sourceAnchor": "rec-12-diversity-constraint-reranker",
       "rawSection": "## REC-12 — Diversity + Constraint Reranker\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement MMR plus hard caps, availability, history suppression, freshness minimums, and deterministic fallback.\n\n**Core concepts:** slate reranking; constraints\n\n**Required mastery output/test:** All constraints hold; quantify relevance/diversity trade-off.",
       "sourceLine": 128,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-13",
@@ -5905,7 +5916,7 @@
       "sourceAnchor": "rec-13-counterfactual-evaluation",
       "rawSection": "## REC-13 — Counterfactual Evaluation\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement IPS, SNIPS, clipping, effective sample size, and a doubly robust-style estimator on synthetic logs.\n\n**Core concepts:** OPE; exposure bias\n\n**Required mastery output/test:** Recover known policy values under good overlap and fail visibly under poor support.",
       "sourceLine": 138,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-14",
@@ -5929,7 +5940,7 @@
       "sourceAnchor": "rec-14-bandit-simulator",
       "rawSection": "## REC-14 — Bandit Simulator\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement epsilon-greedy, UCB, Thompson sampling, and a simple contextual bandit under non-stationarity.\n\n**Core concepts:** exploration; regret\n\n**Required mastery output/test:** Plot/measure regret and adaptation; log propensities for OPE.",
       "sourceLine": 148,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-15",
@@ -5952,7 +5963,7 @@
       "sourceAnchor": "rec-15-sasrec-style-sequential-recommendation",
       "rawSection": "## REC-15 — SASRec-Style Sequential Recommendation\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement a simplified causal self-attention next-item recommender.\n\n**Core concepts:** sequential recommendation\n\n**Required mastery output/test:** Compare against popularity/co-visitation/static embedding baselines with temporal splits.",
       "sourceLine": 158,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-16",
@@ -5975,7 +5986,7 @@
       "sourceAnchor": "rec-16-masked-sequential-recommendation",
       "rawSection": "## REC-16 — Masked Sequential Recommendation\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement BERT4Rec-style masked-item training and compare with autoregressive training.\n\n**Core concepts:** sequence objectives\n\n**Required mastery output/test:** Document masking/inference mismatch and avoid invalid sampled-negative evaluation.",
       "sourceLine": 168,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-17",
@@ -5998,7 +6009,7 @@
       "sourceAnchor": "rec-17-graph-recommendation-baseline",
       "rawSection": "## REC-17 — Graph Recommendation Baseline\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement a small graph collaborative-filtering/message-passing recommender and compare to co-visitation/MF.\n\n**Core concepts:** graph recommendation\n\n**Required mastery output/test:** Measure quality vs cost; document sampling/oversmoothing limitations.",
       "sourceLine": 178,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-18",
@@ -6021,7 +6032,7 @@
       "sourceAnchor": "rec-18-video-feed-recommendation-case",
       "rawSection": "## REC-18 — Video / Feed Recommendation Case\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Build a small feed ranking pipeline with watch/completion/skip labels, session features, freshness, diversity, and long-horizon proxy metrics.\n\n**Core concepts:** video/feed ranking\n\n**Required mastery output/test:** Demonstrate objective conflicts and sequence/freshness effects.",
       "sourceLine": 188,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-19",
@@ -6044,7 +6055,7 @@
       "sourceAnchor": "rec-19-e-commerce-item-recommendation-case",
       "rawSection": "## REC-19 — E-Commerce / Item Recommendation Case\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Build a product recommender with conversion/value, availability, inventory, substitutes/complements, cold start, and seller constraints.\n\n**Core concepts:** commerce recommendation\n\n**Required mastery output/test:** Verify unavailable items never surface; measure relevance vs value/inventory effects.",
       "sourceLine": 198,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-20",
@@ -6068,7 +6079,7 @@
       "sourceAnchor": "rec-20-ads-ranking-case",
       "rawSection": "## REC-20 — Ads Ranking Case\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Build a simplified ad ranking stack with pCTR/pCVR/value, calibration, budget/pacing, frequency caps, and auction-like ordering.\n\n**Core concepts:** ads ranking; calibration\n\n**Required mastery output/test:** Show calibration/value interactions and budget/frequency behavior.",
       "sourceLine": 208,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-21",
@@ -6091,7 +6102,7 @@
       "sourceAnchor": "rec-21-recommendation-evaluation-slice-harness",
       "rawSection": "## REC-21 — Recommendation Evaluation + Slice Harness\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Create reusable offline evaluation with temporal slices, cold-start slices, calibration, coverage/diversity, bootstrap uncertainty, and candidate-source diagnostics.\n\n**Core concepts:** evaluation science\n\n**Required mastery output/test:** Detect deliberately injected aggregate-metric and sampling pathologies.",
       "sourceLine": 218,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-22",
@@ -6115,7 +6126,7 @@
       "sourceAnchor": "rec-22-recommendation-serving-simulator",
       "rawSection": "## REC-22 — Recommendation Serving Simulator\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Simulate candidate fan-out, feature hydration, rank/rerank, cache, timeout, fallback, and version contracts under a latency budget.\n\n**Core concepts:** serving; reliability\n\n**Required mastery output/test:** Measure p50/p95/p99 and verify deterministic degradation on partial failure.",
       "sourceLine": 228,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-23",
@@ -6139,7 +6150,7 @@
       "sourceAnchor": "rec-23-recommendation-incident-lab",
       "rawSection": "## REC-23 — Recommendation Incident Lab\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Inject stale embeddings, feature outage, candidate collapse, score drift, and mixed versions; diagnose from telemetry and replay.\n\n**Core concepts:** observability; incident response\n\n**Required mastery output/test:** Root cause must be localized without privileged knowledge; rollback restores safe state.",
       "sourceLine": 238,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:REC-24",
@@ -6162,7 +6173,7 @@
       "sourceAnchor": "rec-24-end-to-end-recommendation-capstone",
       "rawSection": "## REC-24 — End-to-End Recommendation Capstone\n**Level:** L3  \n**Format:** CAPSTONE\n\n**Implementation prompt:** Build a production-shaped recommendation system spanning logged data, multi-channel retrieval, ANN, ranking/LTR, constraints, evaluation, experimentation plan, serving, monitoring, and one vertical specialization.\n\n**Core concepts:** integration\n\n**Required mastery output/test:** Reproducible repo, benchmark tables, failure tests, architecture memo, and Staff-level defense.",
       "sourceLine": 248,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-01",
@@ -6185,7 +6196,7 @@
       "sourceAnchor": "srch-01-inverted-index-bm25-positions",
       "rawSection": "## SRCH-01 — Inverted Index + BM25 + Positions\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement a field-aware inverted index with positions and BM25/BM25F-style scoring.\n\n**Core concepts:** lexical retrieval\n\n**Required mastery output/test:** Hand-computed fixtures verify TF/IDF/length/phrase behavior.",
       "sourceLine": 260,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-02",
@@ -6208,7 +6219,7 @@
       "sourceAnchor": "srch-02-posting-execution-wand-bmw",
       "rawSection": "## SRCH-02 — Posting Execution + WAND/BMW\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement posting intersection/union and a simplified WAND/Block-Max WAND execution path.\n\n**Core concepts:** query execution\n\n**Required mastery output/test:** Exact top-k matches exhaustive scoring while reducing scored documents.",
       "sourceLine": 270,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-03",
@@ -6231,7 +6242,7 @@
       "sourceAnchor": "srch-03-segmented-versioned-index-lifecycle",
       "rawSection": "## SRCH-03 — Segmented / Versioned Index Lifecycle\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement or simulate immutable segments, refresh, deletes, merges, shadow versions, and atomic switch.\n\n**Core concepts:** index lifecycle\n\n**Required mastery output/test:** Version skew and delete/merge cases are tested.",
       "sourceLine": 280,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-04",
@@ -6254,7 +6265,7 @@
       "sourceAnchor": "srch-04-distributed-search-coordinator",
       "rawSection": "## SRCH-04 — Distributed Search Coordinator\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement a toy scatter/gather coordinator with sharding, replicas, shard-local top-k, global merge, timeout, and partial-result policy.\n\n**Core concepts:** distributed search\n\n**Required mastery output/test:** Inject slow/failed shards and measure tail amplification.",
       "sourceLine": 290,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-05",
@@ -6277,7 +6288,7 @@
       "sourceAnchor": "srch-05-spelling-noisy-channel-correction",
       "rawSection": "## SRCH-05 — Spelling + Noisy-Channel Correction\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement edit/n-gram candidate generation plus probabilistic scoring and protect exact identifiers.\n\n**Core concepts:** query understanding\n\n**Required mastery output/test:** Adversarial SKU/name cases avoid destructive correction.",
       "sourceLine": 300,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-06",
@@ -6300,7 +6311,7 @@
       "sourceAnchor": "srch-06-autocomplete-typeahead",
       "rawSection": "## SRCH-06 — Autocomplete / Typeahead\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement trie/prefix retrieval with popularity/freshness scoring and typo-tolerant candidates.\n\n**Core concepts:** autocomplete\n\n**Required mastery output/test:** Separate autocomplete metrics and latency from normal search.",
       "sourceLine": 310,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-07",
@@ -6324,7 +6335,7 @@
       "sourceAnchor": "srch-07-minhash-lsh-dedup",
       "rawSection": "## SRCH-07 — MinHash / LSH Dedup\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement shingles, MinHash, and LSH for near-duplicate detection/canonicalization.\n\n**Core concepts:** dedup; hashing\n\n**Required mastery output/test:** Recall/precision trade-off against exact Jaccard documented.",
       "sourceLine": 320,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-08",
@@ -6347,7 +6358,7 @@
       "sourceAnchor": "srch-08-dense-bi-encoder-retrieval",
       "rawSection": "## SRCH-08 — Dense Bi-Encoder Retrieval\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Train a small contrastive query-document retriever with hard negatives.\n\n**Core concepts:** dense retrieval\n\n**Required mastery output/test:** Separate representation Recall@k from ANN effects.",
       "sourceLine": 330,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-09",
@@ -6370,7 +6381,7 @@
       "sourceAnchor": "srch-09-learned-sparse-retrieval",
       "rawSection": "## SRCH-09 — Learned Sparse Retrieval\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement a simplified learned-sparse/term-expansion retrieval model or faithful miniature.\n\n**Core concepts:** learned sparse\n\n**Required mastery output/test:** Compare quality, sparsity, storage, and latency to BM25.",
       "sourceLine": 340,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-10",
@@ -6393,7 +6404,7 @@
       "sourceAnchor": "srch-10-late-interaction-retrieval",
       "rawSection": "## SRCH-10 — Late-Interaction Retrieval\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement a ColBERT-style token-level MaxSim retriever on a small corpus.\n\n**Core concepts:** late interaction\n\n**Required mastery output/test:** Compare quality/storage/latency against single-vector retrieval.",
       "sourceLine": 350,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-11",
@@ -6416,7 +6427,7 @@
       "sourceAnchor": "srch-11-ann-benchmark",
       "rawSection": "## SRCH-11 — ANN Benchmark\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Benchmark exact vs IVF-like vs HNSW-like retrieval and at least one compression setting.\n\n**Core concepts:** ANN systems\n\n**Required mastery output/test:** Produce recall/latency/memory/build-time curves.",
       "sourceLine": 360,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-12",
@@ -6439,7 +6450,7 @@
       "sourceAnchor": "srch-12-hybrid-retrieval-fusion",
       "rawSection": "## SRCH-12 — Hybrid Retrieval Fusion\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement RRF, normalized-score fusion, and query-dependent blending.\n\n**Core concepts:** hybrid retrieval\n\n**Required mastery output/test:** Show query classes where each method wins/loses.",
       "sourceLine": 370,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-13",
@@ -6462,7 +6473,7 @@
       "sourceAnchor": "srch-13-cross-encoder-neural-reranker",
       "rawSection": "## SRCH-13 — Cross-Encoder / Neural Reranker\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Train or implement a compact reranker and evaluate candidate-set ceiling vs latency.\n\n**Core concepts:** reranking\n\n**Required mastery output/test:** Measure marginal gain as candidate count increases.",
       "sourceLine": 380,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-14",
@@ -6485,7 +6496,7 @@
       "sourceAnchor": "srch-14-search-ltr-lambdamart",
       "rawSection": "## SRCH-14 — Search LTR / LambdaMART\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Train/evaluate a search ranker using lexical/semantic/behavioral features with proper query grouping.\n\n**Core concepts:** learning to rank\n\n**Required mastery output/test:** Compare pointwise, tree-LTR, and reranker behavior.",
       "sourceLine": 390,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-15",
@@ -6508,7 +6519,7 @@
       "sourceAnchor": "srch-15-judgment-click-bias-lab",
       "rawSection": "## SRCH-15 — Judgment + Click-Bias Lab\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Create graded judgments and synthetic biased clicks; estimate position effects and compare raw vs debiased signals.\n\n**Core concepts:** relevance science\n\n**Required mastery output/test:** Demonstrate how UI policy contaminates clicks.",
       "sourceLine": 400,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-16",
@@ -6531,7 +6542,7 @@
       "sourceAnchor": "srch-16-query-rewrite-guardrails",
       "rawSection": "## SRCH-16 — Query Rewrite Guardrails\n**Level:** L3  \n**Format:** LIVE\n\n**Implementation prompt:** Implement guarded term removal/synonym/expansion logic with evidence-based rollback.\n\n**Core concepts:** query rewriting\n\n**Required mastery output/test:** Exact-ID and destructive-rewrite adversarial tests pass.",
       "sourceLine": 410,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-17",
@@ -6554,7 +6565,7 @@
       "sourceAnchor": "srch-17-search-evaluation-replay-harness",
       "rawSection": "## SRCH-17 — Search Evaluation + Replay Harness\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement recall/MRR/MAP/NDCG, slices, result diffs, bootstrap uncertainty, and replay over versioned runs.\n\n**Core concepts:** evaluation science\n\n**Required mastery output/test:** Detect regressions hidden by aggregate metrics.",
       "sourceLine": 420,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-18",
@@ -6577,7 +6588,7 @@
       "sourceAnchor": "srch-18-product-e-commerce-search-case",
       "rawSection": "## SRCH-18 — Product / E-Commerce Search Case\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Build a small product-search stack with identifiers, attributes, filters, availability, hybrid retrieval, LTR, and revenue guardrails.\n\n**Core concepts:** vertical search\n\n**Required mastery output/test:** Verify exact-ID, facet, inventory, and relevance behavior.",
       "sourceLine": 430,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-19",
@@ -6600,7 +6611,7 @@
       "sourceAnchor": "srch-19-video-media-search-case",
       "rawSection": "## SRCH-19 — Video / Media Search Case\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Build a media search prototype using metadata plus visual/audio/text embeddings or precomputed multimodal features.\n\n**Core concepts:** media search\n\n**Required mastery output/test:** Evaluate lexical vs semantic vs multimodal retrieval by query class.",
       "sourceLine": 440,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-20",
@@ -6623,7 +6634,7 @@
       "sourceAnchor": "srch-20-local-geo-search-case",
       "rawSection": "## SRCH-20 — Local / Geo Search Case\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Implement text + geo scoring, radius/viewport filtering, availability, popularity, and ranking.\n\n**Core concepts:** local search\n\n**Required mastery output/test:** Test geographic edge cases and relevance-distance trade-offs.",
       "sourceLine": 450,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-21",
@@ -6646,7 +6657,7 @@
       "sourceAnchor": "srch-21-enterprise-acl-search-case",
       "rawSection": "## SRCH-21 — Enterprise / ACL Search Case\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Build a small document search system with ACL filtering, metadata, freshness, dedup, and hybrid retrieval.\n\n**Core concepts:** enterprise search\n\n**Required mastery output/test:** Prove unauthorized documents never surface and measure filter cost.",
       "sourceLine": 460,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-22",
@@ -6670,7 +6681,7 @@
       "sourceAnchor": "srch-22-search-serving-cache-simulator",
       "rawSection": "## SRCH-22 — Search Serving + Cache Simulator\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Simulate query analysis, shard fan-out, caches, retrieval, reranking, fetch, timeouts, and fallbacks.\n\n**Core concepts:** serving; latency\n\n**Required mastery output/test:** Measure p50/p95/p99 and cache/freshness trade-offs.",
       "sourceLine": 470,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-23",
@@ -6694,7 +6705,7 @@
       "sourceAnchor": "srch-23-search-incident-lab",
       "rawSection": "## SRCH-23 — Search Incident Lab\n**Level:** L3  \n**Format:** EXTENDED_DRILL\n\n**Implementation prompt:** Inject bad analyzer rollout, stale shard, merge storm, hot shard, reranker regression, and vector-version mismatch; diagnose via replay.\n\n**Core concepts:** observability; reliability\n\n**Required mastery output/test:** Root cause must be localized and rollback path demonstrated.",
       "sourceLine": 480,
-      "codingReview": null
+      "codingSolution": null
     },
     {
       "canonicalKey": "2027:coding:SRCH-24",
@@ -6717,7 +6728,7 @@
       "sourceAnchor": "srch-24-end-to-end-search-capstone",
       "rawSection": "## SRCH-24 — End-to-End Search Capstone\n**Level:** L3  \n**Format:** CAPSTONE\n\n**Implementation prompt:** Build a production-shaped search engine spanning ingestion/indexing, lexical+dense retrieval, ANN, hybrid fusion, LTR/reranking, evaluation, vertical behavior, serving, monitoring, and experiments.\n\n**Core concepts:** integration\n\n**Required mastery output/test:** Reproducible repo, benchmark tables, failure tests, architecture memo, and Staff-level defense.",
       "sourceLine": 490,
-      "codingReview": null
+      "codingSolution": null
     }
   ],
   "roadmapWeeks": [
@@ -7850,9 +7861,46 @@
         "system-design"
       ],
       "markdown": "\n## Canonical Staff-Depth Question\n\nExplain candidate generation, pre-ranking, ranking, reranking, and post-processing as separate stages. Define each stage's objective, latency budget, recall/quality ceiling, and failure modes.\n\n## Mastery Answer\n\nLarge recommendation systems usually cannot score the entire corpus with their most expensive model. If the catalog contains millions of items, even a modest per-item inference cost becomes too expensive at request time. The system therefore uses a cascade:\n\n$$\n\\text{millions} \\rightarrow \\text{thousands} \\rightarrow \\text{hundreds} \\rightarrow \\text{tens}\n$$\n\nAs the candidate set shrinks, the system can afford more expensive computation, richer features, and more sophisticated models per candidate.\n\n**Candidate generation / retrieval** reduces the corpus to a manageable candidate set. Its primary objective is high recall under candidate-count and latency constraints. Ordering within the retrieved set is secondary. Its key quality ceiling is structural: if a relevant item is absent from the candidate set, no downstream stage can recover it. Production systems often fan out across multiple candidate sources such as popularity, co-visitation, collaborative filtering, content similarity, graph retrieval, and learned embedding retrieval.\n\n**Pre-ranking** is optional. It is useful when retrieval still produces too many candidates for the heavy ranker. A lightweight model removes weak candidates while trying to preserve nearly all candidates that the downstream ranker would value. Its central trade-off is compute saved versus downstream quality lost. Over-pruning creates another irrecoverable ceiling.\n\n**Ranking** applies richer user, item, user-item interaction, and context features to the surviving candidates. Its job is precise personalized ordering or utility estimation. Depending on the product, it may predict click probability, conversion probability, watch time, expected value, or another task-specific objective. Once the candidate set is fixed, position-sensitive metrics such as NDCG, MRR, MAP, or task-specific utility are usually more informative than recall alone.\n\n**Reranking** reasons about the final slate rather than only independent item scores. It can trade some pointwise relevance for diversity, novelty, freshness, exploration, category or seller caps, inventory considerations, policy constraints, or other product and ecosystem objectives. Evaluation should measure both relevance retained and whether the intended slate-level objectives or constraints are satisfied.\n\n**Post-processing** applies deterministic validity and policy rules before results are returned, such as availability, deduplication, eligibility, geographic restrictions, policy enforcement, or already-consumed suppression. Some hard filters may happen earlier when carrying invalid items farther through the pipeline would waste compute.\n\nEach stage should have its own latency budget, quality metric, failure handling, and observability. Candidate count is a key resource knob: increasing it may improve recall and ranking opportunity, but it increases feature-hydration and scoring cost.\n\nFor diagnosis, identify the **first stage where behavior diverges**:\n\n- retrieval Recall@K drops → candidate-generation or candidate-source problem;\n- retrieval is healthy but valuable items disappear before heavy ranking → pre-ranking or pruning problem;\n- candidates are healthy but ordering metrics fall → ranker, feature, objective, or model problem;\n- main-ranker output is healthy but final slate quality falls → reranking or constraint problem;\n- offline quality is healthy but production behavior changes → serving, feature freshness, cache, versioning, or data-skew problem.\n\nA top-line metric such as CTR is useful for product impact, but it is not sufficient for localization. Stage-specific metrics make the system diagnosable.\n\n## Learn the Concepts\n\n### What R01 is actually testing\n\nR01 is not mainly asking whether you can recite five stage names. It is testing whether you understand the systems principle that makes the stages necessary:\n\n> **Spend cheap computation broadly, then spend expensive computation narrowly, while preserving enough opportunity for downstream stages to succeed.**\n\nA strong answer therefore connects four things for every stage:\n\n1. **objective** — what this stage is trying to optimize;\n2. **resource budget** — how much latency/compute/memory it may consume;\n3. **quality ceiling** — what damage becomes impossible to repair downstream;\n4. **failure evidence** — what metric or telemetry would reveal that this stage is the first place the system went wrong.\n\nThat is the durable mental model. Specific models and candidate counts change from product to product.\n\n### Why the architecture is a funnel\n\nSuppose the corpus contains $N$ items and a scoring model costs roughly $c$ milliseconds per item. Exhaustive request-time scoring costs approximately:\n\n$$\nT_{\\text{score-all}} \\approx N \\cdot c\n$$\n\nEven a small $c$ becomes impossible when $N$ is large. If a model costs $0.08$ ms per item, then scoring one million items serially would represent roughly:\n\n$$\n10^6 \\times 0.08\\text{ ms} = 80{,}000\\text{ ms} = 80\\text{ s}\n$$\n\nReal systems batch, vectorize, parallelize, and use accelerators, so this is not a literal serving estimate. It illustrates the scaling problem: **per-candidate cost multiplies by candidate count**.\n\nA cascade changes the economics:\n\n$$\n\\text{corpus}\n\\rightarrow C_{\\text{retrieve}}\n\\rightarrow C_{\\text{pre-rank}}\n\\rightarrow C_{\\text{rank}}\n\\rightarrow C_{\\text{slate}}\n$$\n\nwith candidate sets shrinking approximately as:\n\n$$\n\\text{millions} \\rightarrow \\text{thousands} \\rightarrow \\text{hundreds} \\rightarrow \\text{tens}\n$$\n\nThe exact numbers are product-specific. The invariant is that later stages see fewer candidates and can therefore use richer features and more expensive models.\n\n### Candidate generation / retrieval: preserve opportunity\n\nCandidate generation answers:\n\n> **Which items are worth considering at all?**\n\nIts job is not to produce the perfect final ordering. Its job is to cheaply reduce a huge corpus to a set that still contains the items the downstream system may want.\n\nSuppose 20 items are relevant and retrieval returns 1,000 candidates containing 18 of them:\n\n$$\n\\operatorname{Recall@1000} = \\frac{18}{20} = 0.90\n$$\n\nThat can be strong retrieval even if those 18 relevant items are poorly ordered inside the 1,000. A later ranker exists specifically to reorder them.\n\nThe critical failure is **omission**:\n\n> If a useful item never enters the candidate set, no downstream model can recover it.\n\nThis is the **candidate-set ceiling**. It is structural, not a claim that a numerical Recall@K value directly upper-bounds a different metric such as NDCG. The point is simply that unavailable candidates cannot receive downstream scores or positions.\n\n#### Why multiple candidate sources help\n\nDifferent retrievers encode different notions of usefulness and fail in different places. A recommender may fan out to:\n\n- popularity or trending;\n- item-item / co-visitation;\n- collaborative filtering;\n- content similarity;\n- two-tower embedding retrieval;\n- graph-based retrieval;\n- recent-session/history retrieval;\n- fresh-item or exploration pools.\n\nIf sources overlap heavily, adding another source may cost latency without adding useful candidates. Therefore measure:\n\n- **source recall** — useful items found by each source;\n- **union recall** — useful items found by the combined set;\n- **marginal recall** — new useful items source $j$ contributes after the other sources are already present;\n- candidate count and source latency.\n\nThe useful question is not just “is this retriever good?” but “what incremental opportunity does it add to the funnel for its cost?”\n\n### Pre-ranking: buy compute cheaply\n\nPre-ranking answers:\n\n> **Which candidates are not worth spending expensive downstream compute on?**\n\nIt is optional. Add it only when retrieval leaves too many candidates for the expensive ranker or feature path.\n\nExample:\n\n$$\n2000 \\rightarrow 400\n$$\n\nA good pre-ranker should be much cheaper than the main ranker and should preserve nearly all candidates that matter downstream.\n\nIts central trade-off is:\n\n$$\n\\text{compute saved} \\leftrightarrow \\text{downstream quality lost}\n$$\n\nUseful diagnostics include:\n\n- candidate reduction ratio;\n- heavy-ranker latency or FLOPs saved;\n- fraction of the heavy ranker's eventual top-$M$ candidates preserved;\n- change in downstream NDCG or task utility;\n- slice-level preservation for cold-start, long-tail, fresh, or other important segments.\n\nIf pruning 80% of candidates cuts ranking cost dramatically while barely moving downstream quality, the pre-ranker is doing useful work. If it removes high-value candidates or saves little compute, it is not.\n\nBecause pre-ranking is another irreversible pruning step, it creates another quality ceiling.\n\n### Ranking: spend capacity on precise ordering\n\nRanking answers:\n\n> **Among the surviving candidates, which are best for this user in this context?**\n\nAt this point the candidate set is small enough to hydrate richer features and evaluate a more expressive model. Features can include:\n\n- user history and preferences;\n- item attributes and learned representations;\n- user-item crosses or interaction features;\n- session and request context;\n- fresh online signals;\n- business or marketplace features when appropriate.\n\nThe ranker's output may be a calibrated probability such as:\n\n$$\nP(\\text{click}\\mid u,i,c)\n$$\n\nor\n\n$$\nP(\\text{purchase}\\mid u,i,c)\n$$\n\nor it may be an ordering score with no probability semantics.\n\nThat distinction matters. If downstream logic multiplies a score by price, thresholds it, feeds it to an auction, or interprets it as risk, calibration and score semantics become important. If the score is used only for ordering, ranking quality may matter more than probability calibration.\n\nAt this stage, metrics such as NDCG, MRR, MAP, or task-specific utility are often more diagnostic than candidate recall because the main problem is **ordering within the available set**.\n\n### Reranking: optimize the slate, not isolated items\n\nRanking commonly scores candidates independently or approximately independently. That can produce a bad page even if every individual score is reasonable.\n\nFor example, the top ten items may all be near-duplicates, all come from one creator, or violate an inventory/exposure objective when considered together.\n\nReranking answers:\n\n> **Does the whole output slate make sense?**\n\nIt may optimize or constrain:\n\n- diversity and redundancy;\n- novelty;\n- freshness;\n- exploration;\n- category balance;\n- seller / creator exposure;\n- inventory or supply considerations;\n- product policy;\n- page-level compatibility or spacing rules.\n\nThe conceptual distinction is:\n\n**Ranking:** How good is this candidate?\n\n**Reranking:** How good is this candidate in the context of the already-constructed or intended slate?\n\nReranking therefore needs both **relevance-retention metrics** and metrics for the slate-level objective it was introduced to control.\n\n### Post-processing: enforce hard validity\n\nPost-processing answers:\n\n> **Is every returned result valid and allowed to show?**\n\nSome properties should not depend on a model learning to behave correctly. Examples include:\n\n- item availability;\n- geographic or contractual eligibility;\n- hard policy restrictions;\n- deduplication;\n- already-consumed suppression;\n- mandatory exclusions.\n\nThese rules are often deterministic.\n\n“Post-processing” describes the logical role, not a requirement that every hard filter run at the very last microsecond. If an item is definitely invalid and carrying it through expensive feature hydration/ranking wastes resources, apply the filter earlier. The important design question is whether the rule is a **hard validity constraint** or a **soft learned preference**.\n\n### How quality ceilings propagate\n\nA useful set view is:\n\n$$\nC_{\\text{rank}} \\subseteq C_{\\text{pre-rank}} \\subseteq C_{\\text{retrieve}} \\subseteq \\mathcal{I}\n$$\n\nwhere $\\mathcal{I}$ is the full item universe.\n\nEvery pruning stage can only remove items unless another candidate source is explicitly introduced later. Therefore:\n\n- retrieval can lose opportunity before ranking begins;\n- pre-ranking can lose opportunity before the heavy model begins;\n- ranking can misorder available candidates but usually cannot recover removed ones;\n- reranking can improve the slate only from what survived earlier stages;\n- post-processing can make results valid, but if it removes many items late it may leave a thin or low-quality slate unless refill/fallback logic exists.\n\nThis is why early-stage recall/preservation is treated differently from late-stage ordering quality.\n\n### Metrics should follow stage objectives\n\nOne top-line metric is not sufficient for a multi-stage system.\n\nUse the mapping:\n\n$$\n\\text{stage objective} \\rightarrow \\text{stage metric}\n$$\n\n| Stage | Primary objective | Useful measurements |\n|---|---|---|\n| Retrieval | Preserve useful opportunity cheaply | Recall@K, source recall, union recall, marginal recall, candidate count, latency |\n| Pre-rank | Remove expensive-to-score weak candidates with bounded quality loss | reduction ratio, top-candidate preservation, downstream quality loss, compute/latency saved |\n| Rank | Order surviving candidates accurately | NDCG, MRR, MAP, task utility, log loss/calibration when probability semantics matter, slice metrics |\n| Rerank | Produce a good slate under multiple objectives/constraints | relevance retained, diversity, novelty, coverage, freshness, exposure, constraint satisfaction |\n| Post-process | Guarantee validity | invalid-result rate, dedup correctness, eligibility violations, refill/fallback behavior |\n| Serve | Execute the intended pipeline reliably | p50/p95/p99, timeout rate, fallback rate, freshness, cache hit rate, version consistency, error rate |\n\nCTR, conversion, watch time, or revenue are important product outcomes. They tell you **whether the product changed**. They usually do not tell you **where the pipeline first went wrong**.\n\n### Latency is a budget, not a vague requirement\n\nFor a service with p99 below 120 ms, do not say every component “needs to be fast.” Assign stage budgets.\n\nA request-time decomposition might be:\n\n$$\nT_{\\text{request}}\n\\approx\nT_{\\text{retrieval}}\n+T_{\\text{feature}}\n+T_{\\text{pre-rank}}\n+T_{\\text{rank}}\n+T_{\\text{rerank}}\n+T_{\\text{overhead}}\n$$\n\nThe sum is only a first-order model because independent work can run in parallel and tail latency depends on dependency fan-out, queuing, batching, hardware, and network behavior. But the decomposition forces explicit ownership of the budget.\n\nCandidate count is one of the strongest control knobs. If heavy scoring costs approximately $0.08$ ms per candidate:\n\n$$\n300 \\times 0.08 \\approx 24\\text{ ms}\n$$\n\nwhile\n\n$$\n1000 \\times 0.08 \\approx 80\\text{ ms}\n$$\n\nMore candidates may improve recall and ranking opportunity, but they also increase:\n\n- feature lookups;\n- memory traffic;\n- ranker inference work;\n- batching pressure;\n- downstream reranking work;\n- tail-latency exposure.\n\nThe Staff-level habit is to state **the quality or reliability cost of every latency optimization**.\n\n### Latency/resource levers and their costs\n\n#### Reduce candidate count\n\n**Why it helps:** fewer candidates require feature hydration and scoring.\n\n**Cost:** relevant candidates may be excluded, lowering the upstream ceiling.\n\n#### Add or strengthen pre-ranking\n\n**Why it helps:** the expensive ranker sees fewer candidates.\n\n**Cost:** a weak or biased pre-ranker can over-prune important slices and create another irrecoverable ceiling.\n\n#### Precompute or cache features\n\n**Why it helps:** less request-time computation and fewer remote lookups.\n\n**Cost:** staleness, storage, invalidation complexity, cache misses, and possible training/serving mismatch.\n\n#### Use a smaller or distilled ranker\n\n**Why it helps:** fewer operations and usually a smaller memory footprint.\n\n**Cost:** reduced capacity or imperfect teacher fidelity.\n\n#### Quantize the ranker\n\n**Why it helps:** reduced precision such as FP32 → FP16/BF16 or INT8 can reduce memory bandwidth and accelerate supported kernels.\n\n**Cost:** numerical approximation can change score quality or ordering and must be measured on the actual hardware/runtime.\n\n#### Tune ANN retrieval\n\n**Why it helps:** fewer probes, smaller search effort, or more compression can reduce latency/memory.\n\n**Cost:** approximate retrieval recall can fall.\n\n#### Parallelize independent work\n\n**Why it helps:** wall-clock latency can approach the slowest parallel branch rather than the sum of branch latencies.\n\n**Cost:** more resource pressure and greater exposure to stragglers/fan-out tail effects.\n\n#### Batch/vectorize inference\n\n**Why it helps:** better accelerator utilization and lower per-candidate overhead.\n\n**Cost:** batching windows can add queueing latency; large batches can hurt tail latency or memory pressure.\n\n### Fallbacks are part of the architecture\n\nA production design is incomplete if it describes only the happy path.\n\nDefine deterministic degradation behavior for stage deadlines and failures. For example:\n\n- retrieval timeout → cached/popularity candidates or another healthy retrieval source;\n- feature timeout → stale-but-safe/default features or a simpler scoring path;\n- heavy-ranker timeout → pre-ranker/lightweight-ranker order;\n- reranker failure → main-ranker order plus mandatory hard filters;\n- insufficient valid results after filtering → controlled refill from a safe fallback pool.\n\nThe goal is not merely availability. It is:\n\n> **deterministic, observable degradation**\n\nMonitor fallback rate and the quality of fallback traffic. A service can have a good availability number while silently serving a degraded path to a meaningful fraction of users.\n\nVersioning belongs here too. A model, feature definition, feature snapshot, embedding generator, and ANN index may need compatible versions. “All components are up” does not mean the intended system is being served if those versions are skewed.\n\n### Debugging by first divergence\n\nWhen a product metric changes, do not immediately blame “the model.” Walk the funnel and locate the first place where evidence diverges from baseline.\n\n- **Recall@K drops** → investigate retrieval, source health, ANN/index state, filtering, or candidate quotas.\n- **Retrieval is stable but good candidates disappear before heavy ranking** → investigate pre-ranking/pruning.\n- **Candidate pool is stable but NDCG/task utility falls** → investigate ranker objective, features, labels, model, or calibration/score semantics.\n- **Main-ranker output is stable but final slate changes** → investigate reranking, caps, constraints, policy, or inventory logic.\n- **Offline quality is stable but production outcomes change** → investigate serving, feature freshness/skew, caches, model/index/feature versions, latency, fallbacks, and presentation changes.\n\nThis is the **first-divergence principle**: the earliest stage whose inputs/outputs/telemetry depart from the healthy reference is usually a more useful localization point than the final business metric.\n\n### Debugging with ranked hypotheses\n\nA Staff-quality incident answer should not stop at a list of possible causes. Rank the hypotheses and name a discriminating check for each.\n\nConsider this incident:\n\n- offline NDCG improves;\n- retrieval recall is unchanged;\n- pre-rank preservation is unchanged;\n- CTR is flat;\n- conversion drops;\n- the drop is concentrated on mobile;\n- the new model uses three real-time features;\n- p99 rises but remains just below the server-side SLO.\n\nA reasonable hypothesis order is:\n\n#### Hypothesis 1: mobile-specific feature / serving skew\n\nWhy plausible:\n- the regression is segmented to mobile;\n- new real-time features were introduced.\n\nDiscriminating checks:\n- feature freshness by device;\n- missing/default rate by device;\n- online-vs-offline feature distributions;\n- timestamp alignment;\n- training/serving transformation parity.\n\nSupporting evidence would be substantially higher stale/missing/default feature rates on mobile.\n\n#### Hypothesis 2: objective mismatch\n\nWhy plausible:\n- CTR is flat;\n- conversion falls.\n\nThe model may still rank clickable items well while worsening downstream purchase propensity.\n\nChecks:\n- purchase-oriented offline metrics;\n- conversion by score bucket;\n- score semantics/calibration for purchase;\n- mobile vs desktop purchase slices.\n\n#### Hypothesis 3: mobile-sensitive latency regression\n\nWhy plausible:\n- p99 increased materially;\n- mobile user experience may be more sensitive to end-to-end latency than server-only SLOs reveal.\n\nChecks:\n- conversion by latency bucket;\n- client-side/mobile end-to-end latency;\n- request abandonment or rendering delay;\n- tail latency beyond the server boundary.\n\nImportant lesson: **one healthy metric rarely rules out an entire failure class**. Unchanged fallback rate does not rule out feature skew. Being under an SLO does not prove latency is harmless. Higher offline NDCG does not prove the online objective improved.\n\n### Safe mitigation before perfect root-cause certainty\n\nIncident response and root-cause analysis are related but not identical.\n\nIf one segment is clearly harmed and the system supports safe segmented rollback, mitigate the harm first while preserving evidence for diagnosis. Examples include:\n\n- roll back mobile while leaving healthy desktop traffic unchanged;\n- disable a new real-time feature and use the previous safe feature path;\n- shrink candidate count temporarily if latency is causing severe degradation;\n- route to the last known-good model/index pair.\n\nA root cause becomes much stronger when **evidence and intervention agree**: the suspected mechanism is observed, changing it removes the regression, and a regression test can reproduce/prevent the failure.\n\n### Changed-constraint transfer\n\nThe same funnel principle survives very different products, but stage choices change with constraints.\n\n#### Smaller catalog, cheap model\n\nIf the catalog is only tens of thousands of items and the ranker is cheap, you may not need a distinct pre-ranker. Simpler architecture can be better.\n\n#### Huge catalog, expensive features\n\nFor tens or hundreds of millions of items, retrieval quality, ANN design, candidate quotas, and pre-ranking become much more important because exhaustive feature hydration is impossible.\n\n#### High freshness requirement\n\nIf new items or interactions must appear within seconds/minutes, the design must account for incremental candidate sources, feature freshness, and index update semantics rather than assuming everything can be precomputed daily.\n\n#### Strict policy/availability constraints\n\nIf many retrieved items are ineligible, apply cheap hard filtering earlier to avoid wasting downstream compute, but preserve deterministic final validation before response.\n\n#### Tight latency, high QPS\n\nCandidate counts, cache strategy, batching, model size, parallel fan-out, and fallback behavior become resource-allocation decisions, not merely modeling choices.\n\nThe correct architecture is therefore not “always five stages.” The correct architecture is the **simplest cascade that meets quality, latency, freshness, reliability, and product constraints**.\n\n### Common precision mistakes\n\nAvoid these in interviews and design reviews:\n\n- **Calling retrieval “sampling” by default.** Retrieval is usually deterministic or approximate search/routing, not statistical sampling.\n- **Treating pre-ranking as mandatory.** It exists only when it earns its complexity by saving meaningful downstream compute.\n- **Saying Recall@K numerically caps NDCG.** The real ceiling is structural: missing candidates cannot be ranked.\n- **Treating reranking as only diversity.** It can encode slate interactions, exposure, freshness, inventory, business rules, and ecosystem objectives.\n- **Putting every hard filter at the very end.** Logical post-processing rules can execute earlier if that saves compute, as long as correctness is preserved.\n- **Using one metric for every stage.** Different stages have different objectives and therefore different diagnostics.\n- **Assuming “below SLO” means latency is harmless.** Product sensitivity can exist inside the formal budget, especially across segments or client conditions.\n- **Assuming offline ranking gains guarantee online gains.** Objective mismatch, serving skew, feedback effects, latency, or presentation can reverse the result.\n- **Listing hypotheses without discriminating tests.** Good debugging pairs each hypothesis with the observation that would support or weaken it.\n\n### What to study here versus in later questions\n\nR01 should give you architectural ownership of the funnel. It should not become a substitute for the deeper specialized questions that follow.\n\nUse later items for deeper treatment of:\n\n- **R04 — Recommendation metrics and metric contracts:** exact definitions, derivations, edge-case semantics, and metric selection;\n- **R06 — Collaborative, content, co-visitation, graph, and hybrid retrieval:** candidate-source mechanisms and blending;\n- **R08 — Two-tower retrieval:** contrastive training, serving, normalization, ANN coupling, and freshness;\n- **R10 — ANN for recommendation:** recall/latency/memory/update trade-offs among ANN families;\n- **R12 — Candidate blending and adaptive retrieval budgets:** quotas, overlap, marginal recall, and adaptive allocation;\n- **R13/R14 — learning-to-rank and LambdaMART:** ranking objectives and ranker mechanics;\n- **R20/R21 — diversity and hard constraints:** reranking/slate construction in depth;\n- **R43 — recommendation serving architecture:** deadlines, features, caches, versioning, rollback, and serving topology;\n- **R45/R46 — monitoring/failure diagnosis and capacity/cost/scaling:** production localization and quantitative resource planning.\n\nR01 is the conceptual skeleton those later questions attach to.\n\n### Self-test prompts for concept ownership\n\nWithout looking at notes, you should be able to reason through these:\n\n1. Why can a retrieval system have strong Recall@1000 even if its internal ordering is poor?\n2. Why is a pre-ranker optional, and what evidence would justify adding one?\n3. What exactly is meant by an upstream “quality ceiling”?\n4. Why might increasing retrieval from 300 to 1,000 candidates improve quality but break p99?\n5. Why is NDCG a better rank-stage diagnostic than CTR?\n6. Give two reranking objectives that cannot be represented well by independent item scoring alone.\n7. Which hard constraints would you move earlier in the pipeline, and why?\n8. Design one deterministic fallback for each major stage.\n9. If candidate recall is unchanged but conversion drops after a ranker rollout, what do you check next and in what order?\n10. Under what constraints would you deliberately remove the pre-rank stage?\n\nIf you can answer those from first principles, you understand the architecture rather than only the memorized wording.\n\n## Material Follow-ups / Scenario Variants\n\n### Stage-specific metrics\n\n**Candidate generation**\n- Recall@K\n- source-level recall\n- union recall\n- marginal recall by candidate source\n- candidate count\n- retrieval latency\n\n**Pre-ranking**\n- candidate reduction ratio\n- heavy-ranker compute or latency saved\n- preservation of downstream top candidates\n- NDCG or task-utility loss caused by pruning\n\n**Ranking**\n- NDCG\n- MRR\n- MAP\n- task-specific utility\n- calibration / log loss when probability semantics matter\n- segment and slice metrics\n\n**Reranking**\n- relevance retained\n- diversity / novelty / coverage\n- constraint-satisfaction rate\n- seller / creator / category exposure\n- freshness\n- product-specific guardrails\n\n**Serving**\n- p50 / p95 / p99 latency\n- timeout rate\n- fallback rate\n- feature freshness\n- cache hit rate\n- model / index / feature version consistency\n- error rate\n\n### Latency-budget variant\n\nSuppose total server-side latency is constrained to p99 < 120 ms. Decompose the request into retrieval, feature hydration, pre-ranking, heavy ranking, reranking, and overhead. Assign explicit budgets rather than saying every stage should simply be “fast.”\n\nCandidate count directly affects heavy-ranking cost. If scoring costs approximately $0.08$ ms per candidate:\n\n$$\n300 \\times 0.08 \\approx 24 \\text{ ms}\n$$\n\nwhile\n\n$$\n1000 \\times 0.08 \\approx 80 \\text{ ms}\n$$\n\nPossible latency levers include:\n- reduce candidate count;\n- add or strengthen pre-ranking;\n- precompute or cache features;\n- batch/vectorize scoring;\n- distill or quantize the ranker;\n- tune ANN retrieval;\n- parallelize independent candidate sources.\n\nFor every optimization, state the possible quality or reliability cost.\n\n### Failure-handling variant\n\nDefine deterministic degradation paths:\n- retrieval timeout → cached, popularity, or another healthy candidate source;\n- feature-service timeout → stale-but-safe features or a simpler ranker;\n- heavy-ranker timeout → pre-ranker or lightweight-ranker ordering;\n- reranker failure → main-ranker order plus required hard filtering.\n\nMonitor fallback rate. A service can remain technically available while silently serving degraded recommendations.\n\n### Offline / online mismatch variant\n\nIf offline NDCG improves while online conversion falls, do not assume the ranker itself is the cause. Check:\n- objective mismatch;\n- calibration or score-semantic changes;\n- feature skew or staleness;\n- timeout/fallback behavior;\n- model/index/feature version mismatch;\n- segment regressions;\n- business-rule or presentation changes.\n"
+    },
+    {
+      "curriculum": "2027",
+      "type": "interview-answer",
+      "slug": "2027/interview-answers/recommendation/R04_interview-answer",
+      "path": "curriculum/2027/interview-answers/recommendation/R04_interview-answer.md",
+      "title": "Recommendation Metrics and Metric Contracts",
+      "declaredItems": [
+        "2027:R04"
+      ],
+      "items": [
+        "2027:search-ir:R04"
+      ],
+      "item": "2027:search-ir:R04",
+      "created": "2026-09-18",
+      "updated": "2026-09-18",
+      "tags": [
+        "recommendation",
+        "ranking-metrics",
+        "evaluation",
+        "metric-contracts"
+      ],
+      "markdown": "\n## Canonical Staff-Depth Question\n\nDerive/compare Precision@k, Recall@k, HitRate@k, MRR, MAP, DCG/NDCG, AUC/log-loss, calibration, coverage, novelty, diversity, watch-time/completion, conversion/revenue, and long-term metrics.\n\n## Mastery Answer\n\nI would start by defining the **metric contract** before computing any number: the evaluation unit, candidate universe, relevance/label definition, cutoff $k$, treatment of multiple positives, no-positive cases, duplicates and ties, averaging scheme, sampled negatives, attribution/censoring window, and whether the metric is computed over all requests or only eligible requests. Without that contract, two teams can report the same metric name and mean different things.\n\nFor top-$k$ ranking quality, **Precision@$k$** measures how much of the displayed top-$k$ is relevant,\n\n$$\nP@k = \\frac{|\\mathrm{TopK} \\cap R|}{k},\n$$\n\nwhile **Recall@$k$** measures how much of the relevant set was recovered,\n\n$$\nR@k = \\frac{|\\mathrm{TopK} \\cap R|}{|R|}.\n$$\n\nPrecision is useful when display slots are scarce; recall is especially important in candidate generation because the ranker cannot recover an item that retrieval missed. **HitRate@$k$** is the indicator that at least one relevant item appears in the top $k$; it is useful for next-item or one-success tasks but saturates quickly and ignores additional hits.\n\n**MRR** averages the reciprocal rank of the first relevant item,\n\n$$\n\\mathrm{MRR} = \\frac{1}{N}\\sum_q \\frac{1}{\\mathrm{rank}_q^{(1)}},\n$$\n\nwith a defined value, usually $0$, when there is no hit. It is appropriate when the first useful result dominates utility and deliberately ignores later relevant items. **Average Precision** accumulates Precision@$i$ at ranks containing relevant items; **MAP** averages AP over evaluation units. MAP therefore rewards ranking all relevant items early, but its denominator and cutoff semantics must be specified, especially when there are more relevant items than $k$.\n\nFor graded relevance, **DCG** assigns larger gain to more relevant items and discounts lower ranks, commonly\n\n$$\n\\mathrm{DCG}@k = \\sum_{i=1}^{k}\\frac{2^{rel_i}-1}{\\log_2(i+1)}.\n$$\n\n**NDCG** divides by the ideal DCG for that unit,\n\n$$\n\\mathrm{NDCG}@k = \\frac{\\mathrm{DCG}@k}{\\mathrm{IDCG}@k},\n$$\n\nso it is normalized across queries/users with different attainable gain. The contract must state the gain function, discount, and what happens when $\\mathrm{IDCG}=0$.\n\n**AUC** is fundamentally a pairwise ordering metric: it can be read as the probability that a randomly chosen positive receives a higher score than a randomly chosen negative, with tie handling defined explicitly. It is threshold-independent but can look strong while the top few positions are poor, so it is rarely sufficient for a top-$k$ recommender. **Log-loss** evaluates probabilistic predictions rather than just ordering:\n\n$$\n-\\left[y\\log p + (1-y)\\log(1-p)\\right].\n$$\n\nIt heavily penalizes confident wrong predictions and is appropriate when score semantics matter. If negatives were sampled or the evaluation class mix differs from deployment, raw log-loss may no longer represent deployment probability quality without correction.\n\n**Calibration** asks whether predicted probabilities have empirical meaning: among events scored near $0.2$, roughly $20\\%$ should occur under the relevant conditioning. Calibration is crucial when scores feed thresholds, expected-value calculations, auctions, pacing, or other downstream arithmetic. A model can have excellent AUC/NDCG and poor calibration, or vice versa.\n\nRanking accuracy is not the whole product. **Coverage** measures breadth, such as catalog coverage or the fraction of users for whom the system can produce valid recommendations. **Novelty** measures how non-obvious or non-popular recommendations are, often using self-information such as $-\\log p(i)$ from an item popularity distribution. **Diversity** measures non-redundancy inside a slate, for example average pairwise dissimilarity. These three are distinct: a list can be diverse but composed entirely of popular items, or novel but highly redundant.\n\nFor media/feed systems, **watch time** captures absolute engagement while **completion** normalizes by content duration; each has bias and gaming modes. For commerce, **conversion** and **revenue/value** are closer to the business outcome but are sparse, delayed, attribution-sensitive, and affected by price, inventory, returns, and exposure. **Long-term metrics** such as retention, return rate, satisfaction, lifetime value, churn, or creator/provider health target durable utility but have longer feedback loops and usually require online experimentation or careful causal design rather than naive offline correlation.\n\nI would select metrics by stage. Candidate retrieval is primarily judged by Recall@$K$/HitRate@$K$, marginal recall by source, coverage, and latency/resource cost. A ranker is judged by NDCG/MAP/MRR depending on label structure and user utility, with AUC/log-loss/calibration as score-level diagnostics when relevant. Reranking/slate construction adds diversity, novelty, coverage, and constraint metrics while monitoring relevance loss. The final product is judged online by engagement, conversion/value, long-term outcomes, and guardrails. The key Staff-level point is that **offline ranking metrics are stage diagnostics and proxies, not the product objective itself**.\n\n## Learn the Concepts\n\n### 1. Start with the metric contract\n\nA metric name is incomplete until its semantics are fixed. Define at least:\n\n- **Evaluation unit:** user, session, request, impression, query, or another grain.\n- **Candidate universe:** full catalog, retrieved candidate set, logged impressions, or a sampled negative pool.\n- **Relevance:** binary, graded, implicit engagement, purchase, watch threshold, human judgment, etc.\n- **Cutoff $k$:** and whether fewer than $k$ returned items change the denominator.\n- **No-positive cases:** include as zero, exclude, or report separately.\n- **Duplicates / ties:** how repeated items and equal scores are handled.\n- **Averaging:** macro per request/user, micro over events, or weighted by traffic/value.\n- **Sampling:** whether negatives are exhaustive or sampled and whether correction is required.\n- **Time / attribution:** label window, late events, censoring, returns/cancellations.\n- **Eligibility:** whether unavailable, filtered, policy-blocked, or unjudgeable items are part of the denominator.\n\nMetric-contract disagreements are not implementation trivia. They can reverse conclusions and invalidate experiment comparisons.\n\n### 2. Precision@$k$, Recall@$k$, and HitRate@$k$\n\nLet $R$ be the relevant set and $L_k$ the first $k$ recommended items.\n\n$$\nP@k = \\frac{|L_k \\cap R|}{k}\n$$\n\nanswers: **Of the slots I used, how many were relevant?**\n\n$$\nR@k = \\frac{|L_k \\cap R|}{|R|}\n$$\n\nanswers: **Of all relevant items, how many did I recover?**\n\n$$\nHR@k = \\mathbf{1}[|L_k \\cap R| > 0]\n$$\n\nanswers: **Did I get at least one success?**\n\nExample: suppose two items are relevant.\n\n- Ranking A: relevant, irrelevant, irrelevant.\n- Ranking B: irrelevant, relevant, relevant.\n\nAt $k=3$, A has $P@3=1/3$, $R@3=1/2$, $HR@3=1$. B has $P@3=2/3$, $R@3=1$, $HR@3=1$. HitRate cannot distinguish them because it intentionally discards the number and positions of later hits.\n\n**Stage connection:** Recall@$K$ is the central retrieval-ceiling metric. If a useful item is absent from the candidate set, no downstream ranker can place it in the final slate.\n\n### 3. MRR and MAP\n\n**MRR** focuses only on the first relevant item. If the first relevant ranks at positions $1$, $2$, and $10$ for three requests, the reciprocal ranks are $1$, $1/2$, and $1/10$ before averaging. It is excellent when the user mainly needs one good answer and weaker when utility depends on several good recommendations.\n\nFor binary relevance, an AP-style metric is\n\n$$\nAP@k = \\frac{1}{Z}\\sum_{i=1}^{k} P@i\\cdot rel_i,\n$$\n\nwhere $rel_i\\in\\{0,1\\}$ and the normalization $Z$ must be specified. Common contracts use either the total number of relevant items or a cutoff-aware quantity such as $\\min(|R|,k)$. **MAP** is the mean AP across users/queries.\n\nMAP answers a different question from MRR: it rewards repeatedly placing relevant items early, not just the first one.\n\n### 4. DCG and NDCG\n\nDCG is designed for **graded relevance**. Two choices create its behavior:\n\n1. **Gain:** how much more valuable grade 3 is than grade 2. The common exponential gain $2^{rel}-1$ makes high grades disproportionately important.\n2. **Discount:** how quickly value decays with rank. The common $\\log_2(i+1)$ denominator penalizes deep positions but not linearly.\n\nNDCG normalizes against the best possible ordering for the same judged items, making scores more comparable across requests with different relevance distributions.\n\nImportant edge case: if a request has no positive gain, $\\mathrm{IDCG}=0$. The evaluator must decide whether its NDCG is $0$, excluded, or separately reported. Silently choosing one policy changes aggregate results.\n\n### 5. AUC, log-loss, and calibration are not top-$k$ substitutes\n\n**AUC** measures global pairwise ordering. This is useful for diagnosing whether positives generally score above negatives, but it weights many pairs that never affect the product's top slots. With enormous negative universes, a model may achieve high AUC while still making poor top-$k$ choices.\n\n**Log-loss** is a proper probabilistic scoring rule. It distinguishes a model that says $p=0.51$ from one that says $p=0.99$ even when their ordering is identical. This matters when the score is intended to represent CTR, conversion probability, completion probability, etc.\n\n**Calibration** checks semantic correctness of those probabilities. Common diagnostics include reliability curves, expected calibration error, or Brier score, but calibration should also be inspected by important segment because aggregate calibration can hide segment drift.\n\nA useful separation is:\n\n- NDCG/MAP/MRR: **Is the ordering useful?**\n- Log-loss: **Are probabilistic predictions accurate?**\n- Calibration: **Can downstream systems interpret the score as a probability?**\n\n### 6. Coverage, novelty, and diversity\n\nThese are often confused.\n\n**Catalog coverage** can be defined as\n\n$$\n\\frac{|\\{\\text{items recommended in the evaluation window}\\}|}{|\\text{eligible catalog}|}.\n$$\n\nIt measures global breadth, not whether any individual slate is diverse.\n\n**Novelty** often uses inverse popularity. One simple item-level score is\n\n$$\nnovelty(i) = -\\log p(i),\n$$\n\nwhere $p(i)$ is historical exposure or interaction frequency under a specified time window. Smoothing is needed for unseen items.\n\n**Intra-list diversity** can use pairwise dissimilarity:\n\n$$\nILD(L) = \\frac{2}{n(n-1)}\\sum_{i<j}(1-sim(i,j)).\n$$\n\nThe similarity definition is part of the contract: category similarity, content embeddings, seller/creator identity, or another representation can produce very different conclusions.\n\nThese metrics are usually paired with a relevance metric because maximizing them alone can recommend irrelevant tail items.\n\n### 7. Watch time and completion\n\nFor video/media:\n\n- **Watch time** measures absolute consumed time, which can favor longer content and may be distorted by autoplay or passive consumption.\n- **Completion rate** measures fraction completed or an event such as reaching a threshold, which can favor short content.\n\nNeither is automatically equivalent to satisfaction. Hides, skips, reports, session exits, survey signals, and return behavior may be needed as guardrails or long-horizon outcomes.\n\n### 8. Conversion and revenue/value\n\nConversion is closer to downstream commerce utility but creates harder labels:\n\n- conversions are sparse;\n- labels arrive late;\n- attribution windows matter;\n- stockouts/availability affect opportunity;\n- price and promotions affect conversion;\n- returns/cancellations can reverse apparent value;\n- revenue can reward expensive items even when user utility or margin falls.\n\nTherefore the metric contract should distinguish orders, GMV/revenue, margin/profit, expected value, and realized post-return value rather than using the word “revenue” loosely.\n\n### 9. Long-term metrics\n\nLong-term objectives include retention, repeat sessions, durable satisfaction, churn reduction, lifetime value, creator/provider health, and marketplace sustainability. They are strategically important but statistically difficult because they are delayed, sparse, confounded, and influenced by many product surfaces.\n\nOffline ranking metrics should therefore be treated as **diagnostics/proxies**. Long-term claims usually need online experiments, switchbacks/cluster designs when interference matters, or causal/off-policy methods when experimentation is constrained.\n\n### 10. Metric selection by recommender stage\n\n| Stage | Primary questions | Typical metrics |\n|---|---|---|\n| Candidate retrieval | Did we recover items the user could value? | Recall@$K$, HitRate@$K$, source marginal recall, coverage, latency/memory |\n| Ranker | Did we order candidates correctly? | NDCG@$k$, MAP@$k$, MRR, sometimes AUC |\n| Probability model | Do score magnitudes have meaning? | Log-loss, calibration, Brier/ECE-style diagnostics |\n| Reranker/slate | Is the slate useful and non-redundant under constraints? | NDCG/relevance loss + diversity, novelty, coverage, constraint violations |\n| Online product | Did behavior/business improve? | CTR, watch/completion, conversion, revenue/value, satisfaction |\n| Long horizon | Did durable utility/ecosystem health improve? | retention, return rate, churn, LTV, provider/creator health |\n\n### 11. Common evaluation failures\n\n- Reporting NDCG without defining relevance grades or no-positive behavior.\n- Comparing Recall@$K$ across systems with different candidate universes.\n- Computing AUC on sampled negatives and treating it as if it were full-population AUC.\n- Treating a ranking score as a probability without calibration evidence.\n- Averaging per-user metrics in one experiment and event-weighted metrics in another.\n- Ignoring delayed conversion censoring.\n- Letting unavailable or policy-blocked items inflate offline ranking quality.\n- Optimizing diversity/novelty without measuring relevance loss.\n- Treating offline metric gain as proof of online or long-term product gain.\n\n## Material Follow-ups / Scenario Variants\n\n### Which metric would you choose for a two-stage recommender?\n\nFor candidate generation I would optimize Recall@$K$ at a reasonably large $K$, sliced by important user/item segments, while tracking marginal recall from each candidate source and latency/resource cost. For the final ranker I would use NDCG@$k$ if relevance is graded or MAP/MRR depending whether multiple relevant items or the first hit dominates utility. Final product acceptance would depend on online business/user metrics rather than offline rank metrics alone.\n\n### Why can AUC improve while NDCG@$10$ gets worse?\n\nAUC averages ordering over positive-negative pairs across the score distribution. The model can improve many easy pairs far below the displayed cutoff while making worse mistakes among the highest-scored candidates. NDCG@$10$ is concentrated on the top ranks, so the two metrics can move in opposite directions.\n\n### When does calibration matter in recommendation?\n\nCalibration matters whenever a score participates in arithmetic or thresholds rather than only sorting: expected conversion value $p(\\mathrm{purchase})\\times value$, auction bids, pacing, notification thresholds, risk controls, or multi-objective score blending. If the score is used only as an ordering function, monotonic transformations preserve ranking but change probability semantics.\n\n### E-commerce transfer\n\nFor an e-commerce “items you may like” system, I would track candidate Recall@$K$, ranker NDCG@$k$ or MAP@$k$, calibration if pCTR/pCVR feeds expected value, catalog/seller coverage and novelty as ecosystem diagnostics, and online conversion plus revenue/margin with explicit attribution/return windows. Availability and out-of-stock items must be handled consistently in the evaluation contract.\n\n### Video/feed transfer\n\nFor a video/feed system, binary clicks are usually insufficient. I would use graded engagement signals such as watch-time/completion in offline ranking metrics, then evaluate online watch quality, skips/hides/reports, diversity, and return/retention. Completion must be interpreted with duration bias in mind, and absolute watch time can be gamed by long content or passive consumption.\n\n### Changed constraint: only one relevant item exists per request\n\nRecall@$k$ and HitRate@$k$ become nearly equivalent binary success measures, while MRR adds sensitivity to where that one item appears. MAP contributes little beyond reciprocal-rank-style behavior in this setting.\n\n### Changed constraint: relevance is multi-grade and top positions dominate\n\nUse DCG/NDCG with a documented gain and discount function. Precision/Recall collapse graded information and are less aligned with the product utility.\n"
     }
   ],
-  "codingReviews": [],
+  "codingSolutions": [
+    {
+      "curriculum": "2027",
+      "type": "coding-solution",
+      "slug": "2027/coding-solutions/recommendation/REC-01",
+      "path": "curriculum/2027/coding-solutions/recommendation/REC-01.py",
+      "filename": "REC-01.py",
+      "title": "Ranking Metrics Suite",
+      "declaredItem": "2027:REC-01",
+      "item": "2027:coding:REC-01",
+      "language": "python",
+      "extension": "py",
+      "code": "\"\"\"Implementation for REC-01.\"\"\"\n\nfrom __future__ import annotations\n\nimport math\nfrom collections.abc import Hashable, Mapping, Sequence\nfrom typing import Literal, TypeAlias\n\n\nItemId: TypeAlias = Hashable\nNoRelevantPolicy: TypeAlias = Literal[\"zero\", \"skip\", \"error\"]\nGainScheme: TypeAlias = Literal[\"linear\", \"exponential\"]\nMetricValue: TypeAlias = float | None\n\n\n_VALID_POLICIES = (\"zero\", \"skip\", \"error\")\n_VALID_GAIN_SCHEMES = (\"linear\", \"exponential\")\n\n\ndef _validate_k(k: int) -> None:\n    if k <= 0:\n        raise ValueError(f\"k must be a positive integer, got {k!r}\")\n\n\ndef _validate_no_duplicates(ranked_items: Sequence[ItemId]) -> None:\n    seen: set[ItemId] = set()\n    for item in ranked_items:\n        if item in seen:\n            raise ValueError(f\"Duplicate item id in ranked_items: {item!r}\")\n        seen.add(item)\n\n\ndef _validate_relevance_map(relevance_by_item: Mapping[ItemId, float]) -> None:\n    for item, grade in relevance_by_item.items():\n        if not math.isfinite(grade) or grade < 0:\n            raise ValueError(\n                f\"Invalid relevance grade for item {item!r}: {grade!r}. \"\n                \"Grades must be finite and non-negative.\"\n            )\n\n\ndef _validate_no_relevant_policy(policy: NoRelevantPolicy) -> None:\n    if policy not in _VALID_POLICIES:\n        raise ValueError(f\"Unknown no_relevant_policy: {policy!r}\")\n\n\ndef _validate_gain_scheme(gain_scheme: GainScheme) -> None:\n    if gain_scheme not in _VALID_GAIN_SCHEMES:\n        raise ValueError(f\"Unknown gain_scheme: {gain_scheme!r}\")\n\n\ndef _count_relevant(\n    relevance_by_item: Mapping[ItemId, float],\n    relevance_threshold: float,\n) -> int:\n    \"\"\"Count items in the full relevance map at or above threshold.\"\"\"\n    return sum(1 for v in relevance_by_item.values() if v >= relevance_threshold)\n\n\ndef _resolve_no_relevant(policy: NoRelevantPolicy) -> MetricValue:\n    \"\"\"Apply the no-relevant-items policy when a metric's denominator is zero.\"\"\"\n    if policy == \"zero\":\n        return 0.0\n    if policy == \"skip\":\n        return None\n    if policy == \"error\":\n        raise ValueError(\"No relevant items are present for this query.\")\n    raise ValueError(f\"Unknown no_relevant_policy: {policy!r}\")\n\n\ndef _gain(relevance: float, gain_scheme: GainScheme) -> float:\n    if gain_scheme == \"linear\":\n        return relevance\n    if gain_scheme == \"exponential\":\n        return (2.0**relevance) - 1.0\n    raise ValueError(f\"Unknown gain_scheme: {gain_scheme!r}\")\n\n\ndef _validate_aggregate_inputs(\n    rankings: Sequence[Sequence[ItemId]],\n    relevance_maps: Sequence[Mapping[ItemId, float]],\n) -> None:\n    if len(rankings) != len(relevance_maps):\n        raise ValueError(\n            \"rankings and relevance_maps must have the same length \"\n            f\"(got {len(rankings)} and {len(relevance_maps)}).\"\n        )\n    if len(rankings) == 0:\n        raise ValueError(\"rankings must contain at least one ranking.\")\n\n\ndef precision_at_k(\n    ranked_items: Sequence[ItemId],\n    relevance_by_item: Mapping[ItemId, float],\n    k: int,\n    *,\n    relevance_threshold: float = 1.0,\n    no_relevant_policy: NoRelevantPolicy = \"zero\",\n) -> MetricValue:\n    \"\"\"Return Precision@k for one ranking.\n\n    Precision uses exactly ``k`` as its denominator, even when fewer than\n    ``k`` items were returned. Unknown item IDs have relevance zero.\n    \"\"\"\n    _validate_k(k)\n    _validate_no_duplicates(ranked_items)\n    _validate_relevance_map(relevance_by_item)\n    _validate_no_relevant_policy(no_relevant_policy)\n\n    total_relevant = _count_relevant(relevance_by_item, relevance_threshold)\n    if total_relevant == 0:\n        return _resolve_no_relevant(no_relevant_policy)\n\n    top_k_recs = ranked_items[:k]\n    num_relevance = 0\n    for item in top_k_recs:\n        if item in relevance_by_item and relevance_by_item[item] >= relevance_threshold:\n            num_relevance += 1\n\n    return num_relevance / k\n\n\ndef recall_at_k(\n    ranked_items: Sequence[ItemId],\n    relevance_by_item: Mapping[ItemId, float],\n    k: int,\n    *,\n    relevance_threshold: float = 1.0,\n    no_relevant_policy: NoRelevantPolicy = \"zero\",\n) -> MetricValue:\n    \"\"\"Return Recall@k for one ranking.\"\"\"\n    _validate_k(k)\n    _validate_no_duplicates(ranked_items)\n    _validate_relevance_map(relevance_by_item)\n    _validate_no_relevant_policy(no_relevant_policy)\n\n    total_relevant = _count_relevant(relevance_by_item, relevance_threshold)\n    if total_relevant == 0:\n        return _resolve_no_relevant(no_relevant_policy)\n\n    top_k = ranked_items[:k]\n    num_relevant_retrieved = sum(\n        1 for item in top_k if relevance_by_item.get(item, 0.0) >= relevance_threshold\n    )\n    return num_relevant_retrieved / total_relevant\n\n\ndef hit_rate_at_k(\n    ranked_items: Sequence[ItemId],\n    relevance_by_item: Mapping[ItemId, float],\n    k: int,\n    *,\n    relevance_threshold: float = 1.0,\n    no_relevant_policy: NoRelevantPolicy = \"zero\",\n) -> MetricValue:\n    \"\"\"Return 1.0 if the top-k prefix contains a relevant item, else 0.0.\"\"\"\n    _validate_k(k)\n    _validate_no_duplicates(ranked_items)\n    _validate_relevance_map(relevance_by_item)\n    _validate_no_relevant_policy(no_relevant_policy)\n\n    total_relevant = _count_relevant(relevance_by_item, relevance_threshold)\n    if total_relevant == 0:\n        return _resolve_no_relevant(no_relevant_policy)\n\n    top_k = ranked_items[:k]\n    hit = any(relevance_by_item.get(item, 0.0) >= relevance_threshold for item in top_k)\n    return 1.0 if hit else 0.0\n\n\ndef reciprocal_rank_at_k(\n    ranked_items: Sequence[ItemId],\n    relevance_by_item: Mapping[ItemId, float],\n    k: int,\n    *,\n    relevance_threshold: float = 1.0,\n    no_relevant_policy: NoRelevantPolicy = \"zero\",\n) -> MetricValue:\n    \"\"\"Return reciprocal rank of the first relevant item through rank k.\"\"\"\n    _validate_k(k)\n    _validate_no_duplicates(ranked_items)\n    _validate_relevance_map(relevance_by_item)\n    _validate_no_relevant_policy(no_relevant_policy)\n\n    total_relevant = _count_relevant(relevance_by_item, relevance_threshold)\n    if total_relevant == 0:\n        return _resolve_no_relevant(no_relevant_policy)\n\n    top_k = ranked_items[:k]\n    for rank, item in enumerate(top_k, start=1):\n        if relevance_by_item.get(item, 0.0) >= relevance_threshold:\n            return 1.0 / rank\n    return 0.0\n\n\ndef average_precision_at_k(\n    ranked_items: Sequence[ItemId],\n    relevance_by_item: Mapping[ItemId, float],\n    k: int,\n    *,\n    relevance_threshold: float = 1.0,\n    no_relevant_policy: NoRelevantPolicy = \"zero\",\n) -> MetricValue:\n    \"\"\"Return AP@k using ``min(total_relevant, k)`` as denominator.\"\"\"\n    _validate_k(k)\n    _validate_no_duplicates(ranked_items)\n    _validate_relevance_map(relevance_by_item)\n    _validate_no_relevant_policy(no_relevant_policy)\n\n    total_relevant = _count_relevant(relevance_by_item, relevance_threshold)\n    if total_relevant == 0:\n        return _resolve_no_relevant(no_relevant_policy)\n\n    top_k = ranked_items[:k]\n    denominator = min(total_relevant, k)\n    num_relevant_so_far = 0\n    precision_sum = 0.0\n    for rank, item in enumerate(top_k, start=1):\n        if relevance_by_item.get(item, 0.0) >= relevance_threshold:\n            num_relevant_so_far += 1\n            precision_sum += num_relevant_so_far / rank\n    return precision_sum / denominator\n\n\ndef mean_reciprocal_rank_at_k(\n    rankings: Sequence[Sequence[ItemId]],\n    relevance_maps: Sequence[Mapping[ItemId, float]],\n    k: int,\n    *,\n    relevance_threshold: float = 1.0,\n    no_relevant_policy: NoRelevantPolicy = \"zero\",\n) -> float:\n    \"\"\"Return the macro mean of per-ranking reciprocal ranks.\"\"\"\n    _validate_aggregate_inputs(rankings, relevance_maps)\n    _validate_k(k)\n    _validate_no_relevant_policy(no_relevant_policy)\n\n    values: list[float] = []\n    for ranked_items, relevance_by_item in zip(rankings, relevance_maps):\n        rr = reciprocal_rank_at_k(\n            ranked_items,\n            relevance_by_item,\n            k,\n            relevance_threshold=relevance_threshold,\n            no_relevant_policy=no_relevant_policy,\n        )\n        if rr is not None:\n            values.append(rr)\n\n    if not values:\n        raise ValueError(\n            \"All queries were skipped under no_relevant_policy='skip'; \"\n            \"nothing to aggregate.\"\n        )\n    return sum(values) / len(values)\n\n\ndef mean_average_precision_at_k(\n    rankings: Sequence[Sequence[ItemId]],\n    relevance_maps: Sequence[Mapping[ItemId, float]],\n    k: int,\n    *,\n    relevance_threshold: float = 1.0,\n    no_relevant_policy: NoRelevantPolicy = \"zero\",\n) -> float:\n    \"\"\"Return the macro mean of per-ranking AP@k values.\"\"\"\n    _validate_aggregate_inputs(rankings, relevance_maps)\n    _validate_k(k)\n    _validate_no_relevant_policy(no_relevant_policy)\n\n    values: list[float] = []\n    for ranked_items, relevance_by_item in zip(rankings, relevance_maps):\n        ap = average_precision_at_k(\n            ranked_items,\n            relevance_by_item,\n            k,\n            relevance_threshold=relevance_threshold,\n            no_relevant_policy=no_relevant_policy,\n        )\n        if ap is not None:\n            values.append(ap)\n\n    if not values:\n        raise ValueError(\n            \"All queries were skipped under no_relevant_policy='skip'; \"\n            \"nothing to aggregate.\"\n        )\n    return sum(values) / len(values)\n\n\ndef dcg_at_k(\n    ranked_items: Sequence[ItemId],\n    relevance_by_item: Mapping[ItemId, float],\n    k: int,\n    *,\n    gain_scheme: GainScheme = \"exponential\",\n) -> float:\n    \"\"\"Return DCG@k using discounts ``log2(rank + 1)``.\"\"\"\n    _validate_k(k)\n    _validate_no_duplicates(ranked_items)\n    _validate_relevance_map(relevance_by_item)\n    _validate_gain_scheme(gain_scheme)\n\n    top_k = ranked_items[:k]\n    total = 0.0\n    for rank, item in enumerate(top_k, start=1):\n        relevance = relevance_by_item.get(item, 0.0)\n        total += _gain(relevance, gain_scheme) / math.log2(rank + 1)\n    return total\n\n\ndef idcg_at_k(\n    relevance_by_item: Mapping[ItemId, float],\n    k: int,\n    *,\n    gain_scheme: GainScheme = \"exponential\",\n) -> float:\n    \"\"\"Return ideal DCG@k over the complete relevance map.\"\"\"\n    _validate_k(k)\n    _validate_relevance_map(relevance_by_item)\n    _validate_gain_scheme(gain_scheme)\n\n    sorted_relevances = sorted(relevance_by_item.values(), reverse=True)\n    top_k = sorted_relevances[:k]\n    total = 0.0\n    for rank, relevance in enumerate(top_k, start=1):\n        total += _gain(relevance, gain_scheme) / math.log2(rank + 1)\n    return total\n\n\ndef ndcg_at_k(\n    ranked_items: Sequence[ItemId],\n    relevance_by_item: Mapping[ItemId, float],\n    k: int,\n    *,\n    gain_scheme: GainScheme = \"exponential\",\n    no_relevant_policy: NoRelevantPolicy = \"zero\",\n) -> MetricValue:\n    \"\"\"Return normalized DCG@k, applying policy when IDCG is zero.\"\"\"\n    _validate_k(k)\n    _validate_no_duplicates(ranked_items)\n    _validate_relevance_map(relevance_by_item)\n    _validate_gain_scheme(gain_scheme)\n    _validate_no_relevant_policy(no_relevant_policy)\n\n    ideal = idcg_at_k(relevance_by_item, k, gain_scheme=gain_scheme)\n    if ideal == 0.0:\n        return _resolve_no_relevant(no_relevant_policy)\n\n    actual = dcg_at_k(ranked_items, relevance_by_item, k, gain_scheme=gain_scheme)\n    return actual / ideal"
+    }
+  ],
   "sources": [
     {
       "curriculum": "2026",

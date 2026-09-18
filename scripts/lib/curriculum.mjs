@@ -145,8 +145,47 @@ async function walkMarkdown(root) {
   } catch (error) { if (error.code === 'ENOENT') return []; throw error; }
 }
 
+const CODE_LANGUAGES = new Map([
+  ['.py', 'python'], ['.js', 'javascript'], ['.jsx', 'jsx'], ['.mjs', 'javascript'], ['.cjs', 'javascript'],
+  ['.ts', 'typescript'], ['.tsx', 'tsx'], ['.sql', 'sql'], ['.java', 'java'], ['.c', 'c'], ['.cc', 'cpp'],
+  ['.cpp', 'cpp'], ['.h', 'c'], ['.hpp', 'cpp'], ['.go', 'go'], ['.rs', 'rust'], ['.scala', 'scala'],
+  ['.kt', 'kotlin'], ['.kts', 'kotlin'], ['.sh', 'bash'], ['.r', 'r'],
+]);
+
+async function walkCodeFiles(root) {
+  try {
+    const entries = await fs.readdir(root, { withFileTypes: true });
+    const files = [];
+    for (const entry of entries) {
+      const full = path.join(root, entry.name);
+      if (entry.isDirectory()) files.push(...await walkCodeFiles(full));
+      else if (CODE_LANGUAGES.has(path.extname(entry.name).toLowerCase())) files.push(full);
+    }
+    return files.sort();
+  } catch (error) { if (error.code === 'ENOENT') return []; throw error; }
+}
+
+export function parseCodingSolution({ curriculum, relativePath, code }) {
+  const extension = path.extname(relativePath).toLowerCase();
+  const id = path.basename(relativePath, extension).toUpperCase();
+  const errors = [];
+  if (!new RegExp(`^${codingId.source}$`, 'i').test(id)) errors.push(`${relativePath}: filename must be a canonical coding ID such as DSA-01, REC-05, or SRCH-11`);
+  if (curriculum === '2027') {
+    const directory = path.posix.basename(path.posix.dirname(relativePath));
+    const expected = id.startsWith('SRCH-') ? 'search' : id.startsWith('REC-') ? 'recommendation' : null;
+    if (expected && directory !== expected) errors.push(`${relativePath}: ${id} coding solution must be under coding-solutions/${expected}/`);
+  }
+  return {
+    curriculum, type: 'coding-solution',
+    slug: relativePath.replace(/^curriculum\//, '').slice(0, -extension.length),
+    path: relativePath, filename: path.basename(relativePath), title: id,
+    declaredItem: `${curriculum}:${id}`, item: null,
+    language: CODE_LANGUAGES.get(extension) || 'text', extension: extension.slice(1), code, errors,
+  };
+}
+
 export async function buildIndex(root = process.cwd()) {
-  const sources = [], knowledgeItems = [], codingItems = [], roadmapWeeks = [], interviewAnswers = [], codingReviews = [], warnings = [], errors = [];
+  const sources = [], knowledgeItems = [], codingItems = [], roadmapWeeks = [], interviewAnswers = [], codingSolutions = [], warnings = [], errors = [];
   for (const curriculum of Object.keys(CURRICULA)) {
     const base = path.join(root, 'curriculum', curriculum);
     for (const file of await walkMarkdown(path.join(base, 'sources'))) {
@@ -158,7 +197,7 @@ export async function buildIndex(root = process.cwd()) {
         knowledgeItems.push(...result.knowledge); codingItems.push(...result.coding); roadmapWeeks.push(...result.weeks); warnings.push(...result.warnings);
       } catch (error) { errors.push(`${relativePath}: malformed Markdown/frontmatter: ${error.message}`); }
     }
-    for (const kind of ['interview-answers', 'coding-reviews']) {
+    for (const kind of ['interview-answers']) {
       for (const file of await walkMarkdown(path.join(base, kind))) {
         const relativePath = path.relative(root, file).split(path.sep).join('/');
         try {
@@ -166,10 +205,16 @@ export async function buildIndex(root = process.cwd()) {
           const artifact = parseArtifact({ curriculum, kind, relativePath, raw });
           errors.push(...artifact.errors);
           delete artifact.errors;
-          if (kind === 'interview-answers') interviewAnswers.push(artifact);
-          else codingReviews.push(artifact);
+          interviewAnswers.push(artifact);
         } catch (error) { errors.push(`${relativePath}: malformed frontmatter: ${error.message}`); }
       }
+    }
+    for (const file of await walkCodeFiles(path.join(base, 'coding-solutions'))) {
+      const relativePath = path.relative(root, file).split(path.sep).join('/');
+      const solution = parseCodingSolution({ curriculum, relativePath, code: await fs.readFile(file, 'utf8') });
+      errors.push(...solution.errors);
+      delete solution.errors;
+      codingSolutions.push(solution);
     }
   }
 
@@ -177,14 +222,14 @@ export async function buildIndex(root = process.cwd()) {
   const all = [...knowledgeItems, ...codingItems];
   for (const item of all) {
     if ('bank' in item) item.interviewAnswer = null;
-    else item.codingReview = null;
+    else item.codingSolution = null;
   }
   associateRoadmap(all, roadmapWeeks, warnings);
-  associateArtifacts({ all, interviewAnswers, codingReviews, errors });
+  associateArtifacts({ all, interviewAnswers, codingSolutions, errors });
   const index = {
-    schemaVersion: 3, generatedAt: new Date().toISOString(), curricula: Object.values(CURRICULA).filter((c) => sources.some((s) => s.curriculum === c.id)),
+    schemaVersion: 4, generatedAt: new Date().toISOString(), curricula: Object.values(CURRICULA).filter((c) => sources.some((s) => s.curriculum === c.id)),
     knowledgeItems, codingItems, roadmapWeeks: roadmapWeeks.sort((a,b) => a.curriculum.localeCompare(b.curriculum) || a.weekNumber-b.weekNumber),
-    interviewAnswers, codingReviews, sources, warnings, errors,
+    interviewAnswers, codingSolutions, sources, warnings, errors,
   };
   return index;
 }
@@ -196,7 +241,7 @@ export function parseArtifact({ curriculum, kind, relativePath, raw }) {
   const parsed = matter(raw);
   const data = parsed.data || {};
   const errors = [];
-  const expectedType = { 'interview-answers': 'interview-answer', 'coding-reviews': 'coding-review' }[kind];
+  const expectedType = { 'interview-answers': 'interview-answer' }[kind];
   const prefix = `${relativePath}:`;
   if (data.type !== expectedType) errors.push(`${prefix} type must be "${expectedType}"`);
   if (typeof data.title !== 'string' || !data.title.trim()) errors.push(`${prefix} title is required`);
@@ -252,14 +297,10 @@ function validateArtifactLocation({ curriculum, kind, relativePath, declaredItem
     if (!/^bank\d{2}$/.test(bank || '')) errors.push(`${relativePath}: 2026 knowledge item must include bank qualification, e.g. 2026:bank01:A3`);
     else if (directory !== bank) errors.push(`${relativePath}: declared bank ${bank} does not match directory ${directory}`);
   }
-  if (kind === 'coding-reviews' && curriculum === '2027') {
-    const expected = id.startsWith('SRCH-') ? 'search' : id.startsWith('REC-') ? 'recommendation' : null;
-    if (expected && directory !== expected) errors.push(`${relativePath}: ${id} coding review must be under coding-reviews/${expected}/`);
-  }
 }
 
-function associateArtifacts({ all, interviewAnswers, codingReviews, errors }) {
-  const answerByItem = new Map(), reviewByItem = new Map();
+function associateArtifacts({ all, interviewAnswers, codingSolutions, errors }) {
+  const answerByItem = new Map(), solutionByItem = new Map();
   const associate = (artifact, target) => {
     artifact.items = artifact.declaredItems.map((declared) => {
       const item = resolveArtifactReference(all, declared, target);
@@ -273,9 +314,16 @@ function associateArtifacts({ all, interviewAnswers, codingReviews, errors }) {
     if (answerByItem.has(item.canonicalKey)) errors.push(`${artifact.path}: duplicate interview answer for ${item.canonicalKey}; already mapped by ${answerByItem.get(item.canonicalKey)}`);
     else { answerByItem.set(item.canonicalKey, artifact.path); item.interviewAnswer = artifactRef(artifact); }
   }
-  for (const artifact of codingReviews) for (const item of associate(artifact, 'coding')) {
-    if (reviewByItem.has(item.canonicalKey)) errors.push(`${artifact.path}: duplicate coding review for ${item.canonicalKey}; already mapped by ${reviewByItem.get(item.canonicalKey)}`);
-    else { reviewByItem.set(item.canonicalKey, artifact.path); item.codingReview = artifactRef(artifact); }
+  for (const solution of codingSolutions) {
+    const item = resolveArtifactReference(all, solution.declaredItem, 'coding');
+    if (!item) errors.push(`${solution.path}: unknown or ambiguous canonical coding item "${solution.declaredItem}"`);
+    else if (solutionByItem.has(item.canonicalKey)) errors.push(`${solution.path}: duplicate coding solution for ${item.canonicalKey}; already mapped by ${solutionByItem.get(item.canonicalKey)}`);
+    else {
+      solutionByItem.set(item.canonicalKey, solution.path);
+      solution.item = item.canonicalKey;
+      solution.title = item.title;
+      item.codingSolution = { slug: solution.slug, path: solution.path, title: solution.title, language: solution.language };
+    }
   }
 }
 

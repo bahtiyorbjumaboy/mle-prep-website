@@ -33,12 +33,12 @@ The empty repository is a supported state. It renders instructions instead of de
 
 ```text
 curriculum/
-  2026/{sources,interview-answers,coding-reviews}/
-  2027/{sources,interview-answers,coding-reviews}/
+  2026/{sources,interview-answers,coding-solutions}/
+  2027/{sources,interview-answers,coding-solutions}/
 generated/curriculum-index.json
 scripts/                       # indexing and validation
 src/{components,layouts,lib,pages,styles}/
-templates/{interview-answer,coding-review}.md
+templates/interview-answer.md
 .github/workflows/deploy-pages.yml
 ```
 
@@ -50,9 +50,9 @@ Files under `curriculum/**/sources/` are canonical and are never changed by a bu
 | --- | --- | --- | --- |
 | Source | Authoritative question bank, coding set, roadmap, or instruction document | Defines canonical items | No |
 | Interview answer | Durable reusable answer to one knowledge question | Exactly one knowledge item; at most one per item | No |
-| Coding review | Durable reusable solution review | Exactly one coding item; at most one per item | No |
+| Coding solution | Complete source-code solution | Filename identifies exactly one coding item; at most one per item | No |
 
-Current completion, mastery, attempts, review dates, and short personal notes live in the browser progress store. Durable answers and reviews must not contain live-progress fields.
+Current completion, mastery, attempts, review dates, and short personal notes live in the browser progress store. Durable interview answers and coding solutions must not contain live-progress state.
 
 ## Adding curriculum files
 
@@ -107,24 +107,19 @@ tags: [recommendation, ranking]
 
 Begin body headings at H2. One answer maps to exactly one knowledge item. Put reusable concept teaching in a `## Learn the Concept` section in the same file. See `templates/interview-answer.md`.
 
-## Adding coding reviews
+## Adding coding solutions
 
-Use `curriculum/2026/coding-reviews/<ID>.md`, `curriculum/2027/coding-reviews/search/SRCH-xx.md`, or `curriculum/2027/coding-reviews/recommendation/REC-xx.md`.
+Add the complete source file using its canonical problem ID as the filename:
 
-```yaml
----
-type: coding-review
-item: "2027:REC-05"
-title: "Two-Tower Retrieval"
-created: "2026-09-17"
-updated: "2026-09-17"
-tags: [retrieval, embeddings]
----
+```text
+curriculum/2026/coding-solutions/DSA-01.py
+curriculum/2027/coding-solutions/search/SRCH-11.py
+curriculum/2027/coding-solutions/recommendation/REC-05.py
 ```
 
-Begin body headings at H2. One review maps to exactly one coding problem. See `templates/coding-review.md`.
+The filename is the identity: use the exact coding ID and do not identify a solution by display wording. The indexer resolves concise IDs such as `REC-05` to their internal canonical key and rejects unknown, misplaced, or duplicate solutions. Supported text source files include Python, JavaScript/TypeScript, SQL, Java, C/C++, Go, Rust, Scala, Kotlin, shell, and R. The complete file is rendered verbatim on the website.
 
-Interview-answer and coding-review Markdown supports headings, tables, task lists, fenced code, inline and display LaTeX math, and Mermaid fenced blocks. Math is processed through Astro's Unified pipeline with `remark-math` and `rehype-katex`; source LaTeX is passed through unchanged before rendering. Use `$...$` for inline math and `$$...$$` for display math. The KaTeX stylesheet is included globally.
+Interview-answer Markdown supports headings, tables, task lists, fenced code, inline and display LaTeX math, and Mermaid fenced blocks. Math is processed through Astro's Unified pipeline with `remark-math` and `rehype-katex`; source LaTeX is passed through unchanged before rendering. Use `$...$` for inline math and `$$...$$` for display math. The KaTeX stylesheet is included globally.
 
 ## Progress persistence and portability
 
@@ -134,7 +129,7 @@ Use **Export progress** to download readable JSON, **Import** to validate and re
 
 ## Validation
 
-`npm run validate` detects duplicate canonical keys, unknown artifact references, duplicate interview answers/reviews, malformed or unquoted dates, H1 artifact headings, forbidden live-progress fields, malformed frontmatter, and invalid progress fixtures. Non-fatal source ambiguity is printed with context. Tests cover parsing, identity, artifact relationships, contract violations, progress import, and real KaTeX output. The mandatory math fixture is `tests/fixtures/math-rendering.md`.
+`npm run validate` detects duplicate canonical keys, unknown artifact references, duplicate interview answers/solutions, misplaced solution files, malformed or unquoted dates, H1 artifact headings, forbidden live-progress fields, malformed frontmatter, and invalid progress fixtures. Non-fatal source ambiguity is printed with context. Tests cover parsing, identity, artifact relationships, contract violations, progress import, and real KaTeX output. The mandatory math fixture is `tests/fixtures/math-rendering.md`.
 
 ## GitHub Pages deployment
 
