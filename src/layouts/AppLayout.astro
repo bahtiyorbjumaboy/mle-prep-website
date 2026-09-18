@@ -8,8 +8,9 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const href = (path: string) => `${base}${path}` || '/';
 const route = Astro.url.pathname.replace(base, '') || '/';
 const nav = [
-  ['/interview-answers/', 'Answers', 'answer'],
-  ['/coding-solutions/', 'Coding Solutions', 'code'],
+  ['/', 'Dashboard', 'home'], ['/roadmap/', 'Roadmap', 'map'], ['/knowledge/', 'Knowledge', 'brain'], ['/coding/', 'Coding', 'code'],
+  ['/interview-answers/', 'Answers', 'answer'], ['/coding-solutions/', 'Coding Solutions', 'code'], ['/review/', 'Review Queue', 'review'],
+  ['/sources/', 'Sources', 'source'],
 ];
 ---
 <!doctype html>
