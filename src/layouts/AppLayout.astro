@@ -19,7 +19,7 @@ const nav = [
     <meta charset="UTF-8" /><meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} /><meta name="generator" content={Astro.generator} />
     <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" /><title>{title} · ML Interview OS</title>
-    <script is:inline>document.documentElement.dataset.theme=localStorage.getItem('ml-os-theme')||'dark'</script>
+    <script is:inline>document.documentElement.dataset.theme=localStorage.getItem('ml-os-theme')||'dark';const readingSize=localStorage.getItem('ml-os-reading-size');document.documentElement.dataset.readingSize=['small','medium','large','x-large'].includes(readingSize)?readingSize:'medium'</script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>

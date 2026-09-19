@@ -12,7 +12,25 @@ export function initShell() {
   scrim?.addEventListener('click', () => { sidebar?.classList.remove('open'); scrim.classList.remove('show'); });
   document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => { const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = theme; localStorage.setItem('ml-os-theme', theme); });
   document.addEventListener('keydown', (event) => { if (event.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes((event.target as HTMLElement).tagName)) { event.preventDefault(); const base = import.meta.env.BASE_URL.replace(/\/$/, ''); location.href = `${base}/search/`; } });
-  initProgressForms(); renderProgress(); initFilters(); initPortability(); initCurriculumSelector();
+  initReadingSize(); initProgressForms(); renderProgress(); initFilters(); initPortability(); initCurriculumSelector();
+}
+
+function initReadingSize() {
+  const sizes = ['small', 'medium', 'large', 'x-large'];
+  const labels = ['90%', '100%', '115%', '130%'];
+  const saved = localStorage.getItem('ml-os-reading-size');
+  let index = sizes.includes(saved || '') ? sizes.indexOf(saved!) : 1;
+  const render = () => {
+    document.documentElement.dataset.readingSize = sizes[index];
+    document.querySelectorAll<HTMLOutputElement>('[data-reading-size-label]').forEach((label) => { label.value = labels[index]; label.textContent = labels[index]; });
+    document.querySelectorAll<HTMLButtonElement>('[data-reading-size-step]').forEach((button) => { const next = index + Number(button.dataset.readingSizeStep); button.disabled = next < 0 || next >= sizes.length; });
+  };
+  document.querySelectorAll<HTMLButtonElement>('[data-reading-size-step]').forEach((button) => button.addEventListener('click', () => {
+    index = Math.min(sizes.length - 1, Math.max(0, index + Number(button.dataset.readingSizeStep)));
+    localStorage.setItem('ml-os-reading-size', sizes[index]);
+    render();
+  }));
+  render();
 }
 
 function initCurriculumSelector() {

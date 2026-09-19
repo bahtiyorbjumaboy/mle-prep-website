@@ -127,6 +127,8 @@ Interactive progress is stored in browser `localStorage` under a versioned key. 
 
 Use **Export progress** to download readable JSON, **Import** to validate and replace local data, and **Reset** to clear it. Import preserves valid records, reports malformed ones, and safely retains unknown canonical keys for future curricula. Import overwrite and reset both require confirmation.
 
+Rendered Markdown and coding-solution pages include text-size controls. The selected reading size is stored locally in the browser and reused across content pages.
+
 ## Validation
 
 `npm run validate` detects duplicate canonical keys, unknown artifact references, duplicate interview answers/solutions, misplaced solution files, malformed or unquoted dates, H1 artifact headings, forbidden live-progress fields, malformed frontmatter, and invalid progress fixtures. Non-fatal source ambiguity is printed with context. Tests cover parsing, identity, artifact relationships, contract violations, progress import, and real KaTeX output. The mandatory math fixture is `tests/fixtures/math-rendering.md`.
