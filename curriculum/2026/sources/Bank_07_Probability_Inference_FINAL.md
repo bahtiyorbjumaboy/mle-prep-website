@@ -14,7 +14,7 @@
 
 ## Final questions
 
-### A1
+### A1 — Base Rates and Likelihood Ratios
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A1
@@ -22,7 +22,7 @@
 
 **Q:** A test flags fraud with 95% sensitivity and 2% false-positive rate. Explain, using likelihood ratios rather than by recomputing a confusion matrix, why the same test is informative at one prevalence and nearly useless at another. Then tell me what would have to change to make a positive flag actionable at 0.5% prevalence.
 
-### A2
+### A2 — Independence and Conditional Dependence
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A2
@@ -30,7 +30,7 @@
 
 **Q:** Distinguish independence, uncorrelatedness, and conditional independence. Give an example of variables that are uncorrelated but dependent, and an example where conditioning creates dependence that was not there before. Then say why this matters for a model.
 
-### A3
+### A3 — Likelihood, MAP, Losses, and Regularization
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A3; absorbs A4
@@ -38,7 +38,7 @@
 
 **Q:** Connect likelihood, loss, MAP, and regularization. Derive squared error and cross-entropy from likelihood assumptions, show how common priors induce common penalties, explain what MAP omits relative to full Bayesian inference, and identify cases where the loss↔likelihood correspondence breaks.
 
-### A5
+### A5 — Beta–Binomial Conjugacy and Thompson Sampling
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A5
@@ -46,7 +46,7 @@
 
 **Q:** Derive the Beta-Binomial conjugate update, then explain precisely why it makes Thompson sampling cheap. Say what the Beta's parameters mean, what happens as data accumulates, and what breaks if the reward is not Bernoulli.
 
-### A6
+### A6 — CLT, Bootstrap, and Permutation Tests
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A6; absorbs A19
@@ -56,7 +56,7 @@
 
 **Follow-up tree:**
 - Derive the one-sample and two-sample z/t test statistics at interview depth. When is a z-test justified, when do you use a t-test, what changes with paired versus independent samples, what determines the degrees of freedom, and how do the assumptions connect to the confidence interval?
-### A7
+### A7 — Experiment Design under Interference
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A7; absorbs A18, B31
@@ -66,14 +66,14 @@
 
 **Follow-up tree:**
 - What changes when you test many metrics, variants, or segments? Distinguish family-wise error rate from false discovery rate, and explain when you would use Bonferroni/Holm versus Benjamini-Hochberg rather than treating every p-value independently.
-### A8
+### A8 — CUPED and Variance Reduction
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A8
 
 **Q:** Explain CUPED. What is it doing statistically, why does it not bias the estimate, and what determines how much it buys? Then name other variance-reduction techniques and say when each applies.
 
-### A11
+### A11 — Conditional Expectation as the MSE Minimizer
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A11
@@ -81,7 +81,7 @@
 
 **Q:** Prove that the conditional expectation minimizes expected squared error. Then tell me what the analogous minimizer is for absolute error, and explain why this result is the foundation of regression.
 
-### A12
+### A12 — Entropy, Cross-Entropy, and KL Divergence
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A12
@@ -89,28 +89,28 @@
 
 **Q:** Define entropy, cross-entropy, and KL divergence, and state exactly how they relate. Then explain how you would use KL or a related divergence to detect drift, and what its limitations are for that purpose.
 
-### A13
+### A13 — Simpson’s Paradox and Confounding
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A13
 
 **Q:** Explain Simpson's paradox with a concrete example, and say what is actually happening in causal terms. Then tell me how you would guard against it when reporting an experiment or a model comparison.
 
-### A14
+### A14 — Reservoir Sampling and Uniformity Proof
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A14
 
 **Q:** You are streaming records of unknown total length and must keep a uniform random sample of k of them using O(k) memory. Give the algorithm and prove that every record ends up in the sample with equal probability.
 
-### A15
+### A15 — Estimator Properties, MLE, and Method of Moments
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A15; absorbs A16
 
 **Q:** Define estimator bias, variance, consistency, and efficiency, then compare MLE with method of moments. Give examples where a biased estimator is preferable and where MoM is attractive despite lower efficiency.
 
-### A17
+### A17 — Confidence and Credible Intervals
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A17
@@ -118,77 +118,77 @@
 
 **Q:** State what a 95% confidence interval means, precisely. Then tell me the three interpretations people commonly give that are wrong, and explain how a Bayesian credible interval differs.
 
-### A20
+### A20 — Heteroscedasticity and Its Consequences
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A20
 
 **Q:** What is heteroscedasticity, how would you detect it, and what does it break? Be specific about what remains valid and what does not.
 
-### A21
+### A21 — Banded LSH Collision Probability
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A21
 
 **Q:** Your autocorrect pools candidates with an LSH index over Jaccard similarity. Derive the collision probability for a banded LSH scheme and explain how the band and row parameters shape the S-curve. Then tell me how you would choose them for a sub-10ms latency budget.
 
-### A22
+### A22 — Conditional Multivariate Gaussians
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A22
 
 **Q:** For a multivariate Gaussian, state what the conditional distribution of one block given another looks like, and explain why the result is remarkable. Then connect it to something you would actually build.
 
-### A23
+### A23 — Probability and Causal-Inference Boundary Drill
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A23
 
 **Q:** *(Drill instruction: this question is not answered in depth. The task is to state, for each topic below, what it is in one sentence and where it would apply — then explicitly say that you have not prepared the derivation. Practicing that boundary aloud is the point.)* Give me a one-line account of each of the following and say where it would come up: instrumental variables; difference-in-differences; DAGs and d-separation; order statistics and the winner's curse; overdispersion and count models; memorylessness and hazard rates; Jensen's inequality; importance sampling; inverse transform sampling; and the measure-theoretic foundations of probability.
 
-### B24
+### B24 — Sample Spaces, Random Variables, and Distributions
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B24
 
 **Q:** Define a sample space and a random variable, then distinguish a PMF, a PDF, and a CDF. Say one thing a PDF is not.
 
-### B25
+### B25 — Expectation, Variance, and Linearity
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B25
 
 **Q:** Define expectation and variance. State linearity of expectation, and say whether it requires independence.
 
-### B26
+### B26 — Joint, Marginal, and Conditional Distributions
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B26
 
 **Q:** Distinguish joint, marginal, and conditional distributions, and state the chain rule. Then say which direction — forward or inverse — a probability question versus a statistics question is running.
 
-### B27
+### B27 — Bayes’ Theorem and Odds
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B27
 
 **Q:** State Bayes' theorem and name each of the four terms. Then state it in odds form.
 
-### B28
+### B28 — Standard Probability Distributions
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B28
 
 **Q:** Name the standard distributions — Bernoulli, binomial, Poisson, exponential, normal, uniform — with their means and variances, and say in one phrase what generative story each comes from.
 
-### B29
+### B29 — Law of Large Numbers versus CLT
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B29
 
 **Q:** Distinguish the law of large numbers from the central limit theorem. Say what each one is about, and what CLT requires.
 
-### B30
+### B30 — Covariance, Correlation, and Standard Error
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B30

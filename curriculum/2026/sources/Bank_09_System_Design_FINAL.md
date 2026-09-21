@@ -14,7 +14,7 @@
 
 ## Final questions
 
-### A1
+### A1 — ML System Design Interview Framework
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A1
@@ -24,7 +24,7 @@
 **Follow-up tree:**
 - How would your structure change for an offline batch model, a retrieval/ranking system, and an LLM application?
 
-### A2
+### A2 — Retail Product Recommendations
 **Phase:** G1/S1  
 **Depth:** D2  
 **Source mapping:** A2
@@ -34,7 +34,7 @@
 **Follow-up tree:**
 - How do you prevent popularity/exposure feedback loops and support item/user cold start without breaking latency?
 
-### A3
+### A3 — Large-Catalog Site Search
 **Phase:** G1/S1  
 **Depth:** D2  
 **Source mapping:** A3
@@ -44,7 +44,7 @@
 **Follow-up tree:**
 - How do you protect exact-match/SKU queries, handle zero-result queries, and decide where lexical versus dense retrieval belongs?
 
-### A4
+### A4 — Insurance-Claim Fraud Detection
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A4
@@ -54,7 +54,7 @@
 **Follow-up tree:**
 - With fraud well under 1%, how do review capacity, calibration, thresholding, delayed labels, and human escalation change the design?
 
-### A5
+### A5 — Natural-Language Data-Warehouse Interface
 **Phase:** G1/S1  
 **Depth:** D2  
 **Source mapping:** A5
@@ -64,7 +64,7 @@
 **Follow-up tree:**
 - How do schema linking, structured-output validation, least-privilege SQL execution, and prompt-injection defenses change the architecture?
 
-### A6
+### A6 — Feed Ranking and Session Personalization
 **Phase:** G1/S1  
 **Depth:** D2  
 **Source mapping:** A6; absorbs A15
@@ -74,7 +74,7 @@
 **Follow-up tree:**
 - How do you detect session-intent shifts, introduce exploration safely, and keep feedback loops from collapsing diversity?
 
-### A7
+### A7 — Low-Latency Ad CTR Prediction
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A7
@@ -84,7 +84,7 @@
 **Follow-up tree:**
 - How do calibration, auction feedback, feature freshness, and the sub-30ms budget constrain model choice and serving architecture?
 
-### A8
+### A8 — Shared Feature Platform
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A8
@@ -94,7 +94,7 @@
 **Follow-up tree:**
 - How do you guarantee point-in-time correctness, offline/online consistency, backfills, and feature-version compatibility?
 
-### A9
+### A9 — Large-Scale Vector Search
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A9
@@ -104,7 +104,7 @@
 **Follow-up tree:**
 - What are the consistency semantics for inserts/deletes, index rebuilds, tombstones, and query-time versioning?
 
-### A10
+### A10 — A/B Testing Infrastructure
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A10
@@ -114,7 +114,7 @@
 **Follow-up tree:**
 - How do interference, CUPED/variance reduction, metric governance, multiple testing, and experiment collisions affect the platform?
 - How would the platform implement deterministic assignment and exposure logging, detect sample-ratio mismatch, enforce mutually exclusive experiments, and keep retries/cross-device identity from corrupting treatment assignment?
-### A11
+### A11 — Organization-Wide Model Monitoring and Safety
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A11; absorbs A14
@@ -124,7 +124,7 @@
 **Follow-up tree:**
 - How do delayed labels, drift, segment harm/fairness, and alert fatigue change monitoring thresholds and incident ownership?
 
-### A13
+### A13 — Multi-Tenant Model-Serving Platform
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A13; absorbs A12
@@ -134,7 +134,7 @@
 **Follow-up tree:**
 - How do noisy-neighbor isolation, tenant quotas, model/index version coupling, and rollback work when one tenant causes a hotspot?
 
-### A16
+### A16 — Internal ML Training Platform
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A16

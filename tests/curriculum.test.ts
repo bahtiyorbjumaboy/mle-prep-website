@@ -22,6 +22,10 @@ describe('Markdown source parser', () => {
     expect(parsed.knowledge).toHaveLength(1);
     expect(parsed.knowledge[0]).toMatchObject({ canonicalKey: '2026:bank01:A3', depth: 'D2', titleOrQuestion: 'Why does least squares use a pseudoinverse?' });
   });
+  it('uses the question field instead of metadata for a bare ID heading', () => {
+    const parsed = parseSource({ curriculum: '2026', filename: 'Bank_01_Linear_Algebra_FINAL.md', relativePath: 'curriculum/2026/sources/bank.md', markdown: '### A1\n**Phase:** G1\n**Depth:** D2\n\n**Q:** Why are regression coefficients unstable?\n' });
+    expect(parsed.knowledge[0].titleOrQuestion).toBe('Why are regression coefficients unstable?');
+  });
   it('extracts coding prompts without inventing fields', () => {
     const parsed = parseSource({ curriculum: '2027', filename: 'Coding_Set.md', relativePath: 'coding.md', markdown: '## REC-05: Build a two-tower retrieval model\n\n- **Level:** LIVE\n- **Time Box:** 45 min\n' });
     expect(parsed.coding[0]).toMatchObject({ canonicalKey: '2027:coding:REC-05', level: 'LIVE', timeBox: '45 min' });

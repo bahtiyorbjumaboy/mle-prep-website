@@ -14,14 +14,14 @@
 
 ## Final questions
 
-### A1
+### A1 — Multicollinearity and Unstable Regression Coefficients
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A1
 
 **Q:** You fit a linear regression on a marketing dataset. The model's R² is fine, but when you refit on bootstrap resamples the coefficients swing wildly in magnitude and several flip sign. A colleague suggests standardizing the features. Walk me through what is actually happening, whether standardizing will fix it, and what you would do.
 
-### A2
+### A2 — Condition Numbers, Convergence, and Numerical Error
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A2
@@ -29,7 +29,7 @@
 
 **Q:** Define the condition number of a matrix in terms of its singular values. Explain what it predicts about (a) how fast gradient descent converges on a least-squares objective and (b) how much numerical error you should expect when solving for the coefficients. Then explain why forming and inverting XᵀX is a worse idea than it looks.
 
-### A3
+### A3 — Least-Squares Geometry and the Pseudoinverse
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A3; absorbs B22
@@ -39,7 +39,8 @@
 
 **Follow-up tree:**
 - Compare the normal equations, QR factorization, and SVD as ways to solve least squares. Which would you choose for a well-conditioned full-rank matrix, an ill-conditioned matrix, and a rank-deficient matrix, and why?
-### A5
+
+### A5 — Ridge Regression in SVD Coordinates
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A5
@@ -47,7 +48,7 @@
 
 **Q:** Rewrite ridge regression in the SVD coordinates of X. What does λ do to each direction of the feature space, and why does that explain both the stabilization and the bias ridge introduces? Then state what the sum of those per-direction factors represents.
 
-### A6
+### A6 — Eigendecomposition, SVD, and PCA
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A6; absorbs A7
@@ -55,21 +56,21 @@
 
 **Q:** Compare eigendecomposition, SVD, and PCA as related spectral tools. State when each decomposition exists, the orthogonality guarantees, derive PCA from covariance and from the SVD of centered data, explain centering versus scaling, and identify a supervised-learning case where PCA can hurt.
 
-### A8
+### A8 — Positive Definiteness in ML Matrices
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A8
 
 **Q:** What does it mean for a matrix to be positive definite versus positive semi-definite, and how would you actually check in practice? Give me three matrices that show up in ML that are guaranteed PSD and explain why. What does it mean if your empirical covariance matrix comes back with a slightly negative eigenvalue?
 
-### A9
+### A9 — L1, L2, and L∞ Regularization Geometry
 **Phase:** G1  
 **Depth:** D2  
 **Source mapping:** A9
 
 **Q:** Compare the L1, L2, and L∞ unit balls geometrically, then explain why L1 regularization produces exactly zero coefficients while L2 does not. Give me the geometric argument first, then tell me what is happening to the penalty's derivative at zero that makes it possible.
 
-### A11
+### A11 — Truncated SVD, Numerical Rank, and Matrix Norms
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A11; absorbs A10, A18
@@ -77,7 +78,7 @@
 
 **Q:** Explain truncated SVD and the Eckart–Young optimality result. Connect singular-spectrum shape to numerical rank, denoising, compression, latent-factor models, and embedding collapse; compare Frobenius, spectral, and nuclear norms and explain how you would choose a rank.
 
-### A12
+### A12 — Two-Layer Network Gradient Derivation
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A12
@@ -85,14 +86,14 @@
 
 **Q:** Take a two-layer network: z₁ = W₁x + b₁, a₁ = φ(z₁), z₂ = W₂a₁ + b₂, scalar loss L. Derive the gradients with respect to W₁, W₂, b₁, and b₂. I care about the shapes and about *why* each transpose, each elementwise product, and each sum appears — not just the final expressions. Then tell me what happens to the weight gradient when you batch.
 
-### A13
+### A13 — Cosine, Euclidean, and Inner-Product Similarity
 **Phase:** S1/G2  
 **Depth:** D2  
 **Source mapping:** A13
 
 **Q:** Start from ‖u − v‖² = ‖u‖² + ‖v‖² − 2uᵀv. Use it to explain exactly when cosine similarity and Euclidean distance produce the same ranking, what goes wrong if you rank by raw inner product on unnormalized embeddings, and why approximate nearest-neighbor search still works in a space where distances are supposed to concentrate.
 
-### A14
+### A14 — Embedding Retrieval and ANN Tradeoffs
 **Phase:** S1/G2  
 **Depth:** D2  
 **Source mapping:** A14; absorbs A26
@@ -100,7 +101,7 @@
 
 **Q:** In an embedding-retrieval system, reason through normalization, inner product versus L2, exact versus approximate search, IVF/HNSW/PQ-style tradeoffs, dimension reduction, reduced precision, and quantized codes. Explain what each choice does to memory, geometry, recall, latency, and rebuild needs.
 
-### A15
+### A15 — LSH, MinHash, and Random Projections
 **Phase:** S1/G2  
 **Depth:** D2  
 **Source mapping:** A15
@@ -108,7 +109,7 @@
 
 **Q:** Your autocorrect pools candidates with Jaccard similarity over an LSH index. Explain what an LSH family preserves probabilistically and by what mechanism. Contrast MinHash for Jaccard with random-hyperplane/projection LSH for cosine. Then distinguish LSH collision guarantees from Johnson–Lindenstrauss random-projection guarantees rather than conflating them, and explain how MinHash band/row parameters convert a per-hash collision probability into the sharp threshold you actually want.
 
-### A16
+### A16 — Low-Rank Recommenders and Cold Start
 **Phase:** S1/G2  
 **Depth:** D2  
 **Source mapping:** A16
@@ -116,7 +117,7 @@
 
 **Q:** Frame a user–item recommender as a low-rank factorization problem. What does the rank actually mean here, what does the span of the item factors tell you, and why does cold start appear as an identifiability/span problem in this factorization view rather than merely a shortage of global training data? Then say what breaks if you try to solve it with a literal SVD.
 
-### A17
+### A17 — Orthogonal Transformations, Initialization, and Whitening
 **Phase:** G1  
 **Depth:** D3  
 **Source mapping:** A17
@@ -124,42 +125,42 @@
 
 **Q:** What makes a matrix orthogonal, and what does an orthogonal transformation preserve? Use that to explain why orthogonal initialization helps deep networks, why L2 regularization is rotation-invariant while L1 is not, and what whitening does to the distances between your data points.
 
-### B19
+### B19 — Span, Basis, Independence, and Rank
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B19
 
 **Q:** Define span, linear independence, basis, and rank, and state how they relate. Why is row rank equal to column rank, and what is the rank of a product AB bounded by?
 
-### B20
+### B20 — Three Interpretations of Matrix–Vector Products
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B20
 
 **Q:** Give me three different readings of the matrix product Ax, and explain the dummy-variable trap in terms of one of them.
 
-### B21
+### B21 — Trace, Determinant, and Log-Determinant
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B21
 
 **Q:** What do the trace and the determinant tell you about a matrix, and what does each fail to tell you? Where does log-determinant show up in ML?
 
-### B23
+### B23 — Dot Products and Vector Projections
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B23
 
 **Q:** Define the dot product geometrically and algebraically. Derive the projection of one vector onto another, and state what a zero dot product does and does not imply.
 
-### B24
+### B24 — Eigenvalues and the Spectral Theorem
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B24
 
 **Q:** State the eigenvalue equation and what it means geometrically. What does the spectral theorem guarantee for symmetric matrices, and why does that guarantee matter so often in ML?
 
-### B25
+### B25 — Fundamental Subspaces and Rank–Nullity
 **Phase:** G2  
 **Depth:** D1  
 **Source mapping:** B25

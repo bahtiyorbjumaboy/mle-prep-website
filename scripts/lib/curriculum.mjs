@@ -98,7 +98,7 @@ export function parseSource({ curriculum, filename, relativePath, markdown }) {
         if (!bank) warnings.push(`${relativePath}:${section.line}: cannot determine bank for knowledge ID ${id}`);
         knowledge.push({
           canonicalKey: canonicalKnowledgeKey(curriculum, bank, id), curriculum, bank: bank || 'unbanked', id,
-          titleOrQuestion: titleAfterId(section.heading, id) || excerpt(section.body.join('\n')) || id,
+          titleOrQuestion: titleAfterId(section.heading, id) || firstField(section.raw, ['Title']) || firstField(section.raw, ['Q', 'Question']) || excerpt(section.body.join('\n')) || id,
           phase: firstField(section.raw, ['Phase']), depth: firstField(section.raw, ['Depth']),
           sourceFile: relativePath, sourceAnchor: anchor,
           prerequisites: listField(section.raw, ['Prerequisites?', 'Prereqs?']), followUps: listField(section.raw, ['Follow-ups?', 'Follow Ups']),
