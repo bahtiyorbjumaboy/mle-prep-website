@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-09-21T13:21:45.049Z",
+  "generatedAt": "2026-09-21T21:53:36.459Z",
   "curricula": [
     {
       "id": "2026",
@@ -39,7 +39,13 @@
       "scheduledWeeks": [],
       "rawSection": "### A1 — Multicollinearity and Unstable Regression Coefficients\n**Phase:** G1  \n**Depth:** D2  \n**Source mapping:** A1\n\n**Q:** You fit a linear regression on a marketing dataset. The model's R² is fine, but when you refit on bootstrap resamples the coefficients swing wildly in magnitude and several flip sign. A colleague suggests standardizing the features. Walk me through what is actually happening, whether standardizing will fix it, and what you would do.",
       "sourceLine": 17,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/A1_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/A1_interview-answer.md",
+        "title": "Multicollinearity and Unstable Regression Coefficients",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:A2",
@@ -56,7 +62,13 @@
       "scheduledWeeks": [],
       "rawSection": "### A2 — Condition Numbers, Convergence, and Numerical Error\n**Phase:** G1  \n**Depth:** D3  \n**Source mapping:** A2\n**Prerequisites / cross-references:** B19, B20, B24; comfort with matrix-vector multiplication and singular/eigenvalue vocabulary.  \n\n**Q:** Define the condition number of a matrix in terms of its singular values. Explain what it predicts about (a) how fast gradient descent converges on a least-squares objective and (b) how much numerical error you should expect when solving for the coefficients. Then explain why forming and inverting XᵀX is a worse idea than it looks.",
       "sourceLine": 24,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/A2_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/A2_interview-answer.md",
+        "title": "Conditioning, Gradient Descent, and Normal Equations",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:A3",
@@ -73,7 +85,13 @@
       "scheduledWeeks": [],
       "rawSection": "### A3 — Least-Squares Geometry and the Pseudoinverse\n**Phase:** G1  \n**Depth:** D3  \n**Source mapping:** A3; absorbs B22\n**Prerequisites / cross-references:** B19, B20, B23, B25; solve basic linear systems before the geometric derivation.  \n\n**Q:** Explain least squares geometrically and algebraically: projection, normal equations, residual orthogonality, full-rank versus rank-deficient cases, no/one/many solutions of Ax=b, and what the pseudoinverse returns.\n\n**Follow-up tree:**\n- Compare the normal equations, QR factorization, and SVD as ways to solve least squares. Which would you choose for a well-conditioned full-rank matrix, an ill-conditioned matrix, and a rank-deficient matrix, and why?",
       "sourceLine": 32,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/A3_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/A3_interview-answer.md",
+        "title": "Least Squares Geometry, Solvers, and the Pseudoinverse",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:A5",
@@ -90,7 +108,13 @@
       "scheduledWeeks": [],
       "rawSection": "### A5 — Ridge Regression in SVD Coordinates\n**Phase:** G1  \n**Depth:** D3  \n**Source mapping:** A5\n**Prerequisites / cross-references:** A3 and A6; least-squares geometry plus SVD coordinates.  \n\n**Q:** Rewrite ridge regression in the SVD coordinates of X. What does λ do to each direction of the feature space, and why does that explain both the stabilization and the bias ridge introduces? Then state what the sum of those per-direction factors represents.",
       "sourceLine": 43,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/A5_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/A5_interview-answer.md",
+        "title": "Ridge Regression in SVD Coordinates",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:A6",
@@ -107,7 +131,13 @@
       "scheduledWeeks": [],
       "rawSection": "### A6 — Eigendecomposition, SVD, and PCA\n**Phase:** G1  \n**Depth:** D3  \n**Source mapping:** A6; absorbs A7\n**Prerequisites / cross-references:** B24 and B19; eigenvalue/rank fundamentals before PCA/SVD derivations.  \n\n**Q:** Compare eigendecomposition, SVD, and PCA as related spectral tools. State when each decomposition exists, the orthogonality guarantees, derive PCA from covariance and from the SVD of centered data, explain centering versus scaling, and identify a supervised-learning case where PCA can hurt.",
       "sourceLine": 51,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/A6_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/A6_interview-answer.md",
+        "title": "Eigendecomposition, SVD, and PCA",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:A8",
@@ -124,7 +154,13 @@
       "scheduledWeeks": [],
       "rawSection": "### A8 — Positive Definiteness in ML Matrices\n**Phase:** G1  \n**Depth:** D2  \n**Source mapping:** A8\n\n**Q:** What does it mean for a matrix to be positive definite versus positive semi-definite, and how would you actually check in practice? Give me three matrices that show up in ML that are guaranteed PSD and explain why. What does it mean if your empirical covariance matrix comes back with a slightly negative eigenvalue?",
       "sourceLine": 59,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/A8_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/A8_interview-answer.md",
+        "title": "Positive Definite and Positive Semi-Definite Matrices",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:A9",
@@ -141,7 +177,13 @@
       "scheduledWeeks": [],
       "rawSection": "### A9 — L1, L2, and L∞ Regularization Geometry\n**Phase:** G1  \n**Depth:** D2  \n**Source mapping:** A9\n\n**Q:** Compare the L1, L2, and L∞ unit balls geometrically, then explain why L1 regularization produces exactly zero coefficients while L2 does not. Give me the geometric argument first, then tell me what is happening to the penalty's derivative at zero that makes it possible.",
       "sourceLine": 66,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/A9_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/A9_interview-answer.md",
+        "title": "L1, L2, and L-Infinity Geometry",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:A11",
@@ -175,7 +217,13 @@
       "scheduledWeeks": [],
       "rawSection": "### A12 — Two-Layer Network Gradient Derivation\n**Phase:** G1  \n**Depth:** D3  \n**Source mapping:** A12\n**Prerequisites / cross-references:** B20 and basic chain rule; Bank 05 A1 is the conceptual backprop companion.  \n\n**Q:** Take a two-layer network: z₁ = W₁x + b₁, a₁ = φ(z₁), z₂ = W₂a₁ + b₂, scalar loss L. Derive the gradients with respect to W₁, W₂, b₁, and b₂. I care about the shapes and about *why* each transpose, each elementwise product, and each sum appears — not just the final expressions. Then tell me what happens to the weight gradient when you batch.",
       "sourceLine": 81,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/A12_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/A12_interview-answer.md",
+        "title": "Backpropagation Through a Two-Layer Network",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:A13",
@@ -277,7 +325,13 @@
       "scheduledWeeks": [],
       "rawSection": "### B19 — Span, Basis, Independence, and Rank\n**Phase:** G2  \n**Depth:** D1  \n**Source mapping:** B19\n\n**Q:** Define span, linear independence, basis, and rank, and state how they relate. Why is row rank equal to column rank, and what is the rank of a product AB bounded by?",
       "sourceLine": 128,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/B19_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/B19_interview-answer.md",
+        "title": "Span, Linear Independence, Basis, and Rank",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:B20",
@@ -294,7 +348,13 @@
       "scheduledWeeks": [],
       "rawSection": "### B20 — Three Interpretations of Matrix–Vector Products\n**Phase:** G2  \n**Depth:** D1  \n**Source mapping:** B20\n\n**Q:** Give me three different readings of the matrix product Ax, and explain the dummy-variable trap in terms of one of them.",
       "sourceLine": 135,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/B20_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/B20_interview-answer.md",
+        "title": "Three Views of Matrix-Vector Multiplication",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:B21",
@@ -311,7 +371,13 @@
       "scheduledWeeks": [],
       "rawSection": "### B21 — Trace, Determinant, and Log-Determinant\n**Phase:** G2  \n**Depth:** D1  \n**Source mapping:** B21\n\n**Q:** What do the trace and the determinant tell you about a matrix, and what does each fail to tell you? Where does log-determinant show up in ML?",
       "sourceLine": 142,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/B21_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/B21_interview-answer.md",
+        "title": "Trace, Determinant, and Log-Determinant",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:B23",
@@ -328,7 +394,13 @@
       "scheduledWeeks": [],
       "rawSection": "### B23 — Dot Products and Vector Projections\n**Phase:** G2  \n**Depth:** D1  \n**Source mapping:** B23\n\n**Q:** Define the dot product geometrically and algebraically. Derive the projection of one vector onto another, and state what a zero dot product does and does not imply.",
       "sourceLine": 149,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/B23_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/B23_interview-answer.md",
+        "title": "Dot Products, Orthogonality, and Projection",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:B24",
@@ -345,7 +417,13 @@
       "scheduledWeeks": [],
       "rawSection": "### B24 — Eigenvalues and the Spectral Theorem\n**Phase:** G2  \n**Depth:** D1  \n**Source mapping:** B24\n\n**Q:** State the eigenvalue equation and what it means geometrically. What does the spectral theorem guarantee for symmetric matrices, and why does that guarantee matter so often in ML?",
       "sourceLine": 156,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/B24_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/B24_interview-answer.md",
+        "title": "Eigenvalues, the Spectral Theorem, and PCA",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank01:B25",
@@ -362,7 +440,13 @@
       "scheduledWeeks": [],
       "rawSection": "### B25 — Fundamental Subspaces and Rank–Nullity\n**Phase:** G2  \n**Depth:** D1  \n**Source mapping:** B25\n\n**Q:** Name the four fundamental subspaces of a matrix, state the rank-nullity theorem, and connect them to solving a linear system.\n\n---",
       "sourceLine": 163,
-      "interviewAnswer": null
+      "interviewAnswer": {
+        "slug": "2026/interview-answers/bank01/B25_interview-answer",
+        "path": "curriculum/2026/interview-answers/bank01/B25_interview-answer.md",
+        "title": "Fundamental Subspaces and Rank-Nullity",
+        "type": "interview-answer",
+        "updated": "2026-09-21"
+      }
     },
     {
       "canonicalKey": "2026:bank02:A1",
@@ -7855,6 +7939,327 @@
     }
   ],
   "interviewAnswers": [
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/A12_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/A12_interview-answer.md",
+      "title": "Backpropagation Through a Two-Layer Network",
+      "declaredItems": [
+        "2026:bank01:A12"
+      ],
+      "items": [
+        "2026:bank01:A12"
+      ],
+      "item": "2026:bank01:A12",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "backpropagation",
+        "neural-networks",
+        "matrix-calculus"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nTake a two-layer network: z₁ = W₁x + b₁, a₁ = φ(z₁), z₂ = W₂a₁ + b₂, scalar loss L. Derive the gradients with respect to W₁, W₂, b₁, and b₂. I care about the shapes and about *why* each transpose, each elementwise product, and each sum appears — not just the final expressions. Then tell me what happens to the weight gradient when you batch.\n\n## Mastery Answer\n\nLet\n$$\n\\delta_2=\\frac{\\partial L}{\\partial z_2}.\n$$\n\nFor the second linear layer,\n$$\n\\frac{\\partial L}{\\partial W_2}\n=\n\\delta_2 a_1^T,\n\\qquad\n\\frac{\\partial L}{\\partial b_2}\n=\n\\delta_2.\n$$\n\nThe weight gradient is an **outer product**: downstream error times layer input. The transpose is required to produce the shape of $W_2$.\n\nBackpropagating through the linear map and then the activation gives\n$$\n\\delta_1\n=\n(W_2^T\\delta_2)\\odot \\phi'(z_1).\n$$\n\n$W_2^T$ transports the gradient from output space back into hidden space. The Hadamard product appears because $\\phi$ is applied elementwise, so its Jacobian is diagonal.\n\nThen\n$$\n\\frac{\\partial L}{\\partial W_1}\n=\n\\delta_1x^T,\n\\qquad\n\\frac{\\partial L}{\\partial b_1}\n=\n\\delta_1.\n$$\n\nFor a batch with examples stored as columns,\n$$\n\\frac{\\partial L}{\\partial W_2}\n=\n\\Delta_2A_1^T,\n\\qquad\n\\frac{\\partial L}{\\partial W_1}\n=\n\\Delta_1X^T.\n$$\n\nThese matrix products sum the per-example outer products. Bias gradients sum across examples because the same bias vector is reused for every example. If the batch loss is an average rather than a sum, the aggregate gradients carry the corresponding factor $1/B$.\n\n## Learn the Concepts\n\n### Shapes\n\nLet\n\n$$\nx\\in\\mathbb R^d,\n\\qquad\nW_1\\in\\mathbb R^{h\\times d},\n\\qquad\nb_1,z_1,a_1\\in\\mathbb R^h,\n$$\n\nand\n\n$$\nW_2\\in\\mathbb R^{k\\times h},\n\\qquad\nb_2,z_2,\\delta_2\\in\\mathbb R^k.\n$$\n\nThe scalar loss is $L$.\n\n### Second-layer weight gradient\n\nFor one coordinate,\n$$\nz_{2,i}\n=\n\\sum_j W_{2,ij}a_{1,j}+b_{2,i}.\n$$\n\nTherefore\n$$\n\\frac{\\partial L}{\\partial W_{2,ij}}\n=\n\\frac{\\partial L}{\\partial z_{2,i}}\n\\frac{\\partial z_{2,i}}{\\partial W_{2,ij}}\n=\n\\delta_{2,i}a_{1,j}.\n$$\n\nCollecting all entries gives\n$$\n\\frac{\\partial L}{\\partial W_2}\n=\n\\delta_2a_1^T.\n$$\n\nShape:\n$$\n(k\\times 1)(1\\times h)=k\\times h.\n$$\n\n### Why $W_2^T$ appears\n\nForward propagation uses\n$$\nz_2=W_2a_1+b_2,\n$$\nwhich maps\n$$\n\\mathbb R^h\\to\\mathbb R^k.\n$$\n\nThe gradient must be transported in the reverse direction:\n$$\n\\frac{\\partial L}{\\partial a_1}\n=\nW_2^T\\delta_2\n\\in\\mathbb R^h.\n$$\n\nThe transpose is the adjoint of the forward linear map under the standard Euclidean inner product.\n\n### Why the activation derivative is elementwise\n\nSince\n$$\na_1=\\phi(z_1)\n$$\ncoordinatewise,\n$$\na_{1,i}=\\phi(z_{1,i}),\n$$\nthe Jacobian is diagonal:\n$$\nJ_\\phi(z_1)=\\operatorname{diag}(\\phi'(z_1)).\n$$\n\nMultiplying by this diagonal Jacobian is equivalent to the Hadamard product:\n$$\n\\delta_1\n=\n(W_2^T\\delta_2)\\odot\\phi'(z_1).\n$$\n\nThe factor must be $\\phi'(z_1)$, not $\\phi(z_1)$, because backpropagation applies the chain rule through the activation.\n\n### First-layer gradients\n\nOnce $\\delta_1$ is known, the first layer repeats the same pattern:\n$$\n\\frac{\\partial L}{\\partial W_1}\n=\n\\delta_1x^T,\n$$\n$$\n\\frac{\\partial L}{\\partial b_1}\n=\n\\delta_1.\n$$\n\nThe reusable mental rule is:\n\n- weight gradient = error $\\times$ input$^T$;\n- previous-activation gradient = $W^T\\times$ error;\n- activation backward = upstream gradient $\\odot$ local derivative.\n\n### Batching\n\nWith examples as columns,\n$$\nX\\in\\mathbb R^{d\\times B},\n\\qquad\nA_1\\in\\mathbb R^{h\\times B},\n\\qquad\n\\Delta_2\\in\\mathbb R^{k\\times B}.\n$$\n\nThen\n$$\n\\Delta_2A_1^T\n=\n\\sum_{n=1}^B\n\\delta_2^{(n)}a_1^{(n)T}.\n$$\n\nSo matrix multiplication is simply the vectorized sum of per-example outer products.\n\nBiases are shared across all examples, so their gradients aggregate over the batch dimension.\n\n## Required / Important Follow-ups\n\n### Why is the weight gradient an outer product?\n\nEach weight connects one input coordinate to one output coordinate. The derivative for entry $(i,j)$ is exactly downstream error coordinate $i$ times input coordinate $j$.\n\n### Why is $\\phi'(z_1)$ used rather than $\\phi(z_1)$?\n\nBecause the chain rule multiplies by the **local derivative** of the activation. The forward activation value and the derivative are different objects.\n\n### Why is the product Hadamard rather than a dot product?\n\nEach activation coordinate depends only on its matching preactivation coordinate. The Jacobian is diagonal, so multiplying by it is equivalent to coordinatewise multiplication.\n\n### What changes if the batch is stored as rows instead of columns?\n\nThe same mathematics holds, but transpose locations change with the layout convention. The invariant is still: aggregate the per-example outer products and sum shared-parameter contributions across the batch dimension.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/A1_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/A1_interview-answer.md",
+      "title": "Multicollinearity and Unstable Regression Coefficients",
+      "declaredItems": [
+        "2026:bank01:A1"
+      ],
+      "items": [
+        "2026:bank01:A1"
+      ],
+      "item": "2026:bank01:A1",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-regression",
+        "multicollinearity",
+        "conditioning",
+        "ridge"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nYou fit a linear regression on a marketing dataset. The model's R² is fine, but when you refit on bootstrap resamples the coefficients swing wildly in magnitude and several flip sign. A colleague suggests standardizing the features. Walk me through what is actually happening, whether standardizing will fix it, and what you would do.\n\n## Mastery Answer\n\nThe pattern suggests **multicollinearity**, more precisely near-linear dependence among columns of the design matrix $X$. In SVD terms, one or more singular values are small, so\n$$\n\\kappa(X)=\\frac{\\sigma_{\\max}(X)}{\\sigma_{\\min}(X)}\n$$\nis large.\n\nFor ordinary least squares, under the classical homoskedastic model,\n$$\n\\operatorname{Var}(\\hat\\beta\\mid X)=\\sigma^2(X^TX)^{-1}.\n$$\nNear-null directions of $X$ correspond to tiny eigenvalues of $X^TX$, so the inverse strongly amplifies perturbations. Bootstrap resampling changes the sample slightly, and the fitted coefficient vector can move a lot along those weakly identified directions, including sign flips.\n\nStandardization can help if bad conditioning is partly caused by very different feature scales, but it does **not** remove genuine near-linear dependence. It therefore does not solve multicollinearity by itself.\n\nCoefficient instability can coexist with fairly stable predictions on the observed data manifold because different coefficient vectors can produce similar fitted values there. But prediction stability is not guaranteed, especially in weakly supported directions or under extrapolation, so it should be checked directly.\n\nWhat I do depends on the goal. For prediction, I would evaluate holdout and bootstrap prediction stability and consider ridge or another regularized model. For interpretation, I would diagnose the dependence using singular values, condition diagnostics, VIF or auxiliary regressions, and domain knowledge, then remove, combine, or reparameterize redundant variables where scientifically defensible.\n\n## Learn the Concepts\n\n### Why coefficients become unstable\n\nLeast squares solves\n$$\n\\hat\\beta=(X^TX)^{-1}X^Ty\n$$\nwhen $X$ has full column rank.\n\nUsing the SVD\n$$\nX=U\\Sigma V^T,\n$$\nthe estimator contains factors proportional to\n$$\n\\frac{1}{\\sigma_i}.\n$$\n\nA small singular value means the data contain very little information along that parameter direction. Small changes in $X$ or $y$ can therefore require a large coefficient change.\n\n### Why R² can still look fine\n\nMulticollinearity is primarily an **identifiability and variance** problem, not necessarily an in-sample fit problem. Multiple coefficient vectors can induce nearly the same predictions on the observed feature manifold.\n\nThis is why attribution can be unstable while predictive metrics remain acceptable.\n\n### Why standardization is not the cure\n\nSuppose one feature ranges in millions and another in thousandths. Standardization can reduce scale-induced anisotropy.\n\nBut if\n$$\nx_3\\approx 2x_1-x_2,\n$$\nrescaling the columns does not remove that near-dependence. The weak direction remains.\n\n### VIF\n\nVariance inflation factor for feature $j$ can be written\n$$\n\\operatorname{VIF}_j=\\frac{1}{1-R_j^2},\n$$\nwhere $R_j^2$ comes from regressing feature $j$ on the remaining predictors.\n\nIt measures how much the variance of $\\hat\\beta_j$ is inflated by linear dependence with the rest of the design. It is more general than a pairwise-correlation check.\n\n### Ridge\n\nRidge solves\n$$\n\\min_\\beta \\|y-X\\beta\\|^2+\\lambda\\|\\beta\\|^2.\n$$\n\nIts normal equations are\n$$\n(X^TX+\\lambda I)\\beta=X^Ty.\n$$\n\nThe added $\\lambda I$ lifts weak eigen-directions away from zero and reduces variance, at the cost of bias.\n\n## Required / Important Follow-ups\n\n### Do unstable coefficients imply stable predictions?\n\nNo. They **can** coexist with stable predictions on the observed data manifold, but prediction stability must be measured rather than assumed.\n\n### When can prediction instability become serious?\n\nWhen evaluating points that move strongly in weakly supported directions, under distribution shift, or during extrapolation beyond the correlated training manifold.\n\n### Does ridge make coefficients trustworthy for interpretation?\n\nNot automatically. Ridge stabilizes estimation and shrinks variance, but it introduces bias and does not turn observational coefficients into causal effects.\n\n### If interpretation matters, what else can you do?\n\nUse domain knowledge to remove redundant variables, combine them into meaningful composites, redesign measurements, or explicitly report uncertainty and dependence rather than over-interpreting individual coefficients.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/A2_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/A2_interview-answer.md",
+      "title": "Conditioning, Gradient Descent, and Normal Equations",
+      "declaredItems": [
+        "2026:bank01:A2"
+      ],
+      "items": [
+        "2026:bank01:A2"
+      ],
+      "item": "2026:bank01:A2",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "conditioning",
+        "least-squares",
+        "numerical-stability"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nDefine the condition number of a matrix in terms of its singular values. Explain what it predicts about (a) how fast gradient descent converges on a least-squares objective and (b) how much numerical error you should expect when solving for the coefficients. Then explain why forming and inverting XᵀX is a worse idea than it looks.\n\n## Mastery Answer\n\nFor full-column-rank $X$, the 2-norm condition number is\n$$\n\\kappa(X)=\\frac{\\sigma_{\\max}(X)}{\\sigma_{\\min}(X)}.\n$$\nA large value means the transformation stretches some directions much more than others and that the inverse problem is sensitive to perturbations.\n\nFor least squares,\n$$\nf(\\beta)=\\frac12\\|X\\beta-y\\|^2,\n$$\nthe Hessian is\n$$\nH=X^TX.\n$$\nIts eigenvalues are $\\sigma_i(X)^2$, so\n$$\n\\kappa(H)=\\kappa(X)^2.\n$$\nTherefore gradient-descent geometry is governed by the **squared** condition number of $X$. For a positive-definite quadratic with the optimal fixed step size, the contraction factor is\n$$\n\\frac{\\kappa(H)-1}{\\kappa(H)+1}\n=\n\\frac{\\kappa(X)^2-1}{\\kappa(X)^2+1}.\n$$\nAs the condition number grows, the factor approaches one and convergence becomes slow.\n\nNumerically, the condition number is a first-order sensitivity factor: relative perturbations can be amplified roughly in proportion to $\\kappa$. A rule of thumb is that $\\kappa\\approx 10^p$ can cost about $p$ decimal digits in a worst-case relative-error sense.\n\nForming $X^TX$ is dangerous because\n$$\n\\kappa(X^TX)=\\kappa(X)^2.\n$$\nIt squares the sensitivity before solving. Explicitly forming an inverse is also unnecessary and less stable than solving a system. QR is usually the stable default for full-rank least squares; SVD is preferred when conditioning is severe or rank deficiency matters.\n\n## Learn the Concepts\n\n### What condition number measures\n\nFor the 2-norm,\n$$\n\\kappa(X)=\\|X\\|_2\\|X^+\\|_2.\n$$\n\nFor full column rank this becomes the singular-value ratio. If $\\sigma_{\\min}$ is tiny, there is a direction that $X$ almost collapses. Recovering coefficients along that direction requires strong amplification.\n\n### Least-squares geometry\n\nThe level sets of a quadratic objective are ellipsoids. The curvature in an eigen-direction of $H$ is the corresponding eigenvalue.\n\nFor least squares,\n$$\nH=X^TX=V\\Sigma^2V^T.\n$$\n\nSo curvature ratios are\n$$\n\\frac{\\sigma_{\\max}^2}{\\sigma_{\\min}^2}\n=\n\\kappa(X)^2.\n$$\n\nA highly elongated valley causes vanilla gradient descent to make progress at very different rates across directions, producing zig-zagging and slow contraction.\n\n### Numerical sensitivity\n\nConditioning is a property of the mathematical problem; numerical stability is a property of the algorithm. A badly conditioned problem is intrinsically sensitive, while a poor algorithm can make matters even worse.\n\n### Why normal equations square conditioning\n\nThe singular values of $X^TX$ are the squared singular values of $X$:\n$$\n\\lambda_i(X^TX)=\\sigma_i(X)^2.\n$$\n\nTherefore the ratio of largest to smallest becomes squared.\n\n### Why avoid explicit inversion?\n\nEven when the normal equations are used, one should solve\n$$\n(X^TX)\\beta=X^Ty\n$$\nwith a linear solver rather than compute\n$$\n(X^TX)^{-1}\n$$\nexplicitly. Explicit inversion adds work and typically worsens numerical behavior.\n\n## Required / Important Follow-ups\n\n### Which condition number governs gradient descent?\n\nThe Hessian condition number:\n$$\n\\kappa(H)=\\kappa(X^TX)=\\kappa(X)^2.\n$$\n\n### Is “lose $p$ digits when $\\kappa=10^p$” exact?\n\nNo. It is a worst-case rule of thumb for relative sensitivity, not a guaranteed exact digit loss on every problem.\n\n### What methods avoid forming $X^TX$?\n\nQR solves least squares directly through an orthogonal-triangular factorization. SVD works through singular directions and is especially useful for ill-conditioning and rank deficiency.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/A3_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/A3_interview-answer.md",
+      "title": "Least Squares Geometry, Solvers, and the Pseudoinverse",
+      "declaredItems": [
+        "2026:bank01:A3"
+      ],
+      "items": [
+        "2026:bank01:A3"
+      ],
+      "item": "2026:bank01:A3",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "least-squares",
+        "pseudoinverse",
+        "qr",
+        "svd"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nExplain least squares geometrically and algebraically: projection, normal equations, residual orthogonality, full-rank versus rank-deficient cases, no/one/many solutions of Ax=b, and what the pseudoinverse returns.\n\n## Mastery Answer\n\nFor an overdetermined system $Xw\\approx y$, exact equality may be impossible because $y$ may lie outside $\\operatorname{col}(X)$. Least squares chooses the reachable vector $X\\hat w$ closest to $y$, so $X\\hat w$ is the orthogonal projection of $y$ onto $\\operatorname{col}(X)$.\n\nThe residual is\n$$\nr=y-X\\hat w.\n$$\nAt the optimum it is orthogonal to every column of $X$:\n$$\nX^Tr=0.\n$$\nTherefore\n$$\nX^T(y-X\\hat w)=0,\n$$\ngiving the normal equations\n$$\nX^TX\\hat w=X^Ty.\n$$\n\nFor a general system $Ax=b$:\n\n- if $b\\notin\\operatorname{col}(A)$, there is no exact solution;\n- if $b\\in\\operatorname{col}(A)$ and $\\operatorname{null}(A)=\\{0\\}$, there is exactly one solution;\n- if $b\\in\\operatorname{col}(A)$ and the null space is nontrivial, there are infinitely many solutions:\n$$\nx=x_p+z,\\qquad z\\in\\operatorname{null}(A).\n$$\n\nThus uniqueness for a rectangular matrix requires **full column rank**, not merely an ambiguous statement that the matrix is “full rank.”\n\nIf\n$$\nA=U\\Sigma V^T,\n$$\nthe Moore-Penrose pseudoinverse is\n$$\nA^+=V\\Sigma^+U^T,\n$$\nwhere nonzero singular values are reciprocated. $A^+b$ gives the least-squares minimizer; if multiple minimizers exist, it selects the minimum-Euclidean-norm one. If exact solutions exist but are nonunique, it returns the minimum-norm exact solution.\n\n## Learn the Concepts\n\n### Geometry of least squares\n\nThe column space contains every vector the model can produce. If $y$ is outside that subspace, the best approximation is its orthogonal projection onto the subspace.\n\nThe residual from a closest-point projection must be perpendicular to the subspace. Since the columns of $X$ span the subspace,\n$$\nx_j^Tr=0\n$$\nfor every column $x_j$, compactly\n$$\nX^Tr=0.\n$$\n\n### Normal equations\n\nSubstitute\n$$\nr=y-X\\hat w:\n$$\n$$\nX^T(y-X\\hat w)=0.\n$$\n\nRearranging:\n$$\nX^TX\\hat w=X^Ty.\n$$\n\nIf $X$ has full column rank, $X^TX$ is invertible and the coefficient solution is unique.\n\n### Rank-deficient least squares\n\nIf $X$ is rank deficient, multiple coefficient vectors can generate the same fitted vector. The prediction $X\\hat w$ can still be uniquely defined even when $\\hat w$ is not.\n\n### Pseudoinverse\n\nThe SVD exposes independent input/output directions:\n$$\nA=U\\Sigma V^T.\n$$\n\nThe pseudoinverse reverses every nonzero singular direction:\n$$\nA^+=V\\Sigma^+U^T.\n$$\n\nZero singular directions cannot be inverted, so they receive zero in $\\Sigma^+$.\n\nThis produces the least-squares solution while discarding unsupported null-space components, which is why the resulting coefficient vector has minimum norm.\n\n### Solver choices\n\nThe normal equations are cheap and simple but square the condition number.\n\nQR avoids forming $X^TX$ and is a strong stable default for full-rank least squares.\n\nSVD is more expensive but directly exposes singular values, numerical rank, and null-space structure, making it the most robust choice for severe ill-conditioning or rank deficiency.\n\n## Required / Important Follow-ups\n\n### Compare the normal equations, QR factorization, and SVD as ways to solve least squares. Which would you choose for a well-conditioned full-rank matrix, an ill-conditioned matrix, and a rank-deficient matrix, and why?\n\n**Well-conditioned full-column-rank:** normal equations can be acceptable when simplicity and low cost matter, although QR is a safer default.\n\n**Ill-conditioned but full-rank:** prefer QR because it avoids squaring the condition number. If conditioning is severe or explicit singular-value diagnostics are needed, prefer SVD.\n\n**Rank-deficient:** prefer SVD because it exposes zero or tiny singular values and directly yields the minimum-norm least-squares solution. Pivoted QR can estimate numerical rank, but ordinary QR does not expose singular values or provide the same clean minimum-norm construction.\n\nA useful hierarchy is:\n\n- normal equations: cheapest, least stable;\n- QR: standard stable default;\n- SVD: most robust and informative, but typically most expensive.\n\n### Does pivoted QR expose singular values?\n\nNo. It can reveal or estimate numerical rank through column pivoting and diagonal structure in $R$, but singular values are specifically exposed by the SVD.\n\n### When does $(A^TA)^{-1}A^T$ equal the pseudoinverse?\n\nWhen $A$ has full column rank. It is not the general definition.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/A5_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/A5_interview-answer.md",
+      "title": "Ridge Regression in SVD Coordinates",
+      "declaredItems": [
+        "2026:bank01:A5"
+      ],
+      "items": [
+        "2026:bank01:A5"
+      ],
+      "item": "2026:bank01:A5",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "ridge-regression",
+        "svd",
+        "regularization"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nRewrite ridge regression in the SVD coordinates of X. What does λ do to each direction of the feature space, and why does that explain both the stabilization and the bias ridge introduces? Then state what the sum of those per-direction factors represents.\n\n## Mastery Answer\n\nLet\n\n$$\nX = U\\Sigma V^T.\n$$\n\nRidge regression solves\n\n$$\n\\hat w_{\\lambda}\n= (X^TX+\\lambda I)^{-1}X^Ty.\n$$\n\nUsing the SVD,\n\n$$\nX^TX = V\\Sigma^2V^T,\n\\qquad\nX^Ty = V\\Sigma U^Ty.\n$$\n\nTherefore\n\n$$\n\\hat w_{\\lambda}\n= V(\\Sigma^2+\\lambda I)^{-1}\\Sigma U^Ty\n= V\\,\\operatorname{diag}\\!\\left(\\frac{\\sigma_i}{\\sigma_i^2+\\lambda}\\right)U^Ty.\n$$\n\nSo in singular direction $v_i$, the ridge coefficient is\n\n$$\n\\frac{\\sigma_i}{\\sigma_i^2+\\lambda}(u_i^Ty).\n$$\n\nOLS uses\n\n$$\n\\frac{1}{\\sigma_i}(u_i^Ty),\n$$\n\nso ridge multiplies the OLS coefficient in direction $i$ by\n\n$$\n\\frac{\\sigma_i^2}{\\sigma_i^2+\\lambda}.\n$$\n\nThis is the direction-specific shrinkage factor.\n\nIf $\\sigma_i^2 \\gg \\lambda$, the factor is near $1$, so a well-determined direction changes little. If $\\sigma_i^2 \\ll \\lambda$, the factor is near $0$, so a weak or nearly collinear direction is strongly suppressed.\n\nThat explains stabilization. In OLS, noise in a small-singular-value direction is amplified by division by $\\sigma_i$, and the coefficient variance scales like $1/\\sigma_i^2$ up to the noise variance factor. Ridge removes that amplification by damping exactly those poorly determined directions.\n\nThe trade-off is bias. For every $\\lambda>0$, each retained direction is shrunk relative to OLS, so the expected coefficient is pulled toward zero. Ridge deliberately accepts bias in exchange for a potentially much larger variance reduction.\n\nThe sum of the per-direction shrinkage factors is\n\n$$\n\\operatorname{df}(\\lambda)\n= \\sum_i \\frac{\\sigma_i^2}{\\sigma_i^2+\\lambda}.\n$$\n\nThis equals the trace of the ridge hat matrix and is the effective degrees of freedom: the effective number of parameter directions the fitted model is using after shrinkage.\n\n## Learn the Concepts\n\n### 1. Why OLS becomes unstable in small-singular-value directions\n\nFor full-column-rank least squares,\n\n$$\n\\hat w_{\\text{OLS}}=(X^TX)^{-1}X^Ty.\n$$\n\nSubstitute $X=U\\Sigma V^T$:\n\n$$\n\\hat w_{\\text{OLS}}\n= V\\Sigma^{-1}U^Ty.\n$$\n\nThe coefficient along singular vector $v_i$ is therefore\n\n$$\n\\frac{u_i^Ty}{\\sigma_i}.\n$$\n\nA small singular value means the design matrix barely varies in that feature-space direction. Dividing by a tiny number makes the fitted coefficient extremely sensitive to noise or small perturbations in $y$ and $X$.\n\nThis is the SVD view of multicollinearity and ill-conditioning.\n\n### 2. Ridge modifies the denominator rather than simply clipping coefficients\n\nRidge minimizes\n\n$$\n\\|y-Xw\\|_2^2 + \\lambda\\|w\\|_2^2.\n$$\n\nThe normal equations become\n\n$$\n(X^TX+\\lambda I)w=X^Ty.\n$$\n\nIn the $V$ basis, $X^TX$ is diagonal with entries $\\sigma_i^2$, so ridge acts independently along each singular direction:\n\n$$\n\\text{ridge filter}_i\n= \\frac{\\sigma_i}{\\sigma_i^2+\\lambda}.\n$$\n\nThe key point is that ridge is not uniform shrinkage in the original coordinates. It is adaptive to how well each singular direction is supported by the data.\n\n### 3. Relative shrinkage compared with OLS\n\nOLS has coefficient multiplier $1/\\sigma_i$. Ridge has multiplier $\\sigma_i/(\\sigma_i^2+\\lambda)$. Their ratio is\n\n$$\n\\frac{\\sigma_i/(\\sigma_i^2+\\lambda)}{1/\\sigma_i}\n= \\frac{\\sigma_i^2}{\\sigma_i^2+\\lambda}.\n$$\n\nThis number lies in $(0,1)$ when $\\lambda>0$ and $\\sigma_i>0$.\n\n- Large $\\sigma_i$: almost no shrinkage.\n- Small $\\sigma_i$: aggressive shrinkage.\n- Zero $\\sigma_i$: the direction is unidentifiable from the data and ridge sets its fitted contribution to zero.\n\n### 4. Why this reduces variance\n\nAssume the standard linear model\n\n$$\ny=Xw^*+\\varepsilon,\n\\qquad\n\\operatorname{Var}(\\varepsilon)=\\sigma_\\varepsilon^2I.\n$$\n\nFor OLS, the variance of the estimated coefficient in direction $v_i$ scales as\n\n$$\n\\frac{\\sigma_\\varepsilon^2}{\\sigma_i^2}.\n$$\n\nThus directions with tiny $\\sigma_i$ dominate estimator variance.\n\nRidge multiplies those directions by a factor close to zero, so it sharply reduces variance where the instability is worst. This is why ridge can make coefficient estimates much more stable under bootstrap resampling even though the training fit becomes slightly more biased.\n\n### 5. Where the bias comes from\n\nThe same filter that suppresses noise also suppresses true signal. Relative to OLS, the expected coefficient in direction $v_i$ is multiplied by\n\n$$\n\\frac{\\sigma_i^2}{\\sigma_i^2+\\lambda}<1.\n$$\n\nSo ridge intentionally underestimates coefficient magnitude. The statistical bet is that the reduction in variance is worth more than the added bias.\n\nAs $\\lambda$ increases:\n\n- variance decreases;\n- bias increases;\n- the fitted model becomes less flexible.\n\n### 6. Effective degrees of freedom\n\nThe fitted values are\n\n$$\n\\hat y = H_\\lambda y,\n$$\n\nwhere\n\n$$\nH_\\lambda\n= X(X^TX+\\lambda I)^{-1}X^T.\n$$\n\nUsing the SVD,\n\n$$\nH_\\lambda\n= U\\,\\operatorname{diag}\\!\\left(\\frac{\\sigma_i^2}{\\sigma_i^2+\\lambda}\\right)U^T.\n$$\n\nThe eigenvalues of the smoother are therefore the same shrinkage factors. Its trace is\n\n$$\n\\operatorname{tr}(H_\\lambda)\n= \\sum_i \\frac{\\sigma_i^2}{\\sigma_i^2+\\lambda}.\n$$\n\nFor OLS, each identifiable direction contributes approximately one full degree of freedom. Ridge lets each direction contribute a fractional amount between zero and one.\n\n### 7. Limiting cases\n\nIf $\\lambda\\to0$, ridge approaches OLS on identifiable directions:\n\n$$\n\\frac{\\sigma_i^2}{\\sigma_i^2+\\lambda}\\to1.\n$$\n\nIf $\\lambda\\to\\infty$,\n\n$$\n\\frac{\\sigma_i^2}{\\sigma_i^2+\\lambda}\\to0,\n$$\n\nso the model collapses toward zero coefficients, assuming the intercept is handled separately and not penalized.\n\nThis gives a clean geometric interpretation of the regularization path: increasing $\\lambda$ progressively removes effective model directions, beginning with the weakest singular directions.\n\n## Required / Important Follow-ups\n\n### Is ridge shrinkage uniform across directions?\n\nNo. Relative to OLS, singular direction $i$ is shrunk by\n\n$$\n\\frac{\\sigma_i^2}{\\sigma_i^2+\\lambda}.\n$$\n\nSmall-singular-value directions are shrunk much more than large-singular-value directions.\n\n### Why is the sum of shrinkage factors called effective degrees of freedom?\n\nBecause the ridge hat matrix has eigenvalues\n\n$$\n\\frac{\\sigma_i^2}{\\sigma_i^2+\\lambda},\n$$\n\nso\n\n$$\n\\operatorname{df}(\\lambda)\n= \\operatorname{tr}(H_\\lambda)\n= \\sum_i\\frac{\\sigma_i^2}{\\sigma_i^2+\\lambda}.\n$$\n\nIt measures how much total flexibility remains in the fitted linear smoother after regularization.\n\n### What happens in a rank-deficient direction?\n\nIf $\\sigma_i=0$, OLS cannot identify that coefficient direction from the data. Ridge makes the linear system invertible for $\\lambda>0$ and assigns zero contribution to that unsupported singular direction in the fitted solution.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/A6_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/A6_interview-answer.md",
+      "title": "Eigendecomposition, SVD, and PCA",
+      "declaredItems": [
+        "2026:bank01:A6"
+      ],
+      "items": [
+        "2026:bank01:A6"
+      ],
+      "item": "2026:bank01:A6",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "svd",
+        "pca",
+        "eigendecomposition"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nCompare eigendecomposition, SVD, and PCA as related spectral tools. State when each decomposition exists, the orthogonality guarantees, derive PCA from covariance and from the SVD of centered data, explain centering versus scaling, and identify a supervised-learning case where PCA can hurt.\n\n## Mastery Answer\n\nEigendecomposition, SVD, and PCA are closely related, but they answer different questions.\n\nFor a square matrix $A \\in \\mathbb{R}^{d \\times d}$, an eigendecomposition\n\n$$\nA = Q\\Lambda Q^{-1}\n$$\n\nexists when $A$ is diagonalizable, meaning it has $d$ linearly independent eigenvectors. A real symmetric matrix is the important special case: by the spectral theorem, all eigenvalues are real and the eigenvectors can be chosen orthonormally, so\n\n$$\nA = Q\\Lambda Q^T.\n$$\n\nSVD is more general. Every real matrix $X \\in \\mathbb{R}^{n \\times d}$ has an SVD\n\n$$\nX = U\\Sigma V^T.\n$$\n\nIn the full SVD, $U$ and $V$ are square orthogonal matrices. In the reduced rank-$r$ SVD,\n\n$$\nU \\in \\mathbb{R}^{n \\times r}, \\qquad\n\\Sigma \\in \\mathbb{R}^{r \\times r}, \\qquad\nV \\in \\mathbb{R}^{d \\times r},\n$$\n\nand the columns of $U$ and $V$ are orthonormal. The columns of $U$ span $\\operatorname{col}(X)$, while the columns of $V$ span $\\operatorname{row}(X)=\\operatorname{col}(X^T)$.\n\nSVD connects directly to eigendecomposition because\n\n$$\nX^T X = V\\Sigma^2 V^T\n$$\n\nand\n\n$$\nX X^T = U\\Sigma^2 U^T.\n$$\n\nTherefore, the right singular vectors are eigenvectors of $X^T X$, the left singular vectors are eigenvectors of $X X^T$, and the nonzero eigenvalues are the squared singular values.\n\nFor PCA, let $X$ be centered data with $n$ observations and $d$ features. The sample covariance matrix is\n\n$$\nC = \\frac{1}{n-1}X^T X.\n$$\n\nPCA takes the eigenvectors of $C$, sorted by descending eigenvalue. Each eigenvector gives a principal direction, and its eigenvalue is the variance captured in that direction.\n\nSubstituting the SVD gives\n\n$$\nC = \\frac{1}{n-1}V\\Sigma^2V^T.\n$$\n\nSo the PCA directions are the columns of $V$, and the explained variance of component $i$ is\n\n$$\n\\frac{\\sigma_i^2}{n-1}.\n$$\n\nThe projected PCA coordinates, or scores, are\n\n$$\nXV = U\\Sigma.\n$$\n\nThus PCA can be computed directly from the SVD of centered data without explicitly forming the covariance matrix.\n\nCentering and scaling do different things. Centering is fundamental to ordinary PCA because PCA is meant to describe variation around the mean. Without centering, $X^TX$ is a second-moment matrix, so mean structure contaminates the directions and a leading component can mostly reflect the offset from the origin rather than variation around the data mean. Scaling is optional: standardizing features is appropriate when arbitrary units or magnitude differences should not determine which directions appear most important. If raw variance itself is meaningful, scaling may be undesirable.\n\nPCA can hurt a supervised model because PCA is unsupervised: it preserves directions with high input variance, not directions with high predictive value for $y$. A low-variance feature combination can be highly predictive and still be discarded by dimensionality reduction. PCA can also reduce interpretability because each principal component is a mixture of the original features.\n\n## Learn the Concepts\n\n### 1. Eigendecomposition: invariant directions of a square operator\n\nAn eigenvector $q$ of $A$ satisfies\n\n$$\nAq = \\lambda q.\n$$\n\nThe matrix changes only the vector's scale, not its direction. If a square matrix has enough linearly independent eigenvectors to form a basis, every vector can be expressed in those eigen-directions and the matrix can be diagonalized:\n\n$$\nA = Q\\Lambda Q^{-1}.\n$$\n\nA generic square matrix need not be diagonalizable. Symmetric matrices are much better behaved: the spectral theorem guarantees an orthonormal eigenbasis, so $Q^{-1}=Q^T$. This orthogonality is why symmetric matrices such as covariance matrices are especially convenient in ML.\n\n### 2. SVD: a decomposition that always exists\n\nSVD applies even when a matrix is rectangular or rank-deficient:\n\n$$\nX = U\\Sigma V^T.\n$$\n\nA useful geometric reading is:\n\n1. $V^T$ expresses an input vector in orthogonal feature-space directions.\n2. $\\Sigma$ stretches each direction by its singular value.\n3. $U$ maps those stretched coordinates into orthogonal output/sample-space directions.\n\nFor rank $r$, only $r$ singular values are nonzero. In the reduced SVD, this keeps only the subspaces that the matrix actually uses.\n\nThe subspace roles are worth being precise about. For any vector $a$,\n\n$$\nXa = U\\Sigma V^Ta,\n$$\n\nso every vector in $\\operatorname{col}(X)$ lies in the span of the columns of $U$. Because both spaces have dimension $r$, they are equal. Applying the same logic to $X^T=V\\Sigma U^T$ gives\n\n$$\n\\operatorname{col}(X^T)=\\operatorname{col}(V),\n$$\n\nso $V$ spans the row space of $X$, which lives in feature space.\n\n### 3. Why SVD and eigendecomposition meet at $X^TX$\n\nStarting from the SVD,\n\n$$\nX^TX\n= (U\\Sigma V^T)^T(U\\Sigma V^T)\n= V\\Sigma U^TU\\Sigma V^T\n= V\\Sigma^2V^T.\n$$\n\nBecause $U^TU=I$, this is exactly an eigendecomposition of the symmetric PSD matrix $X^TX$. The same argument gives $XX^T=U\\Sigma^2U^T$.\n\nThis identity is the bridge from SVD to PCA.\n\n### 4. PCA from covariance\n\nAssume the rows of $X$ are centered observations. The variance of the data after projection onto a unit vector $v$ is\n\n$$\n\\operatorname{Var}(Xv)\n= \\frac{1}{n-1}v^T X^TXv.\n$$\n\nPCA asks for the unit direction maximizing this quantity. The Rayleigh quotient is maximized by the eigenvector of $X^TX$ with the largest eigenvalue. Subsequent components maximize remaining variance while being orthogonal to earlier components.\n\nTherefore PCA is fundamentally an eigenproblem on the covariance matrix.\n\n### 5. PCA directly from SVD\n\nIf\n\n$$\nX = U\\Sigma V^T,\n$$\n\nthen\n\n$$\n\\frac{1}{n-1}X^TX\n= V\\frac{\\Sigma^2}{n-1}V^T.\n$$\n\nThis immediately identifies:\n\n- principal directions: columns of $V$;\n- component variances: $\\sigma_i^2/(n-1)$;\n- PCA scores: $XV=U\\Sigma$.\n\nFor a rank-$r$ matrix,\n\n$$\n\\operatorname{rank}(X^TX)=\\operatorname{rank}(X)=r.\n$$\n\nSo the covariance matrix has only $r$ positive eigenvalues. There are therefore exactly $r$ principal directions with nonzero variance; the remaining feature-space directions have zero variance on this centered dataset.\n\n### 6. Centering versus scaling\n\nCentering subtracts each feature mean. It changes the origin so PCA measures spread around the empirical mean rather than distance from the coordinate origin.\n\nScaling changes the relative weighting of features. If one feature is measured in centimeters and another in meters, the centimeter feature can dominate covariance simply because of units. Standardization to unit variance removes that unit effect, but it also changes the question: PCA on standardized data emphasizes correlation structure rather than raw covariance structure.\n\nSo:\n\n- center almost always for ordinary PCA;\n- scale only when the modeling meaning of feature units justifies it.\n\n### 7. When PCA can hurt supervised learning\n\nPCA never looks at the target. Suppose a dataset has one low-variance direction that almost perfectly separates two classes and several high-variance nuisance directions unrelated to the label. PCA can discard the low-variance predictive direction because it optimizes reconstruction variance, not predictive loss.\n\nOther practical costs include:\n\n- loss of feature-level interpretability;\n- extra preprocessing and versioning at serving time;\n- possible mismatch if the covariance structure drifts;\n- unnecessary information loss when the downstream model already handles correlated or high-dimensional inputs well.\n\n## Required / Important Follow-ups\n\n### Reduced-SVD shapes and subspace roles\n\nIf $X \\in \\mathbb{R}^{n\\times d}$ has rank $r<\\min(n,d)$, the reduced SVD has\n\n$$\nU \\in \\mathbb{R}^{n\\times r}, \\qquad\n\\Sigma \\in \\mathbb{R}^{r\\times r}, \\qquad\nV \\in \\mathbb{R}^{d\\times r}.\n$$\n\nThe columns of $U$ span the column space of $X$. The columns of $V$ span the row space of $X$, equivalently $\\operatorname{col}(X^T)$, which is the feature-space subspace relevant to PCA.\n\n### Why are there only $r$ nonzero principal components?\n\nBecause\n\n$$\n\\operatorname{rank}(X^TX)=\\operatorname{rank}(X)=r.\n$$\n\nA symmetric matrix of rank $r$ has exactly $r$ nonzero eigenvalues. Since the covariance matrix is just $X^TX/(n-1)$, it has $r$ positive eigenvalues and therefore $r$ principal directions with nonzero variance.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/A8_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/A8_interview-answer.md",
+      "title": "Positive Definite and Positive Semi-Definite Matrices",
+      "declaredItems": [
+        "2026:bank01:A8"
+      ],
+      "items": [
+        "2026:bank01:A8"
+      ],
+      "item": "2026:bank01:A8",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "positive-definite",
+        "positive-semidefinite",
+        "covariance"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nWhat does it mean for a matrix to be positive definite versus positive semi-definite, and how would you actually check in practice? Give me three matrices that show up in ML that are guaranteed PSD and explain why. What does it mean if your empirical covariance matrix comes back with a slightly negative eigenvalue?\n\n## Mastery Answer\n\nFor a real symmetric matrix $A$:\n\n- $A$ is positive definite (PD) if\n\n$$\nz^TAz>0\n$$\n\nfor every nonzero $z$.\n\n- $A$ is positive semi-definite (PSD) if\n\n$$\nz^TAz\\ge0\n$$\n\nfor every $z$.\n\nThe exclusion of $z=0$ matters for PD because $0^TA0=0$ for every matrix.\n\nFor symmetric matrices, the equivalent eigenvalue test is:\n\n- PD iff every eigenvalue is strictly positive;\n- PSD iff every eigenvalue is nonnegative.\n\nIn practice, if I expect a symmetric matrix to be PD, I would usually try a Cholesky factorization\n\n$$\nA=LL^T.\n$$\n\nStandard unpivoted Cholesky succeeds for a symmetric/Hermitian PD matrix and is typically cheaper than computing a full eigendecomposition. If I specifically need to diagnose PSD or near-singularity, I would inspect the symmetric eigenspectrum or use a numerically appropriate symmetric factorization.\n\nThree common PSD matrices in ML are all instances of the same squared-norm argument.\n\nFirst, a Gram matrix $X^TX$ is PSD because\n\n$$\nz^TX^TXz\n= (Xz)^T(Xz)\n= \\|Xz\\|_2^2\n\\ge0.\n$$\n\nSecond, a covariance matrix of centered data is\n\n$$\nC=\\frac{1}{n-1}X^TX,\n$$\n\nso it is just a nonnegative scalar multiple of a Gram matrix and is therefore PSD.\n\nThird, a kernel Gram matrix is PSD for any valid PSD kernel. If\n\n$$\nk(x_i,x_j)=\\langle \\phi(x_i),\\phi(x_j)\\rangle,\n$$\n\nthen the kernel matrix is simply a Gram matrix in feature space.\n\nThese matrices are strictly PD only when there is no nonzero null direction. For example, $X^TX$ is PD iff $X$ has full column rank.\n\nA true covariance matrix cannot have a negative eigenvalue mathematically. If an empirical covariance matrix has a very small negative eigenvalue, the usual explanation is floating-point error around a true zero or tiny positive eigenvalue, often in a nearly rank-deficient problem. I would judge the magnitude relative to matrix scale, dimension, conditioning, and solver tolerance. A materially negative eigenvalue is a reason to inspect symmetry, missing-value handling, weighting, preprocessing, or the covariance construction itself.\n\nIf a downstream method requires strict PD, adding a small diagonal jitter $\\varepsilon I$ can lift the spectrum away from zero. If the goal is simply to restore PSD structure, one can also project onto the PSD cone by clipping small negative eigenvalues, while recognizing that this changes the matrix.\n\n## Learn the Concepts\n\n### 1. Quadratic forms are the central object\n\nThe quantity\n\n$$\nz^TAz\n$$\n\nis the quadratic form associated with $A$. For a symmetric matrix, it tells us whether the matrix assigns positive, zero, or negative curvature/energy to a direction $z$.\n\n- PD means every nonzero direction has strictly positive quadratic form.\n- PSD means no direction has negative quadratic form, but some directions may be flat.\n\nThose flat directions are exactly what distinguish singular PSD matrices from PD matrices.\n\n### 2. Why eigenvalues characterize PD and PSD\n\nFor a real symmetric matrix, the spectral theorem gives\n\n$$\nA=Q\\Lambda Q^T.\n$$\n\nLet $c=Q^Tz$. Then\n\n$$\nz^TAz\n= z^TQ\\Lambda Q^Tz\n= c^T\\Lambda c\n= \\sum_i \\lambda_i c_i^2.\n$$\n\nBecause each $c_i^2\\ge0$, the sign of the quadratic form is controlled entirely by the eigenvalues.\n\nTherefore:\n\n- all $\\lambda_i>0$ implies PD;\n- all $\\lambda_i\\ge0$ implies PSD;\n- any $\\lambda_i<0$ means the matrix is indefinite rather than PSD.\n\n### 3. Cholesky as a practical PD check\n\nFor a symmetric PD matrix,\n\n$$\nA=LL^T\n$$\n\nwith $L$ lower triangular and positive diagonal entries.\n\nCholesky is attractive when PD is expected because it is computationally efficient and directly gives a factor useful for solving linear systems and Gaussian likelihoods.\n\nA singular PSD matrix may fail standard Cholesky because a zero pivot appears. That failure does not imply the matrix has a genuinely negative direction; it can simply be PSD rather than strictly PD.\n\n### 4. Why Gram matrices are PSD\n\nA Gram matrix stores pairwise inner products. For $G=X^TX$,\n\n$$\nz^TGz=\\|Xz\\|_2^2.\n$$\n\nSquared norms cannot be negative, so every Gram matrix is PSD.\n\nIt is strictly PD iff $Xz\\ne0$ for every nonzero $z$, which is exactly the condition that $X$ has full column rank.\n\n### 5. Covariance matrices are Gram matrices of centered data\n\nIf $X_c$ is centered data, then\n\n$$\nC=\\frac{1}{n-1}X_c^TX_c.\n$$\n\nSo covariance is automatically PSD.\n\nIf $d>n-1$, then the centered data can have rank at most $n-1$, so the covariance matrix must be singular. This is common in high-dimensional ML: zero eigenvalues can be structurally inevitable, not a bug.\n\n### 6. Kernel matrices inherit PSD from feature-space inner products\n\nA valid PSD kernel behaves like an inner product in some feature space:\n\n$$\nk(x,x')=\\langle\\phi(x),\\phi(x')\\rangle.\n$$\n\nFor coefficients $c$,\n\n$$\nc^TKc\n= \\left\\|\\sum_i c_i\\phi(x_i)\\right\\|_2^2\n\\ge0.\n$$\n\nThis PSD property is what makes kernel methods mathematically well behaved.\n\n### 7. Interpreting a slightly negative covariance eigenvalue\n\nExact covariance is PSD, but floating-point arithmetic is finite precision. Rounding error, imperfect symmetry, and ill-conditioning can perturb an eigenvalue that should be zero into a tiny negative number.\n\nThe correct diagnostic is relative, not purely absolute. Compare the negative eigenvalue with quantities such as:\n\n- the largest eigenvalue;\n- the matrix norm;\n- the matrix dimension;\n- expected floating-point tolerance;\n- the condition number.\n\nA value extremely close to zero can be numerical noise. A substantial negative value should trigger investigation of the pipeline rather than automatic clipping.\n\n### 8. Jitter and ridge share the same eigenvalue-lifting operation\n\nIf\n\n$$\nA=Q\\Lambda Q^T,\n$$\n\nthen\n\n$$\nA+\\varepsilon I\n=Q(\\Lambda+\\varepsilon I)Q^T.\n$$\n\nEvery eigenvalue increases by $\\varepsilon$. Numerically, this can turn a nearly singular PSD matrix into a safely PD matrix. Algebraically this is the same spectrum-shifting operation that appears in ridge regression, although the modeling interpretation is different.\n\n## Required / Important Follow-ups\n\n### Does Cholesky test PSD as well as PD?\n\nNot in the ordinary unpivoted form. Standard Cholesky is fundamentally a strict-PD factorization for symmetric/Hermitian matrices. A singular PSD matrix can fail because a pivot is zero.\n\n### When is $X^TX$ strictly PD?\n\nExactly when $X$ has full column rank. If some nonzero $z$ satisfies $Xz=0$, then\n\n$$\nz^TX^TXz=0,\n$$\n\nso the matrix is PSD but not PD.\n\n### What should I do with a small negative eigenvalue?\n\nFirst determine whether it is plausibly numerical by comparing it with matrix scale and tolerance. If the matrix is supposed to be a covariance matrix and the value is only tiny relative to the spectrum, numerical error is likely. If it is materially negative, check how the matrix was constructed before repairing it. Jitter is appropriate when strict PD is required; eigenvalue clipping is a different repair that projects back toward PSD structure.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/A9_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/A9_interview-answer.md",
+      "title": "L1, L2, and L-Infinity Geometry",
+      "declaredItems": [
+        "2026:bank01:A9"
+      ],
+      "items": [
+        "2026:bank01:A9"
+      ],
+      "item": "2026:bank01:A9",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "regularization",
+        "l1",
+        "l2",
+        "sparsity"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nCompare the L1, L2, and L∞ unit balls geometrically, then explain why L1 regularization produces exactly zero coefficients while L2 does not. Give me the geometric argument first, then tell me what is happening to the penalty's derivative at zero that makes it possible.\n\n## Mastery Answer\n\nIn two dimensions, the $L_2$ unit ball is a filled Euclidean disk with a smooth circular boundary. The $L_1$ unit ball is a diamond, whose corners lie on the coordinate axes. The $L_\\infty$ unit ball is an axis-aligned square; in higher dimensions these become a sphere/ball, a cross-polytope, and a hypercube respectively.\n\nThe geometric sparsity argument comes from writing regularization in constrained form: minimize the loss subject to the coefficient vector lying inside a norm ball. The optimizer occurs where a loss contour first touches the feasible region.\n\nFor $L_1$, the feasible set has corners on the coordinate axes. A nontrivial range of loss-contour orientations first touches one of those corners. At such a corner, one or more coordinates are exactly zero, so $L_1$ frequently produces sparse solutions.\n\nFor $L_2$, the boundary is smooth. A generic tangency occurs away from the axes, so coefficients are continuously shrunk but are not normally driven exactly to zero.\n\nThe optimization view gives the same conclusion. For one coefficient $\\beta$:\n\n$$\n\\frac{d}{d\\beta}\\beta^2=2\\beta,\n$$\n\nso the $L_2$ penalty gradient goes to zero as $\\beta\\to0$. There is no threshold region that pins the coefficient exactly at zero.\n\nFor $L_1$,\n\n$$\n\\frac{d}{d\\beta}|\\beta|=\n\\begin{cases}\n+1,&\\beta>0,\\\\\n-1,&\\beta<0.\n\\end{cases}\n$$\n\nAt zero, $|\\beta|$ is non-differentiable and has subgradient\n\n$$\n\\partial |\\beta|\\big|_{\\beta=0}=[-1,1].\n$$\n\nWith penalty weight $\\lambda$, zero satisfies the first-order optimality condition whenever the loss gradient at zero falls inside $[-\\lambda,\\lambda]$. That creates a genuine interval of gradients for which the exact optimum is $\\beta=0$.\n\nThis mechanism appears explicitly in soft-thresholding:\n\n$$\nS_\\lambda(z)\n=\\operatorname{sign}(z)\\max(|z|-\\lambda,0).\n$$\n\nSoft-thresholding is the exact proximal operator for the $L_1$ penalty and gives the closed-form coefficient update in special geometries such as orthonormal designs. For a general correlated Lasso problem, the coefficients are coupled through the loss, so this scalar formula is not a single global closed-form solution, though coordinate-descent updates use the same thresholding mechanism.\n\nThe $L_\\infty$ norm constrains the largest absolute coefficient. Its geometry does not place corners on the coordinate axes in the same sparsity-producing way, so it is more naturally associated with capping or equalizing maximum magnitude than with sparse feature selection. $L_\\infty$ balls also appear naturally in bounded-perturbation settings such as adversarial robustness.\n\n## Learn the Concepts\n\n### 1. The three norms\n\nFor $\\beta\\in\\mathbb{R}^d$:\n\n$$\n\\|\\beta\\|_1=\\sum_i |\\beta_i|,\n$$\n\n$$\n\\|\\beta\\|_2=\\sqrt{\\sum_i\\beta_i^2},\n$$\n\nand\n\n$$\n\\|\\beta\\|_\\infty=\\max_i|\\beta_i|.\n$$\n\nA unit ball is the set of vectors whose norm is at most one.\n\nIn 2D:\n\n- $L_1$: diamond;\n- $L_2$: disk;\n- $L_\\infty$: square.\n\nThe location of corners matters more than the visual shape alone.\n\n### 2. Penalized and constrained regularization are two views of the same trade-off\n\nA penalized problem such as\n\n$$\n\\min_\\beta L(\\beta)+\\lambda\\|\\beta\\|_1\n$$\n\ncorresponds, under standard convex conditions, to a constrained problem of the form\n\n$$\n\\min_\\beta L(\\beta)\n\\quad\\text{subject to}\\quad\n\\|\\beta\\|_1\\le t\n$$\n\nfor an appropriate relationship between $\\lambda$ and $t$.\n\nThis constrained view makes the geometry visible: the loss contours expand until they first touch the feasible set.\n\n### 3. Why $L_1$ corners produce sparsity\n\nThe $L_1$ ball has corners where many coordinates are zero. In two dimensions, the corners are $(\\pm1,0)$ and $(0,\\pm1)$.\n\nBecause a corner has a range of supporting hyperplanes rather than one unique tangent, many different loss-gradient directions are compatible with an optimum at that same corner. Therefore exact axis contact is not a measure-zero accident; it happens robustly over a range of problems.\n\nThat is the geometric reason Lasso solutions are often sparse.\n\n### 4. Why $L_2$ usually shrinks without zeroing\n\nThe $L_2$ boundary is differentiable everywhere away from the origin. At a generic optimum, the loss contour has a unique tangent to the smooth sphere. There is no geometrically preferred set of axis-aligned corners, so exact zero coordinates are not normally produced.\n\nThis does not mean an $L_2$-regularized coefficient can never be zero. Special symmetry or data conditions can make that happen. The point is that $L_2$ does not have a structural thresholding mechanism that generically creates sparsity.\n\n### 5. Subgradients explain the same phenomenon analytically\n\nFor Lasso,\n\n$$\n\\min_\\beta L(\\beta)+\\lambda|\\beta|,\n$$\n\nzero is optimal if\n\n$$\n0\\in \\nabla L(0)+\\lambda[-1,1].\n$$\n\nEquivalently,\n\n$$\n|\\nabla L(0)|\\le\\lambda.\n$$\n\nSo a whole interval of loss gradients maps to the exact same coefficient value, zero.\n\nFor ridge,\n\n$$\n\\nabla\\big(\\lambda\\beta^2\\big)=2\\lambda\\beta.\n$$\n\nAs $\\beta$ approaches zero, the penalty force also approaches zero. Ridge therefore pulls continuously toward zero rather than creating a dead zone around it.\n\n### 6. Soft-thresholding\n\nThe proximal problem\n\n$$\n\\min_\\beta \\frac12(\\beta-z)^2+\\lambda|\\beta|\n$$\n\nhas solution\n\n$$\n\\beta^*=\\operatorname{sign}(z)\\max(|z|-\\lambda,0).\n$$\n\nThis is soft-thresholding:\n\n- if $|z|\\le\\lambda$, the solution is exactly zero;\n- if $|z|>\\lambda$, the solution is shrunk toward zero by $\\lambda$.\n\nFor orthonormal-design Lasso, the problem decouples by coordinate and this formula directly gives the coefficients. For correlated features, the coordinates interact, so iterative methods such as coordinate descent repeatedly apply conditional thresholding updates.\n\n### 7. What $L_\\infty$ regularization does geometrically\n\nThe $L_\\infty$ constraint\n\n$$\n\\|\\beta\\|_\\infty\\le t\n$$\n\nmeans every coefficient satisfies $|\\beta_i|\\le t$. The constraint directly caps the largest magnitude.\n\nIts corners occur when multiple coefficients simultaneously hit the maximum magnitude, not when many coefficients vanish. So the geometry favors magnitude equalization/capping rather than sparsity.\n\n### 8. Broader modeling trade-offs\n\n$L_1$ is attractive when sparse feature selection is useful, but with strongly correlated predictors it can choose one feature somewhat arbitrarily among a group.\n\n$L_2$ is stable under correlated features and spreads weight across them, but it does not perform feature selection.\n\nThis motivates elastic net, which combines $L_1$ and $L_2$ when both sparsity and grouped stability are desirable.\n\n## Required / Important Follow-ups\n\n### Does soft-thresholding solve arbitrary Lasso in one closed-form step?\n\nNo. It is the exact proximal operator for the $L_1$ penalty and gives a direct closed form when the regression geometry decouples, such as an orthonormal design. In a general correlated design, coefficients interact through the loss, although coordinate-descent updates use soft-thresholding conditionally.\n\n### Why does the $L_1$ subgradient create an exact zero?\n\nAt zero,\n\n$$\n\\partial(\\lambda|\\beta|)=[-\\lambda,\\lambda].\n$$\n\nIf the negative loss gradient lies anywhere inside that interval, the first-order optimality condition can be satisfied with $\\beta=0$. That interval is the analytic counterpart of the geometric corner.\n\n### What is the main geometric role of $L_\\infty$?\n\n$L_\\infty$ constrains the maximum coordinate magnitude. Its hypercube geometry tends to cap or equalize large coefficients rather than produce axis-aligned sparsity. It is therefore structurally different from the sparsity-inducing geometry of $L_1$.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/B19_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/B19_interview-answer.md",
+      "title": "Span, Linear Independence, Basis, and Rank",
+      "declaredItems": [
+        "2026:bank01:B19"
+      ],
+      "items": [
+        "2026:bank01:B19"
+      ],
+      "item": "2026:bank01:B19",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "rank",
+        "basis"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nDefine span, linear independence, basis, and rank, and state how they relate. Why is row rank equal to column rank, and what is the rank of a product AB bounded by?\n\n## Mastery Answer\n\nThe **span** of vectors is the set of all linear combinations of those vectors. A set is **linearly independent** if the only coefficients that produce the zero vector are all zero; equivalently, no vector can be written as a linear combination of the others. A **basis** is a linearly independent spanning set, and the **dimension** of a subspace is the number of vectors in any basis.\n\nFor a matrix $A$, the **rank** is the dimension of its column space, equivalently the dimension of its row space. Row rank equals column rank because row reduction reveals the same number of pivots from both perspectives: the nonzero rows of echelon form form a basis for the row space, while the corresponding pivot columns of the **original** matrix form a basis for the column space.\n\nFor compatible matrices,\n$$\n\\operatorname{rank}(AB)\\le \\min(\\operatorname{rank}(A),\\operatorname{rank}(B)).\n$$\nEvery column of $AB$ lies in $\\operatorname{col}(A)$, so the product cannot have rank greater than $A$. Also $\\operatorname{null}(B)\\subseteq \\operatorname{null}(AB)$, so the product cannot retain more independent input directions than $B$.\n\n## Learn the Concepts\n\n### Span\n\nFor vectors $v_1,\\ldots,v_k$,\n$$\n\\operatorname{span}\\{v_1,\\ldots,v_k\\}\n=\n\\left\\{\\sum_i c_i v_i\\right\\}.\n$$\n\nSpan answers a reachability question: what vectors can be constructed from the available directions?\n\nFor\n$$\nA=[a_1\\ \\cdots\\ a_n],\n$$\nwe have\n$$\nAx=x_1a_1+\\cdots+x_na_n,\n$$\nso all possible outputs of $A$ are exactly its column space.\n\n### Linear independence\n\n$v_1,\\ldots,v_k$ are linearly independent if\n$$\n\\sum_i c_i v_i=0\n$$\nimplies every $c_i=0$.\n\nFor the columns of $A$, linear dependence is equivalent to the existence of a nonzero solution of\n$$\nAx=0.\n$$\n\n### Basis and dimension\n\nA basis spans a subspace without redundancy. Every vector in the subspace has a unique coordinate representation in that basis. The number of basis vectors is the dimension.\n\n### Rank\n\nFor $A\\in\\mathbb R^{m\\times n}$,\n$$\n\\operatorname{rank}(A)\n=\n\\dim(\\operatorname{col}(A))\n=\n\\dim(\\operatorname{row}(A)).\n$$\n\nRank is the number of independent directions that survive the transformation.\n\n### Why row rank equals column rank\n\nGaussian elimination produces an echelon form with $r$ pivots.\n\n- The $r$ nonzero rows of echelon form form a basis for the row space.\n- The $r$ pivot **indices** identify $r$ columns of the original matrix that form a basis for the original column space.\n\nTherefore both dimensions equal $r$.\n\nA useful precision point: row operations preserve the row space and preserve dependence relationships among columns, but they do not preserve the literal column space.\n\n### Rank of a product\n\nIf $A\\in\\mathbb R^{m\\times k}$ and $B\\in\\mathbb R^{k\\times n}$, then\n$$\n\\operatorname{col}(AB)\\subseteq \\operatorname{col}(A),\n$$\nso\n$$\n\\operatorname{rank}(AB)\\le \\operatorname{rank}(A).\n$$\n\nAlso,\n$$\nBx=0\\implies ABx=0,\n$$\nso\n$$\n\\operatorname{null}(B)\\subseteq \\operatorname{null}(AB).\n$$\n\nBy rank-nullity, this gives\n$$\n\\operatorname{rank}(AB)\\le \\operatorname{rank}(B).\n$$\n\n## Required / Important Follow-ups\n\n### Why must pivot columns be taken from the original matrix?\n\nRow operations change the actual column vectors. The reduced matrix tells us which **column indices** are pivots, but the basis for the original column space must use those columns from the original matrix.\n\n### What does rank deficiency mean in an ML design matrix?\n\nAt least one feature column is an exact linear combination of others. Ordinary least squares then has non-identifiable coefficients unless an additional constraint, pseudoinverse convention, or regularization is introduced.\n\n### Can $\\operatorname{rank}(AB)$ be strictly less than both ranks?\n\nYes. The image of $B$ may enter directions that $A$ sends to zero.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/B20_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/B20_interview-answer.md",
+      "title": "Three Views of Matrix-Vector Multiplication",
+      "declaredItems": [
+        "2026:bank01:B20"
+      ],
+      "items": [
+        "2026:bank01:B20"
+      ],
+      "item": "2026:bank01:B20",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "matrix-multiplication",
+        "multicollinearity"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nGive me three different readings of the matrix product Ax, and explain the dummy-variable trap in terms of one of them.\n\n## Mastery Answer\n\nFor $A\\in\\mathbb R^{m\\times n}$ and $x\\in\\mathbb R^n$, there are three useful readings of $Ax$.\n\n**Row view:** the $i$th output is the dot product of the $i$th row with $x$:\n$$\n(Ax)_i=a_i^Tx.\n$$\n\n**Column view:**\n$$\nAx=x_1a_1+\\cdots+x_na_n,\n$$\nso $Ax$ is a linear combination of the columns of $A$ and lies in $\\operatorname{col}(A)$.\n\n**Transformation view:** $A$ is a linear map from $\\mathbb R^n$ to $\\mathbb R^m$.\n\nThe dummy-variable trap is easiest to see with the column view. If a categorical variable with $k$ categories is encoded with all $k$ one-hot columns and the model also contains an intercept column of ones, then the dummy columns sum exactly to the intercept. The columns are linearly dependent, so the design matrix is rank deficient and $X^TX$ is singular. Dropping one dummy column or dropping the intercept removes the exact dependence; fitted values can remain equivalent while coefficient interpretation changes.\n\n## Learn the Concepts\n\n### Row view\n\nIf the rows of $A$ are $r_1^T,\\ldots,r_m^T$,\n$$\nAx=\n\\begin{bmatrix}\nr_1^Tx\\\\\n\\vdots\\\\\nr_m^Tx\n\\end{bmatrix}.\n$$\n\nThis is the natural view for prediction: each row/example is scored by a dot product with a parameter vector.\n\n### Column view\n\nIf\n$$\nA=[a_1\\ \\cdots\\ a_n],\n$$\nthen\n$$\nAx=\\sum_j x_ja_j.\n$$\n\nThis view directly connects matrix multiplication to span and linear systems. $Ax=b$ is solvable exactly iff\n$$\nb\\in\\operatorname{col}(A).\n$$\n\n### Transformation view\n\nA matrix is a linear operator:\n$$\nA:\\mathbb R^n\\to\\mathbb R^m.\n$$\n\nThis view is useful for composition, rank, null spaces, projections, neural-network linear layers, and embeddings.\n\n### Dummy-variable trap\n\nSuppose a categorical feature has three levels with dummy columns $d_1,d_2,d_3$. Every row belongs to exactly one category, so\n$$\nd_1+d_2+d_3=\\mathbf 1.\n$$\n\nIf the intercept column $\\mathbf 1$ is also present,\n$$\n\\mathbf 1-d_1-d_2-d_3=0,\n$$\nwhich is an exact nontrivial linear dependence.\n\nThat makes the coefficient vector non-unique: multiple coefficient assignments produce the same fitted values.\n\n### Exact versus near multicollinearity\n\nThe dummy-variable trap is **exact** multicollinearity. Near multicollinearity means the columns are almost dependent. The matrix can remain full rank but have a very small singular value, making the problem ill-conditioned.\n\n“Correlated features” is only an informal proxy. The precise issue is near-linear dependence among columns.\n\n## Required / Important Follow-ups\n\n### Does standardizing fix the dummy-variable trap?\n\nNo. Standardization changes scales but does not remove an exact linear dependence.\n\n### Why can dropping one dummy or dropping the intercept give the same fitted values?\n\nBoth parameterizations can span the same prediction space. What changes is the coordinate system used to describe those predictions, so coefficient interpretation changes.\n\n### What is the numerical signature of near multicollinearity?\n\nA small singular value and a large condition number. Numerical rank can become tolerance-dependent even though algebraic rank is still full.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/B21_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/B21_interview-answer.md",
+      "title": "Trace, Determinant, and Log-Determinant",
+      "declaredItems": [
+        "2026:bank01:B21"
+      ],
+      "items": [
+        "2026:bank01:B21"
+      ],
+      "item": "2026:bank01:B21",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "determinant",
+        "trace",
+        "gaussian-models"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nWhat do the trace and the determinant tell you about a matrix, and what does each fail to tell you? Where does log-determinant show up in ML?\n\n## Mastery Answer\n\nFor a square matrix $A$, the **trace**\n$$\n\\operatorname{tr}(A)=\\sum_i A_{ii}\n$$\nis also the sum of the eigenvalues, counting algebraic multiplicity.\n\nThe **determinant** is the signed volume-scaling factor of the linear transformation. Its magnitude $|\\det(A)|$ tells how volumes scale, while its sign records orientation reversal. A zero determinant means the matrix is singular. The determinant is also the product of the eigenvalues.\n\nBoth are highly compressed scalar summaries. Trace does not reveal individual eigenvalues, eigenvectors, rank, or conditioning. A nonzero determinant proves full rank for a square matrix, but the determinant magnitude by itself is not a reliable conditioning diagnostic.\n\nThe **log-determinant** appears in multivariate Gaussian likelihoods and Gaussian-process objectives. For a covariance matrix $\\Sigma$, $\\log\\det\\Sigma$ measures covariance volume on a log scale and converts a product of eigenvalues into a sum:\n$$\n\\log\\det\\Sigma=\\sum_i\\log\\lambda_i.\n$$\n\n## Learn the Concepts\n\n### Trace\n\nThe trace is\n$$\n\\operatorname{tr}(A)=A_{11}+\\cdots+A_{nn}.\n$$\n\nA fundamental identity is\n$$\n\\operatorname{tr}(A)=\\sum_i\\lambda_i.\n$$\n\nTrace is invariant under a change of basis:\n$$\n\\operatorname{tr}(Q^{-1}AQ)=\\operatorname{tr}(A).\n$$\n\nThis makes it a coordinate-independent scalar summary of a linear operator.\n\n### Determinant\n\nFor a square matrix,\n$$\n\\det(A)=\\prod_i\\lambda_i.\n$$\n\nGeometrically,\n$$\n|\\det(A)|\n$$\nis the factor by which $A$ scales $n$-dimensional volume.\n\n- $|\\det(A)|>1$: volume expands.\n- $0<|\\det(A)|<1$: volume shrinks.\n- $|\\det(A)|=1$: volume magnitude is preserved.\n- $\\det(A)<0$: orientation is reversed.\n- $\\det(A)=0$: at least one dimension collapses, so $A$ is singular.\n\nThe magnitude, not the raw signed value, controls volume scaling.\n\n### What these summaries miss\n\nTwo matrices can have the same trace and determinant but very different eigenvalue distributions, eigenvectors, geometry, and conditioning.\n\nFor example, determinant can be nonzero while the matrix is still badly conditioned: one singular value can be tiny while another is large enough to keep the product moderate.\n\n### Why log-determinant?\n\nFor a positive-definite covariance matrix,\n$$\n\\det(\\Sigma)=\\prod_i\\lambda_i,\n$$\nso\n$$\n\\log\\det(\\Sigma)=\\sum_i\\log\\lambda_i.\n$$\n\nThe logarithm turns a potentially huge or tiny product into a numerically and algebraically manageable sum.\n\nIn a multivariate Gaussian,\n$$\n-\\log p(x)\n$$\ncontains a quadratic Mahalanobis term and a normalization term involving\n$$\n\\frac12\\log\\det\\Sigma.\n$$\n\nThe quadratic term penalizes distance relative to covariance geometry; the log-determinant term accounts for the volume occupied by the distribution.\n\n## Required / Important Follow-ups\n\n### Does $\\det(A)>1$ always mean expansion?\n\nNo. Volume scaling depends on $|\\det(A)|$. A determinant of $-3$ triples volume magnitude and reverses orientation.\n\n### Can determinant diagnose conditioning?\n\nNot reliably. Conditioning depends on the ratio of largest to smallest singular values, not their product.\n\n### Why is log-determinant common for covariance matrices?\n\nCovariance matrices are positive semidefinite, and positive-definite covariance matrices have positive eigenvalues. Log-determinant summarizes total variance-volume while being additive across eigen-directions.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/B23_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/B23_interview-answer.md",
+      "title": "Dot Products, Orthogonality, and Projection",
+      "declaredItems": [
+        "2026:bank01:B23"
+      ],
+      "items": [
+        "2026:bank01:B23"
+      ],
+      "item": "2026:bank01:B23",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "dot-product",
+        "projection"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nDefine the dot product geometrically and algebraically. Derive the projection of one vector onto another, and state what a zero dot product does and does not imply.\n\n## Mastery Answer\n\nAlgebraically,\n$$\nu^Tv=\\sum_i u_iv_i.\n$$\n\nGeometrically, for nonzero vectors,\n$$\nu^Tv=\\|u\\|\\,\\|v\\|\\cos\\theta.\n$$\n\nSo the sign indicates whether the angle is acute, right, or obtuse.\n\nTo project $u$ onto a nonzero vector $v$, write the projection as $cv$ and require the residual $u-cv$ to be orthogonal to $v$:\n$$\nv^T(u-cv)=0.\n$$\nTherefore\n$$\nc=\\frac{v^Tu}{v^Tv},\n$$\nand\n$$\n\\operatorname{proj}_v(u)=\\frac{v^Tu}{v^Tv}v.\n$$\n\nA zero dot product between nonzero vectors means they are orthogonal. For centered data vectors, zero dot product corresponds to zero sample covariance up to the scaling convention. But zero covariance does **not** imply statistical independence in general; it does for jointly Gaussian variables.\n\n## Learn the Concepts\n\n### Algebraic meaning\n\nThe dot product multiplies corresponding coordinates and sums them:\n$$\nu^Tv=u_1v_1+\\cdots+u_nv_n.\n$$\n\nIt measures alignment.\n\n### Geometric meaning\n\nFor nonzero vectors,\n$$\n\\cos\\theta=\\frac{u^Tv}{\\|u\\|\\|v\\|}.\n$$\n\nTherefore:\n\n- $u^Tv>0$: acute angle.\n- $u^Tv=0$: orthogonal.\n- $u^Tv<0$: obtuse angle.\n\nThe zero-vector case is special because its angle is undefined, even though its dot product with every vector is zero.\n\n### Projection derivation\n\nThe closest point to $u$ on the line spanned by $v$ must have the form $cv$.\n\nAt the closest point, the residual is perpendicular to the line:\n$$\nv^T(u-cv)=0.\n$$\n\nExpanding:\n$$\nv^Tu-cv^Tv=0,\n$$\nhence\n$$\nc=\\frac{v^Tu}{v^Tv}.\n$$\n\nSo\n$$\n\\operatorname{proj}_v(u)\n=\n\\frac{v^Tu}{\\|v\\|^2}v.\n$$\n\nIf $v$ is unit length, this simplifies to\n$$\n(u^Tv)v.\n$$\n\n### Connection to least squares\n\nLeast squares generalizes this one-dimensional projection to projection onto an entire column space. At the optimum, the residual is orthogonal to every column of the design matrix.\n\n### Dot product versus independence\n\nIf centered sample vectors $x$ and $y$ satisfy\n$$\nx^Ty=0,\n$$\ntheir sample covariance is zero up to normalization by $n$ or $n-1$.\n\nBut nonlinear dependence can remain. Uncorrelated does not mean independent unless additional distributional structure, such as joint Gaussianity, is present.\n\n## Required / Important Follow-ups\n\n### Why does projection use $v^Tv$ in the denominator?\n\nBecause $v$ may not be unit length. The denominator removes the effect of the basis vector's scale.\n\n### What happens if $v=0$?\n\nProjection onto the span of the zero vector is not defined by the formula because $v^Tv=0$.\n\n### How does this connect to cosine similarity?\n\nCosine similarity normalizes the dot product by both vector norms and therefore measures direction alignment rather than raw magnitude.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/B24_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/B24_interview-answer.md",
+      "title": "Eigenvalues, the Spectral Theorem, and PCA",
+      "declaredItems": [
+        "2026:bank01:B24"
+      ],
+      "items": [
+        "2026:bank01:B24"
+      ],
+      "item": "2026:bank01:B24",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "eigenvalues",
+        "spectral-theorem",
+        "pca"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nState the eigenvalue equation and what it means geometrically. What does the spectral theorem guarantee for symmetric matrices, and why does that guarantee matter so often in ML?\n\n## Mastery Answer\n\nAn eigenpair satisfies\n$$\nAx=\\lambda x,\n$$\nwith $x\\neq 0$. Geometrically, $x$ is a direction that $A$ does not rotate away from its own line: $A$ only scales it. The magnitude $|\\lambda|$ controls the scale change, while the sign controls direction reversal.\n\n- $|\\lambda|>1$: stretch.\n- $0<|\\lambda|<1$: shrink.\n- $\\lambda<0$: reverse direction in addition to scaling.\n- $\\lambda=0$: collapse that direction to zero.\n\nFor a real symmetric matrix, the spectral theorem guarantees real eigenvalues and an orthonormal eigenbasis. Equivalently,\n$$\nA=Q\\Lambda Q^T\n$$\nwith orthogonal $Q$ and diagonal real $\\Lambda$.\n\nThis matters in ML because many important matrices are symmetric: covariance matrices, Gram matrices, Hessians, and many kernel matrices. Their geometry can be analyzed along orthogonal eigen-directions.\n\nFor PCA, if\n$$\n\\Sigma=Q\\Lambda Q^T\n$$\nand centered data are transformed to\n$$\nz=Q^Tx,\n$$\nthen\n$$\n\\operatorname{Cov}(z)\n=\nQ^T\\Sigma Q\n=\n\\Lambda.\n$$\nBecause $\\Lambda$ is diagonal, the principal-component coordinates are uncorrelated, and each eigenvalue is the variance along its corresponding principal component.\n\n## Learn the Concepts\n\n### Eigenvectors and eigenvalues\n\nMost vectors change both direction and magnitude under a matrix transformation. An eigenvector is special:\n$$\nAx=\\lambda x.\n$$\n\nIt stays on the same one-dimensional line.\n\nThe scale factor is governed by $|\\lambda|$, not merely by whether $\\lambda$ is numerically greater or less than $1$. For example, $\\lambda=-3$ triples magnitude and reverses direction.\n\n### Spectral theorem\n\nFor real symmetric $A$,\n$$\nA=A^T,\n$$\nthe spectral theorem gives:\n\n1. all eigenvalues are real;\n2. eigenvectors can be chosen orthonormal;\n3. $A$ can be orthogonally diagonalized:\n$$\nA=Q\\Lambda Q^T.\n$$\n\nBecause $Q$ is orthogonal,\n$$\nQ^{-1}=Q^T.\n$$\n\nThe decomposition turns a complicated linear transformation into independent scalar actions along orthogonal coordinates.\n\n### PCA\n\nFor centered data, PCA diagonalizes the covariance matrix.\n\nIf\n$$\n\\Sigma=Q\\Lambda Q^T,\n$$\nthen PCA coordinates are\n$$\nz=Q^Tx.\n$$\n\nTheir covariance is\n$$\n\\operatorname{Cov}(z)\n=\nQ^T\\Sigma Q\n=\nQ^TQ\\Lambda Q^TQ\n=\n\\Lambda.\n$$\n\nThe off-diagonal entries vanish, so principal components are uncorrelated. The diagonal entries are their variances.\n\nThe uncorrelated result comes from **diagonalizing the covariance matrix**, not merely from the fact that the axes are orthogonal.\n\n### Hessians\n\nAt a critical point, a symmetric Hessian has real eigenvalues.\n\n- all eigenvalues strictly positive: strict local minimum;\n- mixed signs: saddle;\n- zero eigenvalues: the second-order test is inconclusive along flat directions.\n\n## Required / Important Follow-ups\n\n### Does a negative eigenvalue mean shrinkage?\n\nNot necessarily. Magnitude and sign play different roles. $\\lambda=-4$ stretches by a factor of four and reverses direction.\n\n### Why is orthogonal diagonalization numerically convenient?\n\nOrthogonal transformations preserve Euclidean norms and have inverse equal to transpose, which avoids introducing additional conditioning from the change of basis.\n\n### Why do PCA eigenvalues represent variance?\n\nEach diagonal entry of $\\Lambda=Q^T\\Sigma Q$ is the variance of the corresponding transformed principal-component coordinate.\n"
+    },
+    {
+      "curriculum": "2026",
+      "type": "interview-answer",
+      "slug": "2026/interview-answers/bank01/B25_interview-answer",
+      "path": "curriculum/2026/interview-answers/bank01/B25_interview-answer.md",
+      "title": "Fundamental Subspaces and Rank-Nullity",
+      "declaredItems": [
+        "2026:bank01:B25"
+      ],
+      "items": [
+        "2026:bank01:B25"
+      ],
+      "item": "2026:bank01:B25",
+      "created": "2026-09-21",
+      "updated": "2026-09-21",
+      "tags": [
+        "linear-algebra",
+        "subspaces",
+        "rank-nullity",
+        "linear-systems"
+      ],
+      "markdown": "\n## Canonical Interview Question\n\nName the four fundamental subspaces of a matrix, state the rank-nullity theorem, and connect them to solving a linear system.\n\n## Mastery Answer\n\nFor $A\\in\\mathbb R^{m\\times n}$, the four fundamental subspaces are:\n\n- column space $\\operatorname{col}(A)\\subseteq\\mathbb R^m$;\n- null space $\\operatorname{null}(A)\\subseteq\\mathbb R^n$;\n- row space $\\operatorname{row}(A)=\\operatorname{col}(A^T)\\subseteq\\mathbb R^n$;\n- left null space $\\operatorname{null}(A^T)\\subseteq\\mathbb R^m$.\n\nThey satisfy\n$$\n\\operatorname{row}(A)=\\operatorname{null}(A)^\\perp\n$$\nand\n$$\n\\operatorname{col}(A)=\\operatorname{null}(A^T)^\\perp.\n$$\n\nRank-nullity states\n$$\n\\operatorname{rank}(A)+\\operatorname{nullity}(A)=n.\n$$\n\nFor $Ax=b$, a solution exists iff\n$$\nb\\in\\operatorname{col}(A).\n$$\n\nIf $x_p$ is one particular solution, every solution is\n$$\nx=x_p+z,\\qquad z\\in\\operatorname{null}(A).\n$$\n\nTherefore:\n\n- $b\\notin\\operatorname{col}(A)$: no exact solution;\n- consistent system + trivial null space: exactly one solution;\n- consistent system + nontrivial null space: infinitely many solutions.\n\n## Learn the Concepts\n\n### Column space\n\nThe column space contains all outputs $Ax$. It therefore determines which right-hand sides $b$ are reachable.\n\n### Null space\n\nThe null space contains input directions that the matrix destroys:\n$$\nAz=0.\n$$\n\nThese are invisible directions of the transformation.\n\n### Row space\n\nThe row space lives in the input space $\\mathbb R^n$ and contains the input directions that the rows can detect.\n\n### Left null space\n\nThe left null space is\n$$\n\\operatorname{null}(A^T).\n$$\n\nIt consists of output-space directions orthogonal to every column of $A$.\n\n### Orthogonality relationships\n\nThe row space and null space are orthogonal complements in $\\mathbb R^n$:\n$$\n\\mathbb R^n\n=\n\\operatorname{row}(A)\\oplus\\operatorname{null}(A).\n$$\n\nSimilarly,\n$$\n\\mathbb R^m\n=\n\\operatorname{col}(A)\\oplus\\operatorname{null}(A^T).\n$$\n\n### Rank-nullity\n\nIf $A$ has $n$ columns,\n$$\n\\operatorname{rank}(A)+\\dim(\\operatorname{null}(A))=n.\n$$\n\nThe $n$ input dimensions split into directions that affect the output and directions that are annihilated.\n\n### Solution geometry\n\nSuppose\n$$\nAx_p=b.\n$$\n\nFor any\n$$\nz\\in\\operatorname{null}(A),\n$$\nwe have\n$$\nA(x_p+z)=Ax_p+Az=b.\n$$\n\nConversely, if $x_1$ and $x_2$ are both solutions, then\n$$\nA(x_1-x_2)=0,\n$$\nso their difference lies in the null space.\n\nThus the complete solution set is an affine translate of the null space.\n\n## Required / Important Follow-ups\n\n### Does rank deficiency always imply infinitely many solutions?\n\nNo. Rank deficiency gives a nontrivial null space only relative to the number of columns. There are infinitely many solutions only if the system is also consistent.\n\n### What exactly gives uniqueness?\n\nFor a consistent system, uniqueness is equivalent to\n$$\n\\operatorname{null}(A)=\\{0\\},\n$$\nwhich is equivalent to full column rank.\n\n### Why call $x_p$ a particular solution rather than a unique solution?\n\nBecause if the null space is nontrivial, $x_p$ is only one representative from an entire affine family $x_p+\\operatorname{null}(A)$.\n"
+    },
     {
       "curriculum": "2027",
       "type": "interview-answer",
