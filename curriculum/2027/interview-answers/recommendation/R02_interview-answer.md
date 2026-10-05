@@ -1,14 +1,16 @@
 ---
 type: interview-answer
 item: "2027:R02"
-title: "Explicit, Implicit, and Exposure-Conditioned Feedback"
-created: "2026-09-18"
-updated: "2026-09-18"
+title: "Explicit, implicit, and exposure-conditioned feedback"
+created: "2026-09-26"
+updated: "2026-10-05"
 tags:
   - recommendation
   - implicit-feedback
   - exposure-bias
-  - labels
+  - examination
+  - label-construction
+  - delayed-feedback
 ---
 
 ## Canonical Staff-Depth Question
@@ -17,178 +19,569 @@ Compare explicit and implicit feedback. Explain why non-interaction is not a neg
 
 ## Mastery Answer
 
-Explicit feedback is an intentional preference signal such as a rating, like/dislike, hide, or survey response. It is usually semantically clearer but sparse and highly selected: the users who choose to rate are not a random sample. Implicit feedback is behavior such as impressions, clicks, dwell, watch time, carts, purchases, skips, or repeated visits. It is abundant, but its semantics are weaker because behavior is produced jointly by user preference, the recommendation policy, position, UI, context, and opportunity to act.
+Explicit feedback is a deliberate user statement such as a rating, like, dislike, hide, or "not interested." It is usually semantically clearer, but it is sparse and selected because only some users choose to provide it. Implicit feedback is inferred from behavior such as impressions, clicks, dwell, watch time, carts, purchases, skips, or abandonment. It is much denser, but also more ambiguous because the observed action depends on what the system exposed, where it appeared, whether the user examined it, and how much time was available for a downstream outcome.
 
-The key mistake is treating every non-interaction as a negative. If an item was never exposed, the absence of a click tells us nothing about preference. Even after exposure, a user may not have examined the item because it was below the fold, in a low-attention position, or the session ended. A better data-generating view is:
+The key mistake is to treat every non-interaction as a negative. For an implicit-feedback objective, I would model the data-generating process as roughly
 
-`policy chooses exposure → user may examine → user may act → some outcomes arrive later`.
+$$
+\text{eligibility} \rightarrow \text{exposure} \rightarrow \text{examination} \rightarrow \text{action} \rightarrow \text{delayed outcome}.
+$$
 
-So labels should be exposure-conditioned. I would distinguish at least:
+An unexposed item is normally unlabeled, not negative. An exposed item with uncertain examination is weak evidence. An exposed-and-plausibly-examined item with no target action after a completed observation window is a defensible negative for that target, but still a noisy one. An explicit dislike is a different and generally stronger negative signal, so I would not automatically collapse it with a passive non-click.
 
-- **unexposed:** unknown / unlabeled for this interaction objective;
-- **exposed but not reliably examined:** usually unknown or lower-confidence evidence;
-- **exposed and examined but ignored after the observation window:** a defensible negative for the chosen objective;
-- **positive interaction:** click, watch, cart, purchase, etc., depending on the target;
-- **explicit negative:** hide, dislike, "not interested," return, or another action whose product semantics make it negative.
+The labels are missing not at random because the historical serving policy determines which user-item pairs become observable. Popular, high-scoring, eligible, or business-favored items receive more exposure, so the logged data overrepresents outcomes under the existing policy. The resulting loop is
 
-This is a missing-not-at-random problem because whether we observe feedback depends on the serving policy and user behavior. Popular or highly ranked items get more opportunities to collect labels, so the observed dataset is not the same as the preference distribution we ultimately care about. Exposure-aware negative construction helps training, and logged propensities or counterfactual methods become important when we need to compare policies rather than merely fit the logged one.
+$$
+\text{historical policy} \rightarrow \text{exposure} \rightarrow \text{observed behavior} \rightarrow \text{training data} \rightarrow \text{new policy}.
+$$
 
-Repeated impressions must not be treated as independent identical negatives. Ten ignored impressions can overweight one user-item pair, and later impressions may reflect fatigue or changed context. I would define the row grain explicitly—often impression-level for CTR, but user-item-session/window-level for broader preference—then deduplicate or cap repeated evidence, preserve impression count/recency as features when useful, and distinguish first exposure from repeated exposure.
+That means the model can learn both preference and historical-policy bias unless the labeling and evaluation contract makes the selection process explicit.
 
-Delayed conversion creates right-censoring. A click today with no purchase yet is not a mature negative if purchases commonly arrive over the next several days. I would define an attribution window and only mark the example negative once that window has closed, or use a delayed-feedback/survival-style treatment when the delay distribution itself matters.
+Repeated impressions require an explicit grain and attribution rule. Ten legitimate exposures are not the same thing as ten duplicate log rows, and they should not automatically become ten independent negatives. Repetition can reflect fatigue, familiarity, or policy overexposure, so I would define whether training examples are impression-level, aggregated user-item examples, frequency-weighted examples, or sequence-aware examples, and preserve the raw exposure history so that choice remains auditable.
 
-The interview-level principle is: **a label is valid only after defining the opportunity to observe it.** Before creating positives and negatives, specify exposure, examination, action semantics, repeated-exposure treatment, and label-maturity window.
+Delayed outcomes require label maturity. If the target is purchase within seven days, an impression from yesterday with no purchase is censored, not yet negative. I would define the attribution window, decide which exposure receives credit when multiple impressions precede one conversion, and only finalize a negative after the observation window closes.
+
+In implementation I would preserve stable impression/request IDs, user/session and item IDs, event timestamps, rank/position, surface, serving-policy or model version, and downstream action timestamps. I would test that unexposed items are not silently labeled negative, repeated impressions are handled under the intended grain, unresolved delayed outcomes remain censored, and label rates are monitored by position, device, user activity, item popularity, and exposure frequency.
+
+The governing principle is that a behavioral label is meaningful only relative to the **opportunity to produce it** and the **time at which the outcome becomes observable**.
 
 ## Learn the Concepts
 
-### 1. Explicit versus implicit feedback
+### Foundation
 
-**Explicit feedback** is deliberately provided by the user to express preference. Examples include star ratings, thumbs-up/down, "not interested," hides, survey responses, or preference settings. Its advantage is semantic clarity: the action is intended to communicate something about preference. Its disadvantages are sparsity and selection bias. Users who rate are often unusually engaged, polarized, or motivated, so explicit feedback is not automatically representative.
+The central mental model is:
 
-**Implicit feedback** is inferred from behavior. Examples include impression, click, hover, dwell, watch, skip, cart, purchase, repeat visit, or abandonment. It is much denser and is generated naturally at serving scale, but it is ambiguous. A click may reflect relevance, curiosity, misleading presentation, or position. No click may reflect dislike, lack of examination, distraction, or insufficient time.
+**Observed behavior is not the same thing as latent preference.**
 
-The same event can have different label semantics for different objectives. A click is a positive for a CTR model, but not necessarily a positive for purchase propensity or long-term satisfaction. A two-second video watch may be positive under a naive play objective but negative under a satisfaction objective.
+Recommendation systems rarely observe whether a user truly likes every item. They observe behavior generated by a sequence of opportunities and product decisions. Before a user can click, watch, buy, hide, or ignore an item, the system usually decides whether the item is eligible, whether to expose it, and where to place it.
 
-### 2. The data-generating process
-
-A recommender does not observe user-item preference uniformly. The system first chooses what the user can see. A useful causal ordering is:
+A useful behavioral pipeline is:
 
 $$
-\text{policy} \rightarrow E \rightarrow X \rightarrow Y,
+\text{eligible} \rightarrow \text{exposed} \rightarrow \text{examined} \rightarrow \text{action} \rightarrow \text{delayed outcome}.
 $$
 
-where $E$ is exposure, $X$ is examination or meaningful opportunity to inspect, and $Y$ is the interaction or outcome. Context, position, UI, user state, and item properties can affect several of these variables.
+Important terminology:
 
-The observed interaction rate is therefore closer to $P(Y=1 \mid E=1)$, often further conditioned on examination and the logged policy, than to an unconditional preference probability $P(Y=1)$. This distinction is why recommendation logs are policy-conditioned data.
+- **Explicit feedback:** a deliberate user-provided preference signal such as a rating, thumbs-up/down, hide, or "not interested."
+- **Implicit feedback:** a signal inferred from ordinary behavior such as impression, click, watch, dwell, cart, purchase, skip, return, or abandonment.
+- **Exposure:** the system presented the item to the user in the relevant surface.
+- **Examination:** the user plausibly perceived the exposed item and had a meaningful opportunity to react.
+- **Non-interaction:** no target action was observed; this is a fact about behavior, not automatically a negative preference label.
+- **Negative label:** an example treated as evidence against the target action under a specified opportunity and observation contract.
+- **Censoring:** the observation window is incomplete, so absence of an outcome is not yet a trustworthy negative.
+- **Attribution window:** the period after an eligible exposure during which a later action can be credited to that exposure.
+- **Repeated impression:** a distinct real exposure of the same item to the same user at another time or request.
+- **Duplicate log row:** the same logical event recorded more than once because of retries or logging defects.
+- **Missing not at random (MNAR):** which labels are unobserved depends systematically on the mechanism that generated exposure and observation.
+- **Serving policy:** the retrieval/ranking/business logic that decides which items are shown and often where they are positioned.
 
-### 3. Why non-interaction is not a negative
+Explicit feedback is usually easier to interpret because the user intentionally supplies it. If a user presses "not interested," the semantic intent is stronger than a missing click. But explicit feedback is still not perfect ground truth: it can be noisy, context-dependent, strategic, inconsistent over time, or supplied mainly by unusually engaged users.
 
-Suppose a catalog contains 100 items. The system shows 10, the user actually scrolls far enough to examine 5, clicks 1, and eventually purchases that item.
+Implicit feedback is much denser and therefore more useful at scale, but its meaning is conditional on the opportunity process. A click can mean strong preference, mild curiosity, misleading presentation, accidental interaction, or high position. A non-click can mean dislike, distraction, non-examination, or no exposure at all.
 
-- The **90 unexposed items** are not negatives. The user never had an opportunity to interact.
-- The **5 exposed but unexamined items** are also weak evidence; absence of action may simply mean absence of attention.
-- The **4 examined-but-ignored items** are plausible negatives for a click objective, assuming the examination signal and observation window are trustworthy.
-- The **clicked item** is positive for click, but its purchase label is unresolved until the purchase attribution window matures.
+The most important rule is therefore:
 
-This makes implicit recommendation data resemble a **positive-unlabeled** problem more than ordinary fully labeled classification.
+**No observed interaction does not automatically imply negative preference.**
 
-### 4. Exposure and examination are different
+Suppose a recommender has 10,000 items and a user clicks one item. The other 9,999 items cannot be labeled negative merely because no click exists. Most were probably never shown.
 
-An impression event often means the system rendered or logged an item, not that the user actually processed it. Examination can depend on:
+A useful label-state taxonomy is:
 
-- rank/position;
-- viewport visibility;
-- scrolling depth;
-- carousel position;
-- dwell on the containing surface;
-- whether the app was foregrounded;
-- whether the session ended before the item was reachable.
+1. **Unexposed:** the item was not shown; preference is unobserved for this opportunity.
+2. **Exposed but examination uncertain:** the item was technically rendered or logged, but the user may not have seen it.
+3. **Exposed and plausibly examined, no action:** a candidate negative for a specified target after the observation window matures.
+4. **Explicit negative:** hide, dislike, report, or other deliberate negative signal.
+5. **Positive:** click, long watch, cart, purchase, or another target event.
+6. **Censored / immature:** exposure occurred, but the target window has not closed.
 
-If reliable examination telemetry exists, use it. If it does not, be explicit that exposed-but-unclicked labels are noisy negatives whose error rate depends on position and UI behavior.
+#### Worked example
 
-### 5. Missing-not-at-random labels
+Consider an e-commerce recommendation carousel:
 
-The missing labels are not random. The serving policy preferentially exposes some items—often popular, historically strong, sponsored, fresh, or already predicted to be relevant. Those items collect more interaction data and therefore influence the next model more strongly. This can create a feedback loop:
+| Item | Exposed? | Examination evidence | Immediate action | Purchase within 7 days | Interpretation |
+|---|---|---|---|---|---|
+| A | Yes | Top row, visible | Click | Yes | Positive for click and purchase |
+| B | Yes | Top row, visible | No click | No | Plausible click negative; purchase negative only after 7 days |
+| C | Yes | Position 30, no scroll evidence | No click | No | Weak/unknown click evidence |
+| D | No | None | No action | No | Unexposed; not a behavioral negative |
+| E | Yes | Visible | No click | Unknown, only 1 day elapsed | Censored for 7-day purchase |
+
+This table illustrates why a single binary field such as `clicked = 0/1` does not capture the full semantics of the opportunity.
+
+For a click objective, B may be a reasonable negative, C may be down-weighted or excluded, and D should generally not be labeled as a click negative for this request. For a 7-day purchase objective, B and C are only mature negatives after seven days without purchase, while E remains censored until its outcome window closes.
+
+### Core Interview Reasoning
+
+A compact reasoning structure for R02 is:
+
+**signal semantics → opportunity → observation bias → repeated opportunities → delayed outcomes → dataset contract**
+
+#### 1. Signal semantics: explicit versus implicit
+
+Start by asking what the observed event actually means.
+
+Explicit feedback has clearer semantics but lower coverage. Implicit feedback has higher coverage but mixes preference with presentation, attention, context, and policy effects.
+
+This means the model target should reflect the business question. A click model, purchase model, dislike model, and long-term satisfaction model are not learning the same quantity even if they use overlapping events.
+
+#### 2. Opportunity: exposure and examination
+
+A user can only produce meaningful behavioral evidence if the system creates an opportunity.
+
+Exposure alone may be insufficient because a rendered item may not be examined. Position, viewport, scroll depth, carousel page, device layout, visible duration, autoplay behavior, and page abandonment can all change the probability of examination.
+
+A strong label contract therefore distinguishes:
 
 $$
-\text{policy preference} \rightarrow \text{more exposure} \rightarrow \text{more observed positives} \rightarrow \text{stronger future preference}.
+\text{unexposed} \neq \text{exposed but unexamined} \neq \text{examined but no action}.
 $$
 
-This matters both for **training** and **evaluation**. Exposure-aware training avoids treating never-shown items as ordinary negatives. For unbiased policy comparison, however, label construction alone is not sufficient; one may need propensities, randomized traffic, IPS/SNIPS/DR-style methods, or online experiments. Those are deeper topics owned by later IDs such as R25/R26.
+These states can later be mapped to a simpler target if justified, but the raw data should not destroy the distinction prematurely.
 
-### 6. What counts as a defensible negative?
+#### 3. Observation bias: labels are missing not at random
 
-A "true negative" in recommender training is usually an operational definition, not a metaphysical statement that the user dislikes the item. A stronger negative has more of the following evidence:
+In an ideal fully observed preference matrix, every user-item pair would have a label. Real recommenders observe only a tiny selected subset.
 
-1. the item was exposed;
-2. it was plausibly examined;
-3. the user had enough time/opportunity to act;
-4. the outcome window has matured;
-5. the user chose a competing item or explicitly rejected this one;
-6. the semantics match the modeled objective.
+The serving policy chooses what receives exposure. Therefore the probability that a label is observed is related to user features, item features, popularity, business rules, previous model scores, inventory, eligibility, and position. The missing outcomes are not random.
 
-An explicit hide/dislike is often stronger negative evidence than a non-click. A completed exposure followed by a rapid skip can be strong negative evidence for a video-satisfaction target, but may be irrelevant for a purchase target.
+Conceptually,
 
-### 7. Repeated impressions
+$$
+P(\text{label observed} \mid u,i)
+$$
 
-Repeated exposure creates several problems if each impression is naively inserted as an independent negative:
+is itself a function of the historical policy and context.
 
-- **overweighting:** one user-item pair can dominate the loss simply because the serving policy repeatedly showed it;
-- **dependence:** impressions from the same user/session are not independent samples;
-- **fatigue:** the meaning of the fifth impression may differ from the first;
-- **policy confounding:** frequent exposure may reflect the old model's preference, not true user preference.
+This creates a selection problem: the model sees more evidence about items the previous system already preferred to show.
 
-The correct treatment depends on the training objective and row grain. For impression-level CTR, repeated impressions may legitimately remain separate rows, but weighting, user/session clustering, and position/context features matter. For preference or retrieval objectives, it is often better to aggregate or cap repeated user-item negatives within a time/session window while retaining count, recency, or exposure history as features.
+The resulting feedback loop is:
 
-### 8. Delayed conversion and censoring
+$$
+\text{policy}_t
+\rightarrow
+\text{exposure}_t
+\rightarrow
+\text{behavior}_t
+\rightarrow
+\text{training data}_{t+1}
+\rightarrow
+\text{policy}_{t+1}.
+$$
 
-Clicks, watches, and purchases can arrive on different timescales. Consider an ad or commerce recommendation shown at time $t_0$. If purchases often happen up to seven days later, labeling the example as a purchase-negative at $t_0+1$ hour is incorrect. The example is **right-censored**: the final outcome has not had time to arrive.
+This is why naive training can reinforce popularity, exposure concentration, or blind spots.
 
-Common strategies include:
+#### 4. Repeated opportunities: repeated impressions are not ordinary duplicates
 
-- train only on examples whose attribution window has closed;
-- define explicit conversion windows, such as purchase within 7 days of click or impression;
-- keep unresolved examples out of the negative class until maturity;
-- model time-to-event or delayed feedback directly when latency of conversion is itself important.
+Two different problems must be separated:
 
-Longer windows improve label completeness but make training data older. Shorter windows increase freshness but create false negatives. The window is therefore a modeling and product decision, not a logging afterthought.
+- the same logical impression recorded twice because of a retry;
+- the user genuinely seeing the same item multiple times.
 
-### 9. Label table design
+The first is a data-quality defect and should usually be deduplicated. The second is part of the user experience and may contain real information.
 
-A useful conceptual label table has one row per chosen grain, for example user-item-impression or user-item-session, with fields such as:
+Repeated exposure can cause:
 
-- `exposed`;
-- `examined` or examination proxy;
-- position / surface / policy version;
-- impression count and recency;
-- positive action(s);
-- explicit negative action(s);
-- event timestamps;
-- attribution-window end;
-- `label_mature`;
-- final task-specific label.
+- increased familiarity;
+- fatigue or annoyance;
+- changing user intent;
+- delayed relevance;
+- policy overexposure;
+- correlated labels across impressions.
 
-The important part is not the exact schema. It is that **unknown**, **weak negative**, **mature negative**, and **positive** are not silently collapsed into one binary target before the assumptions are made explicit.
+Therefore five no-click impressions are not necessarily five independent negative judgments about the user-item pair.
 
-### 10. Relationship to negative sampling
+The training grain should be explicit. Possibilities include:
 
-Negative sampling is downstream of label semantics. First determine which items are eligible negatives. Then decide how to sample them efficiently. Uniformly sampling from the whole catalog can accidentally treat unexposed but relevant items as negatives. Exposure-aware negatives are usually more defensible for an interaction objective because the user had an opportunity to respond. Hard-negative mining adds another layer and can increase false-negative risk if "hard" means "highly plausible positive."
+- one row per impression;
+- one row per `(request, item)`;
+- one row per `(user, item, session)`;
+- one row per `(user, item, time window)`;
+- sequence-aware examples containing exposure count and recency.
 
-### 11. Failure modes to diagnose
+There is no universal choice; the choice defines the statistical target.
 
-If a recommender's offline metric improves while online quality degrades, label construction is one place to inspect. Warning signs include:
+#### 5. Delayed outcomes: negative labels require maturity
 
-- a surge in negative examples caused by logging more impressions rather than genuine behavior change;
-- changed viewport or impression semantics after a client release;
-- treating late conversions as negatives;
-- counting the same impression/action multiple times;
-- a policy rollout changing exposure distribution while the model is trained as if data were IID;
-- aggregate gains driven only by popular, heavily exposed items.
+Immediate actions such as clicks often mature quickly. Purchases, subscriptions, returns, or retention may take hours, days, or weeks.
 
-The diagnostic sequence starts by reconstructing the logged data-generating process and checking label counts by exposure state, position, policy version, delay, and repeated-impression count.
+Suppose purchase is defined as occurring within horizon $H$ after exposure at $t_0$. A mature negative requires:
+
+$$
+T_{\text{data cutoff}} \ge t_0 + H.
+$$
+
+If not, the row is censored.
+
+A common failure is to label recent rows `purchase = 0` merely because the purchase has not happened yet. That systematically creates false negatives near the data cutoff.
+
+#### 6. Dataset contract
+
+A reliable implicit-feedback dataset should preserve enough context to reconstruct the opportunity:
+
+- stable request/impression identifier;
+- user/session identifier;
+- item identifier;
+- event type and event time;
+- position/rank;
+- surface/module;
+- serving-policy/model version;
+- exposure/examination metadata when available;
+- downstream action time/type;
+- label maturity state;
+- attribution rule/version.
+
+The dataset should preserve raw distinctions even if the training objective later compresses them.
+
+### Deeper Reasoning and Derivations
+
+#### Why non-interaction is a latent-state mixture
+
+A raw non-interaction can correspond to several hidden states:
+
+$$
+\text{no action}
+\in
+\{\text{unexposed},\ \text{unexamined},\ \text{examined and rejected},\ \text{deferred},\ \text{censored}\}.
+$$
+
+If these states are collapsed into one negative class, the model is trained on label noise whose structure is not random.
+
+This matters because the model may learn correlates of exposure or examination rather than preference. For example, deep-ranked items may accumulate non-clicks because they are unseen, not because they are irrelevant.
+
+#### Exposure is a selection mechanism
+
+Suppose the historical recommender exposes items according to score $s_t(u,i)$. Items with high scores are more likely to be shown:
+
+$$
+P(E=1\mid u,i) = f(s_t(u,i),\text{eligibility},\text{business rules},\text{context}).
+$$
+
+Observed click data then comes from the conditional distribution among exposed items:
+
+$$
+P(C=1\mid E=1,u,i),
+$$
+
+not from the unconditional preference distribution over all user-item pairs.
+
+A model trained naively on exposed examples therefore answers a policy-conditioned question unless additional assumptions, randomized exposure, click models, propensity methods, or controlled exploration are used.
+
+#### Examination separates exposure from attention
+
+For many ranked surfaces, a useful latent decomposition is:
+
+$$
+P(C=1\mid u,i,p)
+=
+P(X=1\mid p,\text{context})
+\cdot
+P(C=1\mid X=1,u,i,\text{context}),
+$$
+
+where $X$ represents examination and $p$ is position.
+
+This is not a universal click model, but it captures the key idea: observed click probability combines attention opportunity with response conditional on attention.
+
+If the model treats every impression as equally examined, position and UI policy can masquerade as relevance.
+
+#### Why adding position as a feature is not debiasing
+
+Adding position may improve prediction of clicks under the same serving policy because position explains behavior. But it does not change the fact that the historical policy selected both the item and its position.
+
+Prediction under the logged policy and unbiased relevance estimation are different goals.
+
+Position-as-feature can answer:
+
+> Given this policy and this position, what is the probability of a click?
+
+It does not automatically answer:
+
+> How relevant would this item be if it were exposed under another policy or position?
+
+That second question may require randomized data, explicit examination modeling, propensity correction, or counterfactual methods.
+
+#### Explicit feedback also has selection bias
+
+Explicit ratings are clearer but often come from a non-random subset of users and situations. Highly engaged users, very satisfied users, or very dissatisfied users may be more likely to leave ratings.
+
+So explicit feedback can have:
+
+- participation bias;
+- extreme-response bias;
+- context dependence;
+- inconsistent personal scales;
+- strategic behavior.
+
+The advantage is semantic clarity, not perfect unbiasedness.
+
+#### Repeated impressions create dependence
+
+Consider five impressions of the same item followed by one click. Naively treating the first four as independent negatives and the fifth as positive assumes each impression is an independent draw from the same user-item preference state.
+
+That assumption may fail because repeated exposure changes familiarity, fatigue, position, context, and intent.
+
+If the downstream target is impression-level CTR, keeping all impressions may still be valid, but the model and evaluation should recognize correlation and repeated-exposure effects. If the target is user-item preference, aggregation or sequence-aware treatment may be more appropriate.
+
+#### Delayed conversion and censoring
+
+For an exposure at $t_0$ and horizon $H$, define
+
+$$
+y=1
+$$
+
+if a qualifying conversion occurs in
+
+$$
+(t_0, t_0+H].
+$$
+
+A valid observed negative requires the entire interval to be observed with no conversion. If the dataset cutoff is $T$ and
+
+$$
+T < t_0+H,
+$$
+
+the outcome is right-censored with respect to this label definition.
+
+This is why label freshness and label completeness conflict for delayed objectives.
+
+#### Attribution is part of the target
+
+Suppose impressions occur at 09:00, 12:00, and 17:00, followed by purchase at 18:00.
+
+Possible contracts include:
+
+- **last-touch:** credit only 17:00;
+- **first-touch:** credit only 09:00;
+- **closest eligible exposure:** similar to last-touch under constraints;
+- **multi-touch:** distribute credit across several exposures;
+- **user-item-window target:** aggregate exposures into one example.
+
+These are different learning problems. Attribution is not merely a data-engineering join.
+
+#### Common failure modes
+
+High-value failure modes include:
+
+- treating all missing user-item pairs as negatives;
+- treating every logged impression as equally examined;
+- using deep-position non-clicks as strong negatives without visibility evidence;
+- duplicating retry-generated impressions;
+- collapsing genuine repeated impressions as if they were transport duplicates;
+- giving one purchase positive credit to every prior impression without an attribution rule;
+- finalizing recent delayed outcomes as negatives before maturity;
+- mixing explicit dislikes with passive non-clicks without defining the target semantics;
+- using candidate-generation non-selection as if it were user rejection;
+- changing frontend rendering/logging behavior without versioning the exposure contract;
+- evaluating on labels produced by the same broken exposure rule used for training;
+- confusing policy-conditioned click prediction with unbiased preference estimation.
+
+### Advanced Staff-Depth Considerations
+
+The reusable Staff-level backbone for this item is:
+
+`Baseline → Change → Mechanism → Measure → Act → Trade-off → Validate`
+
+Equivalently:
+
+`Assumption → Mechanism → Evidence → Decision → Trade-off → Validation`
+
+For this question, the baseline is: The baseline is an opportunity-conditioned behavioral process: eligibility → exposure → examination → action → delayed outcome. The invariant is that absence of action is informative only relative to the opportunity the user actually received and the time available for the outcome to mature.
+
+The eight subsections below apply that same loop from different angles. Each explanation teaches the mechanism first; the filled template then compresses it into a reusable interview scaffold.
+
+#### 1. Changed Constraints and Transfer Logic
+
+Changed constraints alter what can be observed, not the underlying semantics. If examination telemetry disappears, examination becomes latent; if the purchase horizon grows, label maturity slows; if a new surface changes rendering, “impression” may no longer mean the same opportunity. The design must preserve uncertainty instead of converting missing observability into false certainty.
+
+A useful reasoning chain is:
+
+`changed assumption → affected mechanism/stage → invariant → broken assumption → consequence → redesign → metric impact → trade-off → validation`
+
+**Filled template for this item**
+
+- **Original assumption:** Impression plus viewport/position signals provide a defensible proxy for opportunity/examination.
+- **Changed constraint:** The product logs impressions but no direct examination/viewport telemetry.
+- **Invariant:** A negative still requires plausible opportunity and a completed observation window.
+- **Broken assumption:** Logged impression can no longer be treated as equally strong evidence of examination across positions/surfaces.
+- **Consequence:** Deep-position or pre-rendered non-clicks become noisier and can create artificial negatives.
+- **Design change:** Use visible-position/surface heuristics, downweight or exclude uncertain non-clicks, and preserve examination uncertainty explicitly.
+- **Metric impact:** Monitor label rates and model quality by position, surface, device, and examination-proxy bucket.
+- **Trade-off:** More conservative negatives improve semantic validity but reduce sample size and may lower apparent offline discrimination.
+- **Validation:** Compare proxy policies using audits, UI-version slices, online outcomes, and stability under rendering changes.
+
+#### 2. Failure Modes and Diagnosis
+
+Implicit-label incidents often originate in logging or UI semantics rather than the ranker. A frontend change can triple logged impressions, inflate passive negatives, improve AUC on similarly corrupted evaluation labels, and simultaneously reduce real CTR. Diagnose the data-generating process before retraining.
+
+**Filled template for this item**
+
+- **Symptom:** Impressions/session triple after a frontend release, clicks stay flat, offline AUC rises, online CTR falls.
+- **Stage decomposition:** eligibility/rendering → exposure logging → examination proxy → action attribution → label maturation → training/evaluation.
+- **Slices:** UI version, position, viewport/depth, device, surface, user activity, item popularity, exposure count, event age.
+- **Competing hypotheses:** Impression semantics changed; duplicate logs; examination fell; attribution changed; censoring/maturity bug.
+- **Discriminating evidence:** Visible-position distribution, unique impression IDs, negative-label rate, attribution distance, and row-level replay.
+- **Offline/online comparison:** Verify offline labels reflect actual served/exposed opportunities under the same UI contract.
+- **Replay/isolation:** Rebuild a sample with old versus new impression semantics and compare labels/model metrics.
+- **First divergence:** Exposure/impression semantics if counts change before user behavior does.
+- **Immediate mitigation:** Revert or gate the new logging rule and stop consuming contaminated labels.
+- **Permanent prevention:** Version exposure semantics, monitor label-contract invariants, and add frontend-to-dataset replay tests.
+
+Memory aid: `Symptom → Slice → Stage → Hypotheses → Evidence → First divergence → Fix`.
+
+#### 3. Latency and Resource Trade-offs
+
+R02 is not primarily an online inference-latency question, but resource trade-offs appear in instrumentation and label generation. Fine-grained viewport/examination telemetry improves label semantics but increases client events, storage, joins, privacy surface, and pipeline cost. Use the cheapest observability that materially changes label validity.
+
+**Filled template for this item**
+
+- **Budget:** Telemetry/storage/processing budget for exposure and examination evidence.
+- **Cost decomposition:** Client events + ingestion + storage + deduplication + attribution joins + label maturation/backfill.
+- **Dominant cost:** High-cardinality fine-grained visibility events and long retention for delayed attribution.
+- **Quality driver:** More precise opportunity/examination evidence reduces mislabeled negatives.
+- **Cost driver:** More instrumentation and longer histories increase event volume, join complexity, and privacy/operational burden.
+- **Optimization knobs:** Surface-specific proxies, sampling instrumentation, bounded retention, incremental label maturation, partitioned joins, and selective high-value telemetry.
+- **Fallback/degradation:** Fall back to conservative position/surface proxies and mark uncertainty rather than pretending exact examination.
+- **Trade-off curve:** Label audit quality/model online utility versus event/storage/compute cost.
+- **Decision:** Instrument at the granularity where better opportunity semantics materially improve labels or decisions.
+
+Memory aid: `Budget → Breakdown → Bottleneck → Knobs → Quality loss → Fallback`.
+
+#### 4. Scale and Capacity
+
+At large scale, the statistical contract remains the same but execution must preserve distinctions among unexposed, uncertainly examined, mature negative, explicit negative, and censored states. Distributed ingestion, deduplication, attribution, and backfill cannot collapse those states for convenience.
+
+**Filled template for this item**
+
+- **Scaling dimension:** Impression/action logs grow to billions of events with repeated exposures and delayed outcomes.
+- **Baseline scale assumption:** Event identity, attribution, and maturity can be resolved with straightforward joins.
+- **First bottleneck:** High-volume joins/deduplication and long attribution windows become expensive.
+- **Second-order effects:** Retention cost, late-event backfills, cross-partition joins, and repeated-exposure multiplicity grow.
+- **Architectural response:** Partitioned event logs, stable IDs, incremental label maturation, bounded attribution state, and targeted backfills.
+- **Partitioning/replication/caching/batching:** Partition by event time/entity, materialize safe examination proxies, batch backfills, and preserve source/version metadata.
+- **Consistency/freshness consequence:** Distributed pipelines increase risk of duplicate IDs, partial late-event application, and mixed logging-policy versions.
+- **Operational failure mode:** Throughput optimization silently merges unknown/unexamined/censored states into negatives.
+- **Validation:** Invariant tests plus sampled row replay, label-rate slices, duplicate rates, and backfill idempotence at projected volume.
+
+Memory aid: `What grows? → What stops fitting? → What bottlenecks? → How do we partition? → What new failure appears?`.
+
+#### 5. Freshness, State, and Versioning
+
+Freshness and label maturity are different clocks. Click labels may mature quickly while purchase or retention labels remain censored for days or weeks. Faster retraining does not make delayed truth arrive sooner, so training cadence must be separated from outcome maturity.
+
+**Filled template for this item**
+
+- **State that becomes stale:** Exposure semantics, policy/UI version, examination proxies, attribution mappings, and delayed label state.
+- **Why freshness matters:** UI/policy changes alter the meaning of impressions; delayed outcomes revise recent labels.
+- **Required freshness:** Exposure-contract metadata must update with every serving/UI change; label freshness is limited by the outcome horizon.
+- **Refresh cost:** Backfills, re-attribution, long-history joins, and versioned dataset rebuilds.
+- **Update architecture:** Fast streams for impressions/clicks plus slower maturation/backfill for conversion/retention.
+- **Version consistency:** Label builder must know the policy/UI/logging version that generated each exposure.
+- **Failure from version skew:** The same schema field “impression” can carry different semantics across UI versions.
+- **Fallback:** Exclude/downweight ambiguous recent periods or train on mature windows while monitoring fresh proxies.
+- **Measurement:** Event age, maturity fraction, attribution distance, UI/policy version, and freshness-sliced label/model metrics.
+- **Decision:** Favor semantic correctness over nominally fresher but immature/corrupted labels.
+
+Memory aid: `What goes stale? → How fast does it matter? → What does refresh cost? → How do versions stay consistent?`.
+
+#### 6. Implementation, Serving, and Observability
+
+The logging contract is the implementation of the statistical definition. Stable request/impression identity, event time, position/surface, policy/version, examination metadata, downstream action time, attribution-rule version, and maturity state must survive from serving to training. Otherwise no later debiasing method can reconstruct an opportunity process that was never logged.
+
+**Filled template for this item**
+
+- **Conceptual object:** Opportunity-conditioned behavioral labels with explicit uncertainty and maturity.
+- **Training/data implementation:** Join exposures to actions under versioned attribution/examination rules; preserve raw states before mapping to objectives.
+- **Stored artifact/state:** Impression/request IDs, user/session/item IDs, timestamps, rank/surface, policy/UI version, examination proxy, action events, attribution/maturity state.
+- **Serving path:** Serving emits decision/exposure metadata; client/product emits visibility/action events; label pipeline reconciles them later.
+- **Component contract:** Serving, frontend instrumentation, and dataset builder must agree on what counts as exposure/examination and event identity.
+- **Logging:** Stable impression IDs, position, render/viewport metadata, policy/model/UI version, actions, and eligibility when relevant.
+- **Versioning:** Exposure semantics and attribution rules must be versioned alongside datasets.
+- **Failure mode:** UI changes create artificial negatives or one conversion is copied to many exposures.
+- **Observability:** Impression/action ratios, label prevalence, duplicate/repeat rates, maturity, attribution distances, and slice distributions.
+- **Rollback:** Revert logging/label rules and rebuild affected partitions with the previous contract.
+- **Testing/replay:** Reconstruct individual requests from serving decision through exposure to final label.
+
+Memory aid: `Train → Store → Serve → Version → Log → Monitor → Roll back`.
+
+#### 7. Vertical Transfer
+
+The mechanism should transfer; the assumptions must be re-derived. Use the checklist:
+
+`labels → candidate sources → objectives → features → constraints → evaluation → experiments → serving/freshness → ecosystem effects`
+
+Representative verticals:
+
+- **Video/feed:** **Invariant:** Opportunity-conditioning transfers. **Different assumption:** Autoplay and continuous scroll make examination and dwell/skip semantics different from click surfaces. **Technical consequence:** Use visibility/watch/skip signals and treat autoplay impressions cautiously.
+- **E-commerce:** **Invariant:** Exposure/examination/maturity logic transfers. **Different assumption:** Purchases are delayed and availability/price can make action impossible or change utility. **Technical consequence:** Preserve stock/price state and explicit attribution windows.
+- **Ads:** **Invariant:** Selective exposure and delayed outcome logic transfer. **Different assumption:** Viewability, auction selection, conversion attribution, and policy dependence are stronger. **Technical consequence:** Log auction/viewability context and distinguish exposure from eligibility/non-selection.
+- **Marketplace:** **Invariant:** Opportunity semantics transfer. **Different assumption:** Provider availability/geography and two-sided constraints affect non-interaction. **Technical consequence:** Preserve supply eligibility so absent demand is not inferred from impossible offers.
+- **Notifications:** **Invariant:** Opportunity stages transfer. **Different assumption:** Send, delivery, display, open, dismiss, and downstream action are distinct. **Technical consequence:** Model each opportunity stage and avoid treating delivery as examination.
+
+**Filled transfer template — Video/feed**
+
+- **Invariant:** Opportunity-conditioning transfers.
+- **Different data-generating process:** Autoplay and continuous scroll make examination and dwell/skip semantics different from click surfaces.
+- **Different objective:** Re-derive the primary product utility for this vertical rather than copying the base objective.
+- **Different candidates/features:** Candidate sources and features should reflect the vertical-specific context and available signals.
+- **Different constraints:** Autoplay and continuous scroll make examination and dwell/skip semantics different from click surfaces.
+- **Metric change:** Retain transferable stage metrics, then add vertical-specific outcomes and guardrails.
+- **Serving change:** Use visibility/watch/skip signals and treat autoplay impressions cautiously.
+- **Ecosystem effect:** Check creator/provider/seller/advertiser or user-side concentration where relevant.
+- **Validation:** Evaluate both transferable retrieval/ranking quality and the vertical-specific product outcome.
+
+Memory aid: `Keep the mechanism; re-derive the assumptions.`
+
+#### 8. Objective and Metric Mismatch
+
+A label pipeline can faithfully predict the labels it created while those labels cease to represent user utility. This is the canonical objective-mismatch risk for R02: a corrupted or policy-conditioned label definition can improve AUC/log-loss while online behavior worsens. First verify execution; then question whether the label semantics are the right proxy.
+
+**Filled template for this item**
+
+- **Offline/model metric:** AUC/log-loss on impression-derived click labels improves.
+- **Online/product outcome:** CTR or downstream satisfaction declines.
+- **Execution verification:** Check serving model/version, exposure logging, label builder, UI semantics, and evaluation data consistency.
+- **Metric semantics:** The metric rewards prediction of the constructed labels under the logged opportunity process.
+- **Blind spots:** Unobserved examination, policy selection, delayed outcomes, availability, repeated exposure, and explicit negative semantics.
+- **Missing product factor:** True preference/utility conditional on meaningful opportunity may not match the logged binary target.
+- **Repair:** Redefine exposure/examination/maturity states, use multi-task/weighted labels, and apply debiasing methods only after logging is sound.
+- **Trade-off:** More faithful labels can reduce sample size and complicate objectives/evaluation.
+- **Online validation:** Controlled experiment plus label-audit slices, user utility metrics, and exposure/position guardrails.
+
+Memory aid: `Did we execute the objective incorrectly, or correctly optimize the wrong objective?`
 
 ## Material Follow-ups / Scenario Variants
 
-### Construct labels for a commerce recommender
+### Logged impressions triple after a frontend release, clicks stay flat, offline AUC rises, and online CTR falls. What is the leading diagnosis?
 
-For a purchase-oriented ranker, I would not define every non-purchase as negative. I would start from eligible exposures, record whether the product was actually viewable, preserve clicks/carts as intermediate outcomes, and wait until a defined purchase window matures. An explicit "not interested" or product dismissal can be a stronger negative. Recently exposed examples with open conversion windows stay unresolved rather than entering the negative class.
+Treat this as a label-generation incident until proven otherwise. Start with the first divergence: impression counts. Inspect whether the new frontend renders or logs many more below-the-fold items as impressions without increasing real examination. Then compare negative-label rate, position distribution, device/surface slices, and UI-version slices. If both training and evaluation use the same corrupted impression rule, offline AUC can improve even while real ranking quality falls online.
 
-### What changes for a short-video feed?
+### What logging contract is needed for repeated impressions and delayed conversion?
 
-Exposure and examination are closer together because content may autoplay, but they are still not identical. A rendered thumbnail is weaker exposure than playback start. A very fast swipe can be an explicit negative-like signal; meaningful watch duration or completion is stronger positive evidence. Repeated impressions can create fatigue, and the objective must distinguish accidental play from satisfaction.
+A schema containing only `user_id`, `item_id`, `event_type`, and `timestamp` records event times but does not reliably identify which serving decision should receive credit when the same user sees the same item repeatedly.
 
-### What changes for ads?
+Preserve at least:
 
-Use viewable impressions rather than merely requested ads when possible. For CTR, a mature viewable impression with no click can serve as a negative. For conversion, no click or no purchase immediately after the impression is not enough because conversion is delayed. Position and auction policy create strong selection bias, so counterfactual evaluation requires propensity/experiment information beyond simple binary labels.
+- stable request or impression ID;
+- user/session ID;
+- item ID;
+- event type and timestamp;
+- position/rank;
+- surface/module;
+- policy/model version;
+- examination proxy when available;
+- downstream event time/type;
+- attribution rule/version;
+- label maturity state.
 
-### What changes for notifications?
+Downstream actions should either carry the originating impression/request identity or be joined under an explicit time-aware attribution rule. A join on `(user_id, item_id)` alone can duplicate one conversion across many prior exposures.
 
-"Sent" is not necessarily exposure. Delivery success, device state, and whether the notification was actually presented matter. An unopened notification should not be labeled negative if delivery failed. Open and downstream-action windows may also differ, so label maturity must be objective-specific.
+### What if the product retrains daily but purchase labels take 30 days to mature?
 
-### Changed constraint: no examination telemetry
+Separate training cadence from label maturity. The system can retrain every day using fully mature purchase rows that end roughly 30 days before the current cutoff. Fresher signals such as clicks, dwell, or carts can be auxiliary objectives or serving-time features. A more advanced alternative is explicit delayed-feedback modeling, but it does not make the missing future outcome observable; it introduces assumptions to model it.
 
-If I cannot observe examination, I would not pretend impression-without-click is a clean negative. I would use the best available opportunity proxies such as position, viewport eligibility, scroll depth, or surface dwell, treat the remaining negatives as noisy, slice metrics by position/surface, and consider small randomized exposure experiments to estimate how much the logging policy is distorting behavior.
+### How does this connect to counterfactual evaluation or debiasing?
 
-### Changed constraint: heavy repeated exposure
-
-If some user-item pairs receive many impressions, I would inspect whether the training objective is unintentionally weighting the old serving policy. Depending on the task, I would cap or aggregate negatives per user-item-window, add exposure-count/recency features, and evaluate separately on first-exposure versus repeated-exposure cases.
+R02 establishes the data-generating problem: observed labels are policy-conditioned because exposure and examination are selective. Counterfactual methods such as IPS/SNIPS or click models attempt to correct or reason about that selection under additional assumptions. The first step is still to preserve the exposure process accurately; no statistical correction can recover information that the logging system destroyed.

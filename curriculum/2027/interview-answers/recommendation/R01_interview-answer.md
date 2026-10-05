@@ -2,14 +2,15 @@
 type: interview-answer
 item: "2027:R01"
 title: "Two-stage and multi-stage recommender architecture"
-created: "2026-09-17"
-updated: "2026-09-18"
+created: "2026-09-25"
+updated: "2026-10-05"
 tags:
   - recommendation
   - ranking
-  - retrieval
+  - candidate-generation
+  - multi-stage-ranking
   - latency
-  - system-design
+  - debugging
 ---
 
 ## Canonical Staff-Depth Question
@@ -18,647 +19,694 @@ Explain candidate generation, pre-ranking, ranking, reranking, and post-processi
 
 ## Mastery Answer
 
-Large recommendation systems usually cannot score the entire corpus with their most expensive model. If the catalog contains millions of items, even a modest per-item inference cost becomes too expensive at request time. The system therefore uses a cascade:
+I would frame a multi-stage recommender as a **compute-allocation funnel**: use very cheap, broad methods over the largest item universe, then spend progressively more computation on progressively smaller candidate sets. The stages are separate because they optimize different objectives under different candidate counts and latency budgets, and because each irreversible pruning step creates a quality ceiling for every downstream stage.
 
-$$
-\text{millions} \rightarrow \text{thousands} \rightarrow \text{hundreds} \rightarrow \text{tens}
-$$
+**Candidate generation** reduces the full catalog to a manageable set, often using several sources such as popularity, co-visitation, collaborative filtering, content similarity, graph methods, or learned embedding retrieval. Its primary objective is high useful recall under tight cost and latency constraints. It is the first major quality ceiling: if a relevant item is never retrieved, no downstream ranker can recover it. I would monitor candidate count, Recall@K where labels allow it, source-level and union recall, marginal recall by source, overlap, coverage, segment behavior, index freshness, and retrieval p95/p99. Typical failures are low recall, source collapse, stale indexes or embeddings, excessive source overlap, cold-start gaps, routing mistakes, and retrieval fan-out or tail-latency regressions.
 
-As the candidate set shrinks, the system can afford more expensive computation, richer features, and more sophisticated models per candidate.
+**Pre-ranking** is optional and exists when retrieval returns more candidates than the expensive ranker can afford. It uses a cheaper model and usually a smaller feature set to prune, for example, 2,000 candidates to 300. Its objective is not perfect ordering; it is to preserve nearly all high-value candidates while reducing downstream compute. Its main metric is survival or recall of valuable candidates versus the candidate-reduction ratio. It creates another hard ceiling because anything pruned here is gone. Failure modes include over-pruning, objective mismatch with the main ranker, stale or missing lightweight features, and segment-specific survival loss.
 
-**Candidate generation / retrieval** reduces the corpus to a manageable candidate set. Its primary objective is high recall under candidate-count and latency constraints. Ordering within the retrieved set is secondary. Its key quality ceiling is structural: if a relevant item is absent from the candidate set, no downstream stage can recover it. Production systems often fan out across multiple candidate sources such as popularity, co-visitation, collaborative filtering, content similarity, graph retrieval, and learned embedding retrieval.
+**Ranking** applies the highest-fidelity item-level scoring model to the smaller surviving set. Because candidate count is now bounded, it can use richer user, item, context, and interaction features. Its objective is fine-grained ordering for the product target: relevance, expected engagement, conversion, value, or a learned multi-objective utility. It is bounded by the candidates and information it receives from upstream. I would monitor ranking metrics, score distributions, calibration when probabilities have downstream meaning, feature freshness/missingness, model and feature versions, and online business/user metrics. Failure modes include objective mismatch, feature leakage or training-serving skew, stale features, score/calibration drift, model-version mismatch, and overfitting.
 
-**Pre-ranking** is optional. It is useful when retrieval still produces too many candidates for the heavy ranker. A lightweight model removes weak candidates while trying to preserve nearly all candidates that the downstream ranker would value. Its central trade-off is compute saved versus downstream quality lost. Over-pruning creates another irrecoverable ceiling.
+**Reranking** operates on an already ordered list and optimizes the **slate**, not only independent item scores. It can enforce diversity, freshness, seller/creator/category caps, history suppression, policy rules, availability, or other hard and soft constraints. Its objective is slate utility subject to constraints. It may intentionally sacrifice some raw relevance to improve diversity, safety, ecosystem health, or product requirements. I would monitor constraint firing rates, relevance displaced, diversity/freshness metrics, segment impact, and deterministic fallback behavior. Failure modes include over-constraining the slate, conflicting constraints, excessive relevance loss, segment harm, or unstable/non-deterministic fallback.
 
-**Ranking** applies richer user, item, user-item interaction, and context features to the surviving candidates. Its job is precise personalized ordering or utility estimation. Depending on the product, it may predict click probability, conversion probability, watch time, expected value, or another task-specific objective. Once the candidate set is fixed, position-sensitive metrics such as NDCG, MRR, MAP, or task-specific utility are usually more informative than recall alone.
+**Post-processing** performs final deterministic response correctness: deduplication, eligibility and availability checks, policy filtering, pagination, response shaping, and timeout/fallback handling. It should be cheap and predictable because it sits at the end of the critical path. Its ceiling is entirely inherited from upstream; it can only preserve, filter, or transform what it receives. Failure modes include removing too many results, stale eligibility state, duplicate or empty slates, inconsistent pagination, and unsafe fallback paths.
 
-**Reranking** reasons about the final slate rather than only independent item scores. It can trade some pointwise relevance for diversity, novelty, freshness, exploration, category or seller caps, inventory considerations, policy constraints, or other product and ecosystem objectives. Evaluation should measure both relevance retained and whether the intended slate-level objectives or constraints are satisfied.
+For latency, I would not assign arbitrary numbers before knowing the end-to-end SLO, QPS, candidate counts, and hardware, but the structural rule is clear: **the broadest stages must be cheapest per item, while expensive computation belongs late in the funnel after the set has been reduced**. I would decompose the p99 budget across retrieval, feature hydration, pre-rank, heavy rank, rerank, and orchestration; precompute or cache safe state; parallelize independent work; and define explicit deadlines and quality-aware fallbacks.
 
-**Post-processing** applies deterministic validity and policy rules before results are returned, such as availability, deduplication, eligibility, geographic restrictions, policy enforcement, or already-consumed suppression. Some hard filters may happen earlier when carrying invalid items farther through the pipeline would waste compute.
-
-Each stage should have its own latency budget, quality metric, failure handling, and observability. Candidate count is a key resource knob: increasing it may improve recall and ranking opportunity, but it increases feature-hydration and scoring cost.
-
-For diagnosis, identify the **first stage where behavior diverges**:
-
-- retrieval Recall@K drops → candidate-generation or candidate-source problem;
-- retrieval is healthy but valuable items disappear before heavy ranking → pre-ranking or pruning problem;
-- candidates are healthy but ordering metrics fall → ranker, feature, objective, or model problem;
-- main-ranker output is healthy but final slate quality falls → reranking or constraint problem;
-- offline quality is healthy but production behavior changes → serving, feature freshness, cache, versioning, or data-skew problem.
-
-A top-line metric such as CTR is useful for product impact, but it is not sufficient for localization. Stage-specific metrics make the system diagnosable.
+For a product regression, I would diagnose by stage rather than treating the recommender as one model. Start with retrieval recall/coverage/source health. If retrieval is healthy, inspect pre-rank survival. If that is healthy, compare ranker features, score distributions, model/config versions, and offline/online replay. Then inspect reranking constraint rates and relevance loss, followed by post-processing, timeouts, fallbacks, and version skew. The stopping rule is to find the **first stage whose input remains healthy but whose output diverges from the last healthy baseline**.
 
 ## Learn the Concepts
 
-### What R01 is actually testing
+### Foundation
 
-R01 is not mainly asking whether you can recite five stage names. It is testing whether you understand the systems principle that makes the stages necessary:
+The central mental model is:
 
-> **Spend cheap computation broadly, then spend expensive computation narrowly, while preserving enough opportunity for downstream stages to succeed.**
+> **A recommender progressively reduces a huge item universe into a small final slate, using cheap broad computation early and increasingly expensive, precise computation later.**
 
-A strong answer therefore connects four things for every stage:
+A recommendation surface might have millions of eligible items but display only 10–50. Scoring every user-item pair with the richest model is usually infeasible because the work grows with catalog size and request volume. Multi-stage architectures solve this by allocating computation selectively.
 
-1. **objective** — what this stage is trying to optimize;
-2. **resource budget** — how much latency/compute/memory it may consume;
-3. **quality ceiling** — what damage becomes impossible to repair downstream;
-4. **failure evidence** — what metric or telemetry would reveal that this stage is the first place the system went wrong.
+A common cascade is:
 
-That is the durable mental model. Specific models and candidate counts change from product to product.
+`catalog → candidate generation → optional pre-ranking → ranking → reranking → post-processing → final slate`
 
-### Why the architecture is a funnel
+Important terminology:
 
-Suppose the corpus contains $N$ items and a scoring model costs roughly $c$ milliseconds per item. Exhaustive request-time scoring costs approximately:
+- **Catalog / item universe:** all items that could in principle be recommended.
+- **Candidate generation / retrieval:** cheaply find a small set of plausible items from the full universe.
+- **Candidate:** an item still eligible for consideration after retrieval.
+- **Pre-ranking:** cheaply prune a large candidate pool before the expensive ranker.
+- **Ranking:** use a higher-fidelity model to order the surviving candidates.
+- **Reranking:** modify the ordered list as a slate under list-level objectives or constraints.
+- **Post-processing:** final deterministic filtering, deduplication, eligibility checks, formatting, and fallback handling.
+- **Slate:** the ordered collection of items shown together.
+- **Recall:** how much of the desirable/relevant set survives an upstream stage.
+- **Survival rate:** how much of a valuable subset survives a pruning stage such as pre-ranking.
+- **Quality ceiling:** the best downstream quality achievable given what upstream stages preserved.
+- **Latency budget:** the share of an end-to-end response-time target allocated to a stage.
+- **Tail latency:** p95 or p99 response time, important because user-facing systems fail on slow requests, not just on average latency.
+- **Feature hydration:** fetching or computing user/item/context features needed by a scoring stage.
+- **Fallback:** a deterministic degraded path used when a normal stage times out or fails.
 
-$$
-T_{\text{score-all}} \approx N \cdot c
-$$
+#### Worked example
 
-Even a small $c$ becomes impossible when $N$ is large. If a model costs $0.08$ ms per item, then scoring one million items serially would represent roughly:
+Suppose an e-commerce recommender has **10 million** products and must return **20** recommendations under a tight p99 budget.
 
-$$
-10^6 \times 0.08\text{ ms} = 80{,}000\text{ ms} = 80\text{ s}
-$$
+A possible request path is:
 
-Real systems batch, vectorize, parallelize, and use accelerators, so this is not a literal serving estimate. It illustrates the scaling problem: **per-candidate cost multiplies by candidate count**.
+1. **Candidate generation:** retrieve 2,000 candidates from several channels:
+   - 700 embedding-nearest-neighbor items;
+   - 500 co-visitation items;
+   - 400 collaborative items;
+   - 250 popular/trending items;
+   - 150 content-similar or cold-start items.
+   After deduplication, assume 1,800 unique candidates remain.
+2. **Pre-ranking:** a lightweight model scores the 1,800 and keeps 300.
+3. **Ranking:** a richer model with user, item, context, and interaction features scores the 300 and produces a top 50.
+4. **Reranking:** construct a final 20-item slate, perhaps enforcing availability, seller caps, category diversity, freshness, and history suppression.
+5. **Post-processing:** deduplicate again, verify final eligibility/stock, apply deterministic fallbacks if needed, and format the response.
 
-A cascade changes the economics:
+The key directional property is irreversible loss. If the best product is absent from the 1,800 retrieved candidates, the ranker never sees it. If it is retrieved but the pre-ranker drops it, the main ranker also cannot recover it.
 
-$$
-\text{corpus}
-\rightarrow C_{\text{retrieve}}
-\rightarrow C_{\text{pre-rank}}
-\rightarrow C_{\text{rank}}
-\rightarrow C_{\text{slate}}
-$$
+This is the **quality-ceiling principle**.
 
-with candidate sets shrinking approximately as:
+A second principle is **progressive compute**. The expensive ranker might be completely reasonable over 300 items but absurd over 10 million. The architecture works because candidate count falls as per-item model cost rises.
 
-$$
-\text{millions} \rightarrow \text{thousands} \rightarrow \text{hundreds} \rightarrow \text{tens}
-$$
+### Core Interview Reasoning
 
-The exact numbers are product-specific. The invariant is that later stages see fewer candidates and can therefore use richer features and more expensive models.
+A compact answer structure is:
 
-### Candidate generation / retrieval: preserve opportunity
+**stage → objective → candidate count/cost → metric → quality ceiling → failure mode**
 
-Candidate generation answers:
+#### 1. Candidate generation: maximize useful recall cheaply
 
-> **Which items are worth considering at all?**
+Candidate generation exists because the full catalog is too large for expensive scoring. It usually uses indexed or otherwise efficient retrieval rather than exhaustive rich-model inference.
 
-Its job is not to produce the perfect final ordering. Its job is to cheaply reduce a huge corpus to a set that still contains the items the downstream system may want.
-
-Suppose 20 items are relevant and retrieval returns 1,000 candidates containing 18 of them:
-
-$$
-\operatorname{Recall@1000} = \frac{18}{20} = 0.90
-$$
-
-That can be strong retrieval even if those 18 relevant items are poorly ordered inside the 1,000. A later ranker exists specifically to reorder them.
-
-The critical failure is **omission**:
-
-> If a useful item never enters the candidate set, no downstream model can recover it.
-
-This is the **candidate-set ceiling**. It is structural, not a claim that a numerical Recall@K value directly upper-bounds a different metric such as NDCG. The point is simply that unavailable candidates cannot receive downstream scores or positions.
-
-#### Why multiple candidate sources help
-
-Different retrievers encode different notions of usefulness and fail in different places. A recommender may fan out to:
+Candidate sources can include:
 
 - popularity or trending;
-- item-item / co-visitation;
+- co-visitation or item-item similarity;
 - collaborative filtering;
+- matrix-factorization or two-tower embeddings;
 - content similarity;
-- two-tower embedding retrieval;
-- graph-based retrieval;
-- recent-session/history retrieval;
-- fresh-item or exploration pools.
+- graph retrieval;
+- rules or business-specific channels;
+- contextual or cold-start priors.
 
-If sources overlap heavily, adding another source may cost latency without adding useful candidates. Therefore measure:
+Multiple sources are useful because different methods cover different modes of relevance. A collaborative source may be strong for users with history; content similarity may rescue new items; popularity may provide robust fallback coverage.
 
-- **source recall** — useful items found by each source;
-- **union recall** — useful items found by the combined set;
-- **marginal recall** — new useful items source $j$ contributes after the other sources are already present;
-- candidate count and source latency.
-
-The useful question is not just “is this retriever good?” but “what incremental opportunity does it add to the funnel for its cost?”
-
-### Pre-ranking: buy compute cheaply
-
-Pre-ranking answers:
-
-> **Which candidates are not worth spending expensive downstream compute on?**
-
-It is optional. Add it only when retrieval leaves too many candidates for the expensive ranker or feature path.
-
-Example:
+The core trade-off is:
 
 $$
-2000 \rightarrow 400
+\text{more candidates}
+\Rightarrow
+\text{higher potential recall}
+\Rightarrow
+\text{more downstream cost}.
 $$
 
-A good pre-ranker should be much cheaper than the main ranker and should preserve nearly all candidates that matter downstream.
+Too few candidates lower the opportunity ceiling. Too many increase feature hydration, model inference, network transfer, and tail latency without necessarily adding meaningful recall.
 
-Its central trade-off is:
+Useful metrics include:
 
-$$
-\text{compute saved} \leftrightarrow \text{downstream quality lost}
-$$
+- Recall@K where ground truth permits it;
+- source-level recall;
+- union recall;
+- marginal recall contributed by each source;
+- overlap/redundancy between sources;
+- candidate count distribution;
+- cold-start coverage;
+- segment-level recall;
+- retrieval p50/p95/p99;
+- source timeout/failure rate;
+- index or embedding freshness.
 
-Useful diagnostics include:
+#### 2. Pre-ranking: preserve value while reducing expensive work
 
-- candidate reduction ratio;
-- heavy-ranker latency or FLOPs saved;
-- fraction of the heavy ranker's eventual top-$M$ candidates preserved;
-- change in downstream NDCG or task utility;
-- slice-level preservation for cold-start, long-tail, fresh, or other important segments.
+Pre-ranking is optional. It becomes valuable when retrieval output is still too large for the main ranker.
 
-If pruning 80% of candidates cuts ranking cost dramatically while barely moving downstream quality, the pre-ranker is doing useful work. If it removes high-value candidates or saves little compute, it is not.
+Its job is not to perfectly reproduce the final ordering. Its job is to cheaply reject candidates that are very unlikely to matter while preserving the candidates the heavy ranker would value.
 
-Because pre-ranking is another irreversible pruning step, it creates another quality ceiling.
+A useful measurement is **valuable-item survival**. For example, if the main ranker would place an item in its top 50 given the full retrieved pool, what fraction of such items survive the pre-ranker?
 
-### Ranking: spend capacity on precise ordering
-
-Ranking answers:
-
-> **Among the surviving candidates, which are best for this user in this context?**
-
-At this point the candidate set is small enough to hydrate richer features and evaluate a more expressive model. Features can include:
-
-- user history and preferences;
-- item attributes and learned representations;
-- user-item crosses or interaction features;
-- session and request context;
-- fresh online signals;
-- business or marketplace features when appropriate.
-
-The ranker's output may be a calibrated probability such as:
+The main trade-off is:
 
 $$
-P(\text{click}\mid u,i,c)
+\text{more aggressive pruning}
+\Rightarrow
+\text{lower ranker cost}
+\Rightarrow
+\text{greater risk of ceiling loss}.
 $$
 
-or
+Failure modes include:
 
-$$
-P(\text{purchase}\mid u,i,c)
-$$
+- pruning too aggressively;
+- using a target that disagrees with the main ranker;
+- stale lightweight features;
+- segment-specific undercoverage;
+- pre-rank/rank distribution mismatch after retrieval changes.
 
-or it may be an ordering score with no probability semantics.
+#### 3. Ranking: spend the expensive intelligence here
 
-That distinction matters. If downstream logic multiplies a score by price, thresholds it, feeds it to an auction, or interprets it as risk, calibration and score semantics become important. If the score is used only for ordering, ranking quality may matter more than probability calibration.
+Ranking uses richer features because the candidate set is now bounded.
 
-At this stage, metrics such as NDCG, MRR, MAP, or task-specific utility are often more diagnostic than candidate recall because the main problem is **ordering within the available set**.
+Typical inputs include:
 
-### Reranking: optimize the slate, not isolated items
+- user long-term preferences;
+- short-term/session intent;
+- item attributes and embeddings;
+- freshness/popularity;
+- context such as device, time, locale, or surface;
+- user-item interaction features;
+- business or ecosystem signals where appropriate.
 
-Ranking commonly scores candidates independently or approximately independently. That can produce a bad page even if every individual score is reasonable.
+The objective should correspond to the product decision. It might estimate relevance, CTR, watch time, purchase probability, expected value, or a learned multi-objective utility.
 
-For example, the top ten items may all be near-duplicates, all come from one creator, or violate an inventory/exposure objective when considered together.
+Important trade-offs include:
 
-Reranking answers:
+- model quality versus inference latency;
+- richer online features versus feature-hydration cost;
+- freshness versus caching/precomputation;
+- calibrated probability semantics versus pure ordering score;
+- model complexity versus operational reliability.
 
-> **Does the whole output slate make sense?**
+Failure modes include training-serving skew, stale/missing features, score drift, model/version mismatch, incorrect objective, and poor calibration when scores are later interpreted as probabilities.
 
-It may optimize or constrain:
+#### 4. Reranking: optimize the slate, not isolated items
 
-- diversity and redundancy;
+Independent item scoring can produce a poor list even when each item individually scores well.
+
+Examples:
+
+- ten nearly identical shoes;
+- excessive exposure from one seller or creator;
+- stale items dominating a feed;
+- previously purchased/consumed items reappearing;
+- unavailable or policy-restricted content;
+- overconcentration in one category.
+
+Reranking applies hard or soft constraints to create a better slate.
+
+Examples of hard constraints:
+
+- must be available;
+- policy-safe;
+- seller/category cap cannot be exceeded;
+- already-consumed items excluded.
+
+Examples of soft objectives:
+
+- diversity;
 - novelty;
 - freshness;
-- exploration;
-- category balance;
-- seller / creator exposure;
-- inventory or supply considerations;
-- product policy;
-- page-level compatibility or spacing rules.
+- creator/seller balance;
+- long-term satisfaction.
 
-The conceptual distinction is:
+The core trade-off is **relevance displaced versus slate-level benefit**. Hard constraints must hold. Soft objectives should be tuned against a measurable relevance or business-cost envelope.
 
-**Ranking:** How good is this candidate?
+#### 5. Post-processing: guarantee response correctness
 
-**Reranking:** How good is this candidate in the context of the already-constructed or intended slate?
+Post-processing performs the final checks before serving.
 
-Reranking therefore needs both **relevance-retention metrics** and metrics for the slate-level objective it was introduced to control.
+Typical responsibilities include:
 
-### Post-processing: enforce hard validity
+- final deduplication;
+- eligibility or policy checks;
+- last-mile stock/availability validation;
+- pagination and response formatting;
+- safe fallback behavior;
+- timeout/deadline handling;
+- final reason-code or metadata attachment.
 
-Post-processing answers:
+Because this stage sits at the end of the request, unexpectedly expensive logic directly hurts tail latency. It should be deterministic, bounded, and observable.
 
-> **Is every returned result valid and allowed to show?**
+#### How the pieces connect
 
-Some properties should not depend on a model learning to behave correctly. Examples include:
+Two rules explain most of the architecture:
 
-- item availability;
-- geographic or contractual eligibility;
-- hard policy restrictions;
-- deduplication;
-- already-consumed suppression;
-- mandatory exclusions.
+**Quality-ceiling rule**
 
-These rules are often deterministic.
+Downstream stages can only rank, rerank, or filter the candidates they receive. They cannot recover upstream omissions.
 
-“Post-processing” describes the logical role, not a requirement that every hard filter run at the very last microsecond. If an item is definitely invalid and carrying it through expensive feature hydration/ranking wastes resources, apply the filter earlier. The important design question is whether the rule is a **hard validity constraint** or a **soft learned preference**.
+**Progressive-compute rule**
 
-### How quality ceilings propagate
+The more expensive the computation per item, the later it should occur, after the candidate set has been reduced.
 
-A useful set view is:
+A third rule matters for debugging:
 
-$$
-C_{\text{rank}} \subseteq C_{\text{pre-rank}} \subseteq C_{\text{retrieve}} \subseteq \mathcal{I}
-$$
+**Stage-local-diagnosis rule**
 
-where $\mathcal{I}$ is the full item universe.
+When the product metric changes, inspect stage boundaries and find the first point where the new system diverges from the last healthy baseline.
 
-Every pruning stage can only remove items unless another candidate source is explicitly introduced later. Therefore:
+### Deeper Reasoning and Derivations
 
-- retrieval can lose opportunity before ranking begins;
-- pre-ranking can lose opportunity before the heavy model begins;
-- ranking can misorder available candidates but usually cannot recover removed ones;
-- reranking can improve the slate only from what survived earlier stages;
-- post-processing can make results valid, but if it removes many items late it may leave a thin or low-quality slate unless refill/fallback logic exists.
+#### Why retrieval creates a mathematical ceiling
 
-This is why early-stage recall/preservation is treated differently from late-stage ordering quality.
+Let $R$ be the set of relevant items for a request and $C$ the candidate set produced by retrieval.
 
-### Metrics should follow stage objectives
-
-One top-line metric is not sufficient for a multi-stage system.
-
-Use the mapping:
+A downstream stage can only select from $C$, so the number of relevant items available downstream is bounded by:
 
 $$
-\text{stage objective} \rightarrow \text{stage metric}
+|R \cap C|.
 $$
 
-| Stage | Primary objective | Useful measurements |
-|---|---|---|
-| Retrieval | Preserve useful opportunity cheaply | Recall@K, source recall, union recall, marginal recall, candidate count, latency |
-| Pre-rank | Remove expensive-to-score weak candidates with bounded quality loss | reduction ratio, top-candidate preservation, downstream quality loss, compute/latency saved |
-| Rank | Order surviving candidates accurately | NDCG, MRR, MAP, task utility, log loss/calibration when probability semantics matter, slice metrics |
-| Rerank | Produce a good slate under multiple objectives/constraints | relevance retained, diversity, novelty, coverage, freshness, exposure, constraint satisfaction |
-| Post-process | Guarantee validity | invalid-result rate, dedup correctness, eligibility violations, refill/fallback behavior |
-| Serve | Execute the intended pipeline reliably | p50/p95/p99, timeout rate, fallback rate, freshness, cache hit rate, version consistency, error rate |
-
-CTR, conversion, watch time, or revenue are important product outcomes. They tell you **whether the product changed**. They usually do not tell you **where the pipeline first went wrong**.
-
-### Latency is a budget, not a vague requirement
-
-For a service with p99 below 120 ms, do not say every component “needs to be fast.” Assign stage budgets.
-
-A request-time decomposition might be:
+Retrieval recall is:
 
 $$
-T_{\text{request}}
-\approx
-T_{\text{retrieval}}
-+T_{\text{feature}}
-+T_{\text{pre-rank}}
-+T_{\text{rank}}
-+T_{\text{rerank}}
-+T_{\text{overhead}}
+\mathrm{Recall}_{\text{retrieval}}
+=
+\frac{|R \cap C|}{|R|}.
 $$
 
-The sum is only a first-order model because independent work can run in parallel and tail latency depends on dependency fan-out, queuing, batching, hardware, and network behavior. But the decomposition forces explicit ownership of the budget.
-
-Candidate count is one of the strongest control knobs. If heavy scoring costs approximately $0.08$ ms per candidate:
+If a pre-ranker keeps $P \subseteq C$, the downstream opportunity shrinks again to:
 
 $$
-300 \times 0.08 \approx 24\text{ ms}
+|R \cap P|.
 $$
 
-while
+For a top-$k$ output, even a perfect downstream ranker cannot place a relevant item in the final slate if that item is not in the surviving candidate set.
+
+This is why a stronger ranker may produce little gain when retrieval or pre-ranking is the real bottleneck.
+
+#### Why later stages can afford richer models
+
+Suppose a heavy model costs $c$ units of compute per item and the catalog contains $N$ items.
+
+Full-catalog scoring costs approximately:
 
 $$
-1000 \times 0.08 \approx 80\text{ ms}
+Nc.
 $$
 
-More candidates may improve recall and ranking opportunity, but they also increase:
+If retrieval reduces the set to $K$ candidates, the same model costs approximately:
 
-- feature lookups;
-- memory traffic;
-- ranker inference work;
-- batching pressure;
-- downstream reranking work;
-- tail-latency exposure.
+$$
+Kc.
+$$
 
-The Staff-level habit is to state **the quality or reliability cost of every latency optimization**.
+For example, reducing from $N=10^7$ items to $K=300$ candidates cuts the number of heavy-model scoring operations by more than four orders of magnitude.
 
-### Latency/resource levers and their costs
+The system has not eliminated computation; it has concentrated expensive computation where it is most useful.
 
-#### Reduce candidate count
+#### Candidate count is a system-wide multiplier
 
-**Why it helps:** fewer candidates require feature hydration and scoring.
+Candidate count often affects much more than the retrieval stage.
 
-**Cost:** relevant candidates may be excluded, lowering the upstream ceiling.
+Increasing candidates can increase:
 
-#### Add or strengthen pre-ranking
+- IDs transferred between services;
+- feature keys fetched;
+- feature-store/cache traffic;
+- tensor size;
+- ranker inference time;
+- memory pressure;
+- reranking work;
+- serialization/deserialization;
+- tail latency.
 
-**Why it helps:** the expensive ranker sees fewer candidates.
+This is why increasing retrieval depth from 200 to 1,000 can raise p99 sharply even if retrieval itself changes only slightly.
 
-**Cost:** a weak or biased pre-ranker can over-prune important slices and create another irrecoverable ceiling.
+A useful optimization criterion is **marginal quality gain per unit of resource cost**.
 
-#### Precompute or cache features
+#### Latency is a critical-path property
 
-**Why it helps:** less request-time computation and fewer remote lookups.
+Per-component means or p99s do not necessarily sum linearly because some work can run in parallel and some cannot.
 
-**Cost:** staleness, storage, invalidation complexity, cache misses, and possible training/serving mismatch.
+The important questions are:
 
-#### Use a smaller or distilled ranker
+- which stages lie on the critical path;
+- which retrieval sources can fan out concurrently;
+- which feature fetches can overlap;
+- where queueing or cache misses amplify tail latency;
+- which deadlines trigger degraded paths;
+- how much headroom remains for orchestration and serialization.
 
-**Why it helps:** fewer operations and usually a smaller memory footprint.
+A production latency budget should therefore distinguish:
 
-**Cost:** reduced capacity or imperfect teacher fidelity.
+- sequential versus parallel work;
+- model inference versus feature hydration;
+- online computation versus precomputed state;
+- normal path versus fallback path;
+- median versus p95/p99 behavior.
 
-#### Quantize the ranker
+#### Why pre-ranking can help and hurt simultaneously
 
-**Why it helps:** reduced precision such as FP32 → FP16/BF16 or INT8 can reduce memory bandwidth and accelerate supported kernels.
+Suppose retrieval produces 2,000 candidates and the heavy ranker can safely score only 300.
 
-**Cost:** numerical approximation can change score quality or ordering and must be measured on the actual hardware/runtime.
+A pre-ranker that removes 1,700 candidates may save substantial latency. But if it removes even a small fraction of the best eventual items, it lowers the maximum ranking quality achievable downstream.
 
-#### Tune ANN retrieval
+This creates a two-objective evaluation problem:
 
-**Why it helps:** fewer probes, smaller search effort, or more compression can reduce latency/memory.
+1. how much heavy-ranker work is saved;
+2. how much valuable-item survival is lost.
 
-**Cost:** approximate retrieval recall can fall.
+A pre-ranker is therefore not judged only by its own AUC or NDCG. It must be evaluated in terms of the **downstream opportunity it preserves**.
 
-#### Parallelize independent work
+#### Objective mismatch across stages
 
-**Why it helps:** wall-clock latency can approach the slowest parallel branch rather than the sum of branch latencies.
+A cascade can fail even when each component is locally strong.
 
-**Cost:** more resource pressure and greater exposure to stragglers/fan-out tail effects.
+For example:
 
-#### Batch/vectorize inference
+- retrieval optimizes semantic similarity;
+- pre-ranking optimizes click probability;
+- ranking optimizes conversion value;
+- reranking optimizes diversity.
 
-**Why it helps:** better accelerator utilization and lower per-candidate overhead.
+If semantic similarity yields candidates that look related but rarely convert, the ranker cannot recover products that were never retrieved. If the pre-ranker removes low-click/high-value items, the conversion ranker loses them before it can act.
 
-**Cost:** batching windows can add queueing latency; large batches can hurt tail latency or memory pressure.
+Stage objectives must therefore be compatible enough that upstream stages preserve the opportunity required by downstream objectives.
 
-### Fallbacks are part of the architecture
+#### Diagnostic localization
 
-A production design is incomplete if it describes only the happy path.
+A disciplined incident investigation compares stage inputs and outputs to a healthy baseline.
 
-Define deterministic degradation behavior for stage deadlines and failures. For example:
+**Retrieval**
 
-- retrieval timeout → cached/popularity candidates or another healthy retrieval source;
-- feature timeout → stale-but-safe/default features or a simpler scoring path;
-- heavy-ranker timeout → pre-ranker/lightweight-ranker order;
-- reranker failure → main-ranker order plus mandatory hard filters;
-- insufficient valid results after filtering → controlled refill from a safe fallback pool.
+- candidate count;
+- Recall@K;
+- source recall;
+- union and marginal recall;
+- source overlap;
+- index freshness;
+- source timeouts;
+- p95/p99 latency.
 
-The goal is not merely availability. It is:
+**Pre-ranking**
 
-> **deterministic, observable degradation**
+- candidate count before/after;
+- pruning rate;
+- valuable-item survival;
+- score distribution;
+- segment survival.
 
-Monitor fallback rate and the quality of fallback traffic. A service can have a good availability number while silently serving a degraded path to a meaningful fraction of users.
+**Ranking**
 
-Versioning belongs here too. A model, feature definition, feature snapshot, embedding generator, and ANN index may need compatible versions. “All components are up” does not mean the intended system is being served if those versions are skewed.
+- feature distributions and missingness;
+- feature freshness;
+- training-serving parity;
+- score distributions;
+- model/config version;
+- replay NDCG or other ranking metrics;
+- calibration if scores have probability semantics.
 
-### Debugging by first divergence
+**Reranking**
 
-When a product metric changes, do not immediately blame “the model.” Walk the funnel and locate the first place where evidence diverges from baseline.
+- constraint firing rates;
+- relevance displaced;
+- diversity/freshness changes;
+- seller/category/creator caps;
+- segment-level impact.
 
-- **Recall@K drops** → investigate retrieval, source health, ANN/index state, filtering, or candidate quotas.
-- **Retrieval is stable but good candidates disappear before heavy ranking** → investigate pre-ranking/pruning.
-- **Candidate pool is stable but NDCG/task utility falls** → investigate ranker objective, features, labels, model, or calibration/score semantics.
-- **Main-ranker output is stable but final slate changes** → investigate reranking, caps, constraints, policy, or inventory logic.
-- **Offline quality is stable but production outcomes change** → investigate serving, feature freshness/skew, caches, model/index/feature versions, latency, fallbacks, and presentation changes.
+**Post-processing / serving**
 
-This is the **first-divergence principle**: the earliest stage whose inputs/outputs/telemetry depart from the healthy reference is usually a more useful localization point than the final business metric.
+- timeout rate;
+- fallback rate;
+- dropped-item rate;
+- empty/short slate rate;
+- stale eligibility state;
+- cache behavior;
+- model/index/feature/config version skew.
 
-### Debugging with ranked hypotheses
+The strongest localization rule is:
 
-A Staff-quality incident answer should not stop at a list of possible causes. Rank the hypotheses and name a discriminating check for each.
+> Find the first stage whose input remains healthy but whose output changes materially.
 
-Consider this incident:
+#### Important failure modes
 
-- offline NDCG improves;
-- retrieval recall is unchanged;
-- pre-rank preservation is unchanged;
-- CTR is flat;
-- conversion drops;
-- the drop is concentrated on mobile;
-- the new model uses three real-time features;
-- p99 rises but remains just below the server-side SLO.
+- **Low-recall retrieval:** relevant items never enter the funnel.
+- **Source collapse:** one retrieval channel silently disappears or becomes repetitive.
+- **Excessive source overlap:** many sources return the same items, wasting quota without adding recall.
+- **Over-pruning:** pre-ranking reduces compute but lowers the downstream ceiling.
+- **Objective mismatch:** upstream stages preserve the wrong kind of candidates for the downstream objective.
+- **Training-serving skew:** ranker features differ offline versus online.
+- **Feature staleness:** real-time behavior or item state is not reflected quickly enough.
+- **Model/index version skew:** ranker and retrieval representations are incompatible.
+- **Constraint overreach:** reranking satisfies diversity or business rules at excessive relevance cost.
+- **Unsafe post-processing:** final eligibility or policy logic is stale or inconsistent.
+- **Fallback invisibility:** the system frequently serves a degraded path without enough telemetry, so service availability looks healthy while product quality falls.
 
-A reasonable hypothesis order is:
+### Advanced Staff-Depth Considerations
 
-#### Hypothesis 1: mobile-specific feature / serving skew
+The reusable Staff-level backbone for this item is:
 
-Why plausible:
-- the regression is segmented to mobile;
-- new real-time features were introduced.
+`Baseline → Change → Mechanism → Measure → Act → Trade-off → Validate`
 
-Discriminating checks:
-- feature freshness by device;
-- missing/default rate by device;
-- online-vs-offline feature distributions;
-- timestamp alignment;
-- training/serving transformation parity.
+Equivalently:
 
-Supporting evidence would be substantially higher stale/missing/default feature rates on mobile.
+`Assumption → Mechanism → Evidence → Decision → Trade-off → Validation`
 
-#### Hypothesis 2: objective mismatch
+For this question, the baseline is: The baseline is a multi-stage compute-allocation funnel: broad retrieval preserves opportunity, optional pre-ranking reduces cost, the heavy ranker spends richer computation on a bounded set, reranking optimizes the slate, and post-processing guarantees final correctness. The invariant is that irreversible upstream pruning creates downstream quality ceilings.
 
-Why plausible:
-- CTR is flat;
-- conversion falls.
+The eight subsections below apply that same loop from different angles. Each explanation teaches the mechanism first; the filled template then compresses it into a reusable interview scaffold.
 
-The model may still rank clickable items well while worsening downstream purchase propensity.
+#### 1. Changed Constraints and Transfer Logic
 
-Checks:
-- purchase-oriented offline metrics;
-- conversion by score bucket;
-- score semantics/calibration for purchase;
-- mobile vs desktop purchase slices.
+Constraint changes should be mapped to the stage they stress rather than handled with a global redesign. A tighter p99 budget stresses the critical path; a much larger catalog stresses retrieval/index lifecycle; faster-changing inventory stresses state freshness; richer personalization stresses feature hydration and ranker cost. The invariant is to preserve enough candidate opportunity for the downstream objective while keeping expensive computation bounded.
 
-#### Hypothesis 3: mobile-sensitive latency regression
+A useful reasoning chain is:
 
-Why plausible:
-- p99 increased materially;
-- mobile user experience may be more sensitive to end-to-end latency than server-only SLOs reveal.
+`changed assumption → affected mechanism/stage → invariant → broken assumption → consequence → redesign → metric impact → trade-off → validation`
 
-Checks:
-- conversion by latency bucket;
-- client-side/mobile end-to-end latency;
-- request abandonment or rendering delay;
-- tail latency beyond the server boundary.
+**Filled template for this item**
 
-Important lesson: **one healthy metric rarely rules out an entire failure class**. Unchanged fallback rate does not rule out feature skew. Being under an SLO does not prove latency is harmless. Higher offline NDCG does not prove the online objective improved.
+- **Original assumption:** The system can afford the current candidate counts and stage budgets.
+- **Changed constraint:** End-to-end p99 is tightened to 120 ms while the current nominal path is about 155 ms.
+- **Invariant:** Preserve high-value candidate recall and mandatory eligibility/policy constraints.
+- **Broken assumption:** The heavy-ranker path and current hydration volume no longer fit the latency envelope.
+- **Consequence:** Queueing and tail amplification turn the ranker/candidate volume into the dominant bottleneck.
+- **Design change:** Strengthen pre-ranking, reduce low-marginal-recall candidates, precompute safe item state, batch/vectorize hydration and inference, and define deadline fallbacks.
+- **Metric impact:** Track per-stage p95/p99, candidate survival, retrieval recall, final ranking quality, fallback rate, and online utility.
+- **Trade-off:** Lower latency and cost can reduce the downstream opportunity ceiling or model fidelity.
+- **Validation:** Compare configurations on a quality-versus-p99/resource frontier and choose the lowest-cost design inside the accepted quality-loss envelope.
 
-### Safe mitigation before perfect root-cause certainty
+#### 2. Failure Modes and Diagnosis
 
-Incident response and root-cause analysis are related but not identical.
+Diagnose by stage boundaries. A product regression should not immediately be attributed to “the model.” Compare each stage input/output against the last healthy baseline and stop at the first boundary whose input is healthy but output diverges. That separates retrieval loss, over-pruning, feature/ranker defects, reranking overreach, and post-processing/serving incidents.
 
-If one segment is clearly harmed and the system supports safe segmented rollback, mitigate the harm first while preserving evidence for diagnosis. Examples include:
+**Filled template for this item**
 
-- roll back mobile while leaving healthy desktop traffic unchanged;
-- disable a new real-time feature and use the previous safe feature path;
-- shrink candidate count temporarily if latency is causing severe degradation;
-- route to the last known-good model/index pair.
+- **Symptom:** Online CTR/conversion drops while aggregate candidate Recall@1000 appears unchanged.
+- **Stage decomposition:** retrieval → pre-rank → features/rank → rerank → post-process/serve → exposure.
+- **Slices:** User-history, item-age, device, geography, candidate source, latency bucket, and fallback path.
+- **Competing hypotheses:** Pre-rank over-pruning; ranker feature/version skew; reranking constraint overreach; late-stage filtering/fallback.
+- **Discriminating evidence:** Valuable-item survival, feature/score distributions, constraint firing rates, dropped-item reasons, and replay diffs.
+- **Offline/online comparison:** Compare identical requests, versions, features, scores, and actually served slates.
+- **Replay/isolation:** Run old/new components on the same candidate set and request logs.
+- **First divergence:** The earliest stage where healthy input produces materially changed output.
+- **Immediate mitigation:** Roll back the failing component or route to the last healthy/fallback path.
+- **Permanent prevention:** Stage contracts, versioned rollouts, replay tests, and alerts on candidate/survival/drop/fallback distributions.
 
-A root cause becomes much stronger when **evidence and intervention agree**: the suspected mechanism is observed, changing it removes the regression, and a regression test can reproduce/prevent the failure.
+Memory aid: `Symptom → Slice → Stage → Hypotheses → Evidence → First divergence → Fix`.
 
-### Changed-constraint transfer
+#### 3. Latency and Resource Trade-offs
 
-The same funnel principle survives very different products, but stage choices change with constraints.
+Latency is a critical-path property, and candidate count is a system-wide multiplier. Retrieval depth can increase feature reads, tensor size, ranker inference, memory pressure, reranking work, and serialization even when retrieval latency itself barely moves. Resource decisions should therefore be made from marginal quality per unit of tail latency or compute, not from model quality in isolation.
 
-#### Smaller catalog, cheap model
+**Filled template for this item**
 
-If the catalog is only tens of thousands of items and the ranker is cheap, you may not need a distinct pre-ranker. Simpler architecture can be better.
+- **Budget:** 120 ms end-to-end p99 with headroom for queueing and serialization.
+- **Cost decomposition:** retrieval + feature hydration + pre-rank + heavy rank + rerank/constraints + orchestration.
+- **Dominant cost:** Heavy ranker and candidate-driven hydration are the largest synchronous costs in the baseline.
+- **Quality driver:** More candidates and richer features/models improve opportunity and ordering quality.
+- **Cost driver:** They increase fan-out, remote reads, tensor work, accelerator time, and tail amplification.
+- **Optimization knobs:** Candidate budget, pre-ranker strength, batching/vectorization, cache/precompute, distillation, quantization, parallel fan-out, and ANN effort.
+- **Fallback/degradation:** Continue with healthy retrieval sources; use cached/default-safe features; fall back to pre-rank/light-rank scores; always preserve hard constraints.
+- **Trade-off curve:** Retrieval recall/final NDCG or product metric versus p95/p99, QPS cost, and fallback rate.
+- **Decision:** Choose the knee satisfying the SLO while retaining acceptable opportunity and final utility.
 
-#### Huge catalog, expensive features
+Memory aid: `Budget → Breakdown → Bottleneck → Knobs → Quality loss → Fallback`.
 
-For tens or hundreds of millions of items, retrieval quality, ANN design, candidate quotas, and pre-ranking become much more important because exhaustive feature hydration is impossible.
+#### 4. Scale and Capacity
 
-#### High freshness requirement
+Scale pressure is non-uniform. Catalog growth primarily stresses indexes, sharding, build/update cost, and retrieval fan-out; QPS stresses caches, network, inference throughput, and queueing; feature growth stresses hydration bandwidth; more complex slate constraints stress reranking. The funnel should keep downstream candidate counts bounded so catalog growth does not automatically multiply heavy-ranker work.
 
-If new items or interactions must appear within seconds/minutes, the design must account for incremental candidate sources, feature freshness, and index update semantics rather than assuming everything can be precomputed daily.
+**Filled template for this item**
 
-#### Strict policy/availability constraints
+- **Scaling dimension:** Catalog grows from roughly 1M to 100M items at similar p99.
+- **Baseline scale assumption:** Retrieval/index state fits comfortably and downstream ranks a fixed few hundred candidates.
+- **First bottleneck:** Index memory, ANN/search work, fan-out, and rebuild/update lifecycle stop scaling comfortably.
+- **Second-order effects:** More shards, larger replicas, cache pressure, rebuild time, delete/update complexity, and tail-latency amplification.
+- **Architectural response:** Sharded/partitioned ANN or retrieval indexes, compression, adaptive routing, and incremental/shadow rebuilds.
+- **Partitioning/replication/caching/batching:** Partition by semantics when safe, replicate for availability/QPS, cache hot state, batch feature/inference work.
+- **Consistency/freshness consequence:** More replicas/index generations increase version-skew and stale-state risk.
+- **Operational failure mode:** Partial shard/index rollout can preserve candidate count while silently lowering recall.
+- **Validation:** Load-test projected QPS with Recall@K, p99, memory/replica, rebuild/update time, and failure-mode drills.
 
-If many retrieved items are ineligible, apply cheap hard filtering earlier to avoid wasting downstream compute, but preserve deterministic final validation before response.
+Memory aid: `What grows? → What stops fitting? → What bottlenecks? → How do we partition? → What new failure appears?`.
 
-#### Tight latency, high QPS
+#### 5. Freshness, State, and Versioning
 
-Candidate counts, cache strategy, batching, model size, parallel fan-out, and fallback behavior become resource-allocation decisions, not merely modeling choices.
+Different state has different freshness tolerance. Availability and policy often require near-real-time correctness; user/session features may need seconds-to-minutes; item embeddings and model parameters may tolerate slower refresh. Treating freshness as one global cadence either wastes resources or serves stale critical state.
 
-The correct architecture is therefore not “always five stages.” The correct architecture is the **simplest cascade that meets quality, latency, freshness, reliability, and product constraints**.
+**Filled template for this item**
 
-### Common precision mistakes
+- **State that becomes stale:** Session/user state, item embeddings/indexes, popularity/trending, inventory/availability, ranker features, model/config, and constraint state.
+- **Why freshness matters:** Stale state changes eligibility, retrieval opportunity, feature meaning, or the final slate.
+- **Required freshness:** Near-real-time for hard eligibility/policy; product-dependent for session state; slower for stable representations.
+- **Refresh cost:** Feature recompute, index churn, cache invalidation, network/storage, and rollout complexity.
+- **Update architecture:** Mix streaming/online updates for critical state with incremental/batch refresh for slower state.
+- **Version consistency:** Model, index, feature schema, and constraint/config versions must be mutually compatible.
+- **Failure from version skew:** Candidate quality or score semantics can collapse while services remain nominally healthy.
+- **Fallback:** Last-known-safe version, cached candidates, or conservative eligibility-safe paths.
+- **Measurement:** State age, index generation, cache age, model/config version, freshness-sliced quality, and stale-drop rate.
+- **Decision:** Spend freshness budget where marginal staleness materially changes correctness or utility.
 
-Avoid these in interviews and design reviews:
+Memory aid: `What goes stale? → How fast does it matter? → What does refresh cost? → How do versions stay consistent?`.
 
-- **Calling retrieval “sampling” by default.** Retrieval is usually deterministic or approximate search/routing, not statistical sampling.
-- **Treating pre-ranking as mandatory.** It exists only when it earns its complexity by saving meaningful downstream compute.
-- **Saying Recall@K numerically caps NDCG.** The real ceiling is structural: missing candidates cannot be ranked.
-- **Treating reranking as only diversity.** It can encode slate interactions, exposure, freshness, inventory, business rules, and ecosystem objectives.
-- **Putting every hard filter at the very end.** Logical post-processing rules can execute earlier if that saves compute, as long as correctness is preserved.
-- **Using one metric for every stage.** Different stages have different objectives and therefore different diagnostics.
-- **Assuming “below SLO” means latency is harmless.** Product sensitivity can exist inside the formal budget, especially across segments or client conditions.
-- **Assuming offline ranking gains guarantee online gains.** Objective mismatch, serving skew, feedback effects, latency, or presentation can reverse the result.
-- **Listing hypotheses without discriminating tests.** Good debugging pairs each hypothesis with the observation that would support or weaken it.
+#### 6. Implementation, Serving, and Observability
 
-### What to study here versus in later questions
+A production funnel needs explicit stage contracts, provenance, deadlines, versioning, and replayability. Each stage should expose candidate counts, scores or reason codes, model/index/feature/config versions, latency, timeout/fallback state, and final drop/constraint decisions. This makes quality regressions localizable rather than observable only as a final business-metric change.
 
-R01 should give you architectural ownership of the funnel. It should not become a substitute for the deeper specialized questions that follow.
+**Filled template for this item**
 
-Use later items for deeper treatment of:
+- **Conceptual object:** A sequence of stage-specific candidate transformations with explicit objectives and ceilings.
+- **Training/data implementation:** Build retrieval/ranking labels and stage-aware evaluation datasets with source/stage provenance.
+- **Stored artifact/state:** Retrieval indexes, model checkpoints, feature schemas, caches, rerank configs, and compatibility metadata.
+- **Serving path:** Fan-out retrieval → merge/dedup → hydrate/pre-rank → heavy rank → rerank/constraints → final eligibility/response.
+- **Component contract:** Candidate identity, feature semantics, score/version metadata, deadlines, and eligibility rules must agree.
+- **Logging:** Request ID, stage input/output counts, source attribution, scores, versions, latency, constraint activations, dropped reasons, and fallback reason.
+- **Versioning:** Couple model/index/feature/config changes or explicitly validate compatibility.
+- **Failure mode:** Mixed versions or silent degraded paths can preserve uptime while destroying relevance.
+- **Observability:** Per-stage recall/survival/score/drop/fallback/latency distributions plus key segments.
+- **Rollback:** Restore a compatible bundle and routing pointer, not only one model binary.
+- **Testing/replay:** Shared request fixtures and old/new stage replay should reproduce candidate and slate differences.
 
-- **R04 — Recommendation metrics and metric contracts:** exact definitions, derivations, edge-case semantics, and metric selection;
-- **R06 — Collaborative, content, co-visitation, graph, and hybrid retrieval:** candidate-source mechanisms and blending;
-- **R08 — Two-tower retrieval:** contrastive training, serving, normalization, ANN coupling, and freshness;
-- **R10 — ANN for recommendation:** recall/latency/memory/update trade-offs among ANN families;
-- **R12 — Candidate blending and adaptive retrieval budgets:** quotas, overlap, marginal recall, and adaptive allocation;
-- **R13/R14 — learning-to-rank and LambdaMART:** ranking objectives and ranker mechanics;
-- **R20/R21 — diversity and hard constraints:** reranking/slate construction in depth;
-- **R43 — recommendation serving architecture:** deadlines, features, caches, versioning, rollback, and serving topology;
-- **R45/R46 — monitoring/failure diagnosis and capacity/cost/scaling:** production localization and quantitative resource planning.
+Memory aid: `Train → Store → Serve → Version → Log → Monitor → Roll back`.
 
-R01 is the conceptual skeleton those later questions attach to.
+#### 7. Vertical Transfer
 
-### Self-test prompts for concept ownership
+The mechanism should transfer; the assumptions must be re-derived. Use the checklist:
 
-Without looking at notes, you should be able to reason through these:
+`labels → candidate sources → objectives → features → constraints → evaluation → experiments → serving/freshness → ecosystem effects`
 
-1. Why can a retrieval system have strong Recall@1000 even if its internal ordering is poor?
-2. Why is a pre-ranker optional, and what evidence would justify adding one?
-3. What exactly is meant by an upstream “quality ceiling”?
-4. Why might increasing retrieval from 300 to 1,000 candidates improve quality but break p99?
-5. Why is NDCG a better rank-stage diagnostic than CTR?
-6. Give two reranking objectives that cannot be represented well by independent item scoring alone.
-7. Which hard constraints would you move earlier in the pipeline, and why?
-8. Design one deterministic fallback for each major stage.
-9. If candidate recall is unchanged but conversion drops after a ranker rollout, what do you check next and in what order?
-10. Under what constraints would you deliberately remove the pre-rank stage?
+Representative verticals:
 
-If you can answer those from first principles, you understand the architecture rather than only the memorized wording.
+- **Video/feed:** **Invariant:** The funnel and quality-ceiling logic transfer. **Different assumption:** Session intent, freshness, creator diversity, and watch/skip outcomes dominate. **Technical consequence:** Use fresher session retrieval/ranking and slate constraints for repetition/creator exposure.
+- **E-commerce:** **Invariant:** The same multi-stage architecture transfers. **Different assumption:** Inventory, price, substitutes/complements, seller constraints, and conversion/value matter. **Technical consequence:** Eligibility and availability must be enforced late and fresh; retrieval must preserve purchasable opportunity.
+- **Ads:** **Invariant:** Broad-to-narrow compute allocation still applies. **Different assumption:** Eligibility, pacing, auction semantics, calibration, and strict latency dominate. **Technical consequence:** Candidate/ranking stages must respect targeting/budget constraints and probability semantics.
+- **Marketplace:** **Invariant:** Candidate/ranking/reranking decomposition transfers. **Different assumption:** Two-sided utility and provider exposure/supply health matter. **Technical consequence:** Reranking and evaluation must protect consumer utility and provider concentration.
+- **Notifications:** **Invariant:** The decision funnel transfers, sometimes to send/no-send. **Different assumption:** Every exposure is intrusive; timing, fatigue, frequency caps, and suppression dominate. **Technical consequence:** Use conservative candidate/score thresholds and hard frequency/policy constraints.
+
+**Filled transfer template — Video/feed**
+
+- **Invariant:** The funnel and quality-ceiling logic transfer.
+- **Different data-generating process:** Session intent, freshness, creator diversity, and watch/skip outcomes dominate.
+- **Different objective:** Re-derive the primary product utility for this vertical rather than copying the base objective.
+- **Different candidates/features:** Candidate sources and features should reflect the vertical-specific context and available signals.
+- **Different constraints:** Session intent, freshness, creator diversity, and watch/skip outcomes dominate.
+- **Metric change:** Retain transferable stage metrics, then add vertical-specific outcomes and guardrails.
+- **Serving change:** Use fresher session retrieval/ranking and slate constraints for repetition/creator exposure.
+- **Ecosystem effect:** Check creator/provider/seller/advertiser or user-side concentration where relevant.
+- **Validation:** Evaluate both transferable retrieval/ranking quality and the vertical-specific product outcome.
+
+Memory aid: `Keep the mechanism; re-derive the assumptions.`
+
+#### 8. Objective and Metric Mismatch
+
+A multi-stage system can execute perfectly and still optimize the wrong local proxy. Distinguish implementation failure from objective mismatch. If candidate recall and serving equivalence are healthy but online conversion falls after offline NDCG rises, the system may have faithfully optimized a relevance proxy that omits value, calibration, UX, or long-term effects.
+
+**Filled template for this item**
+
+- **Offline/model metric:** Ranker NDCG or another stage-local relevance metric improves.
+- **Online/product outcome:** CTR/conversion/value is flat or worse.
+- **Execution verification:** Confirm candidates, features, versions, scores, constraints, latency, fallback, and served/exposed slate match expectation.
+- **Metric semantics:** NDCG rewards ordering under the chosen labels/gains, not necessarily conversion or long-term utility.
+- **Blind spots:** Price, availability, calibration, session intent, constraint displacement, UI/exposure effects, or delayed value.
+- **Missing product factor:** The offline relevance contract may omit the causal/product quantity the business actually values.
+- **Repair:** Change labels/gains/objective or add guardrails/multi-objective terms while retaining stage metrics for diagnosis.
+- **Trade-off:** Better product alignment can increase label delay/noise and optimization complexity.
+- **Online validation:** Controlled experiment with primary product metric, stage guardrails, latency/reliability, and segment outcomes.
+
+Memory aid: `Did we execute the objective incorrectly, or correctly optimize the wrong objective?`
 
 ## Material Follow-ups / Scenario Variants
 
-### Stage-specific metrics
+### Retrieval metrics are healthy, but online conversion drops
 
-**Candidate generation**
-- Recall@K
-- source-level recall
-- union recall
-- marginal recall by candidate source
-- candidate count
-- retrieval latency
+First verify that retrieval is genuinely healthy rather than relying on one aggregate number. Compare candidate counts, Recall@K, source-level recall, union recall, marginal recall, overlap, freshness, latency, and important segments against the last healthy version.
 
-**Pre-ranking**
-- candidate reduction ratio
-- heavy-ranker compute or latency saved
-- preservation of downstream top candidates
-- NDCG or task-utility loss caused by pruning
+If retrieval is stable, inspect pre-ranking survival. A healthy retrieval pool can still be damaged by aggressive pruning. Compare pruning rate, candidate count after pre-rank, valuable-item survival, score distributions, and segment-level survival.
 
-**Ranking**
-- NDCG
-- MRR
-- MAP
-- task-specific utility
-- calibration / log loss when probability semantics matter
-- segment and slice metrics
+If pre-ranking is healthy, move to the ranker: compare feature distributions, missingness, freshness, training-serving parity, model/config versions, score distributions, calibration if relevant, and replay ranking metrics. Then inspect reranking constraint rates and relevance displacement. Finally inspect post-processing and serving: timeout rate, fallback rate, stale eligibility, cache behavior, dropped-item reasons, and version skew.
 
-**Reranking**
-- relevance retained
-- diversity / novelty / coverage
-- constraint-satisfaction rate
-- seller / creator / category exposure
-- freshness
-- product-specific guardrails
+The goal is to find the **first stage boundary at which the new system diverges from the healthy baseline**.
 
-**Serving**
-- p50 / p95 / p99 latency
-- timeout rate
-- fallback rate
-- feature freshness
-- cache hit rate
-- model / index / feature version consistency
-- error rate
+### Redesign a 120 ms p99 system currently measuring 30 ms retrieval, 25 ms feature hydration, 15 ms pre-rank, 70 ms ranker, and 15 ms rerank/overhead
 
-### Latency-budget variant
-
-Suppose total server-side latency is constrained to p99 < 120 ms. Decompose the request into retrieval, feature hydration, pre-ranking, heavy ranking, reranking, and overhead. Assign explicit budgets rather than saying every stage should simply be “fast.”
-
-Candidate count directly affects heavy-ranking cost. If scoring costs approximately $0.08$ ms per candidate:
+The nominal sequential total is:
 
 $$
-300 \times 0.08 \approx 24 \text{ ms}
+30 + 25 + 15 + 70 + 15 = 155\text{ ms},
 $$
 
-while
+so the current path cannot meet a 120 ms p99 target without architectural changes.
 
-$$
-1000 \times 0.08 \approx 80 \text{ ms}
-$$
+The 70 ms heavy ranker is the largest single measured component, but first identify the **critical path** because independent retrieval channels or feature fetches may overlap, and component p99s do not always add linearly.
 
-Possible latency levers include:
-- reduce candidate count;
-- add or strengthen pre-ranking;
-- precompute or cache features;
-- batch/vectorize scoring;
-- distill or quantize the ranker;
-- tune ANN retrieval;
-- parallelize independent candidate sources.
+The highest-value redesign levers are:
 
-For every optimization, state the possible quality or reliability cost.
+1. **Reduce candidates reaching the heavy ranker.** Strengthen the pre-ranker or lower the ranker candidate budget using survival and marginal-recall measurements. Trade-off: lower downstream quality ceiling if valuable candidates are pruned.
+2. **Precompute/cache safe item-side features.** Trade-off: freshness and invalidation complexity.
+3. **Parallelize independent work.** Retrieval sources and some user/context feature fetches can overlap. Trade-off: orchestration complexity and higher concurrent resource use.
+4. **Make the ranker cheaper.** Distillation, fewer interactions, batching/vectorization, quantization/lower precision where validated, or a smaller model. Trade-off: possible quality or calibration loss.
+5. **Reduce feature-hydration cost.** Batch reads, improve cache hit rate, colocate hot features, or prune before expensive hydration. Trade-off: system complexity and possibly fewer features available early.
+6. **Reserve headroom.** Queueing, serialization, cache misses, and tail amplification consume real budget; do not allocate the full 120 ms to nominal stage times.
 
-### Failure-handling variant
+Fallbacks should be deterministic:
 
-Define deterministic degradation paths:
-- retrieval timeout → cached, popularity, or another healthy candidate source;
-- feature-service timeout → stale-but-safe features or a simpler ranker;
-- heavy-ranker timeout → pre-ranker or lightweight-ranker ordering;
-- reranker failure → main-ranker order plus required hard filtering.
+- retrieval timeout → cached/popular/trending candidates;
+- one source timeout → proceed with healthy sources if minimum coverage remains;
+- heavy-ranker timeout → pre-ranker or lightweight-ranker scores;
+- reranker timeout → ranker order plus mandatory hard constraints;
+- policy/eligibility failure → fail closed rather than serve invalid items.
 
-Monitor fallback rate. A service can remain technically available while silently serving degraded recommendations.
+The redesign is successful only if **p99 meets the target while stage-specific quality stays inside an agreed loss envelope**.
 
-### Offline / online mismatch variant
+### Catalog grows from 1 million to 100 million items while p99 must stay unchanged
 
-If offline NDCG improves while online conversion falls, do not assume the ranker itself is the cause. Check:
-- objective mismatch;
-- calibration or score-semantic changes;
-- feature skew or staleness;
-- timeout/fallback behavior;
-- model/index/feature version mismatch;
-- segment regressions;
-- business-rule or presentation changes.
+The first pressure lands on **candidate generation and index lifecycle**, not uniformly on every stage.
+
+The system should not react by scoring all 100 million items per request. Indexed retrieval exists specifically to avoid exhaustive rich-model scoring. What becomes harder is:
+
+- index memory;
+- shard count and routing;
+- ANN or other search complexity;
+- cache behavior;
+- index build/rebuild time;
+- update/delete handling;
+- freshness;
+- per-request fan-out;
+- maintaining Recall@K under the same p99.
+
+The invariant to preserve is the funnel: **broad cheap retrieval first, then expensive scoring on a bounded candidate set**.
+
+If the main ranker previously scored about 300 items, there is no reason for its cost to grow 100× merely because the catalog did. Retrieval should absorb most of the catalog-scale increase and continue returning a controlled number of candidates.
+
+Possible redesigns include:
+
+- a more appropriate ANN/index family;
+- partitioning or sharding by geography/inventory/domain where semantics permit it;
+- tighter filters;
+- better cache placement;
+- adaptive retrieval budgets;
+- fewer low-marginal-recall channels for some requests;
+- incremental indexing or shadow rebuilds for freshness.
+
+Measure Recall@K, marginal recall, p95/p99 retrieval latency, memory per replica, build/update cost, and segment coverage. Only if retrieval cannot meet the target after optimization should latency be reallocated from healthy downstream stages.
+
+### A post-processing filter suddenly removes 15% of ranked items
+
+Treat this as a correctness and serving incident, even if the ranker metrics remain healthy.
+
+Check:
+
+- which rule is dropping items;
+- whether eligibility, availability, or policy state changed;
+- whether timestamps or cache freshness regressed;
+- whether a schema/version change altered rule interpretation;
+- which segments, categories, or sellers are affected;
+- whether final slates are becoming shorter or empty;
+- whether the system has enough fallback inventory.
+
+A late-stage filter can make an excellent upstream recommender look poor because it removes results after all ranking work is complete. The first divergence here is post-processing, not retrieval or ranking.
