@@ -1,15 +1,14 @@
 ---
 type: interview-answer
 item: "2027:R04"
-title: "Recommendation metrics and metric contracts"
-created: "2026-09-24"
-updated: "2026-10-05"
+title: "Recommendation Metrics and Metric Contracts"
+created: "2026-10-09"
+updated: "2026-10-09"
 tags:
-  - recommendation
+  - recommendation-systems
   - ranking-metrics
   - evaluation
   - metric-contracts
-  - staff-depth
 ---
 
 ## Canonical Staff-Depth Question
@@ -18,763 +17,522 @@ Derive/compare Precision@k, Recall@k, HitRate@k, MRR, MAP, DCG/NDCG, AUC/log-los
 
 ## Mastery Answer
 
-I start by defining the **metric contract** before computing anything: the evaluation unit, candidate universe, relevance label, cutoff $k$, treatment of unjudged or unexposed items, aggregation rule, empty-label cases, weighting, and time horizon. Without that contract, two correct implementations can report different numbers.
+I would start by separating **what stage I am evaluating** from **what user or business outcome I ultimately care about**. A recommender usually has at least retrieval, ranking, reranking/constraints, and product-outcome layers, so no single metric is sufficient. The metric contract must define the evaluation unit, relevance labels, cutoff $k$, candidate universe, aggregation rule, treatment of users with no positives, duplicate items, ties, and whether negatives are the full catalog or sampled. Without that contract, even a familiar metric can be misleading.
 
-For top-$k$ retrieval and ranking, the main distinction is what each metric rewards. Precision@$k$ asks what fraction of the shown top $k$ are relevant; Recall@$k$ asks what fraction of all relevant items were recovered. HitRate@$k$ collapses that to whether there was at least one hit. MRR emphasizes the rank of the first relevant result. MAP averages precision at the ranks where relevant items appear, so it rewards retrieving multiple relevant items early. DCG supports graded relevance and discounts lower ranks; NDCG normalizes DCG by the best possible ordering for that query or user so scores are comparable across examples with different relevance sets.
+For **retrieval**, the main question is whether relevant items survive candidate generation. Recall@k is usually the primary ceiling metric: among all relevant items for a user, what fraction appear in the top $k$ retrieved candidates? Precision@k asks what fraction of the retrieved $k$ are relevant, but retrieval often intentionally returns a large candidate set, so precision may be less important there. HitRate@k collapses the question to whether at least one relevant item appears. It is intuitive but ignores whether a user had one relevant item or twenty.
 
-AUC and log-loss answer different questions from top-$k$ ranking metrics. AUC measures pairwise ordering across positives and negatives and is threshold-free, but can look strong while the top few recommendations are poor. Log-loss evaluates probabilistic predictions and heavily penalizes confident mistakes; if scores are used as probabilities, I also check calibration, because good ordering does not imply truthful probabilities.
+For **ranking**, order matters. MRR emphasizes the rank of the first relevant result: reciprocal rank is $1/r$ where $r$ is the position of the first relevant item, then averaged across queries or users. It is appropriate when one early success dominates utility. MAP averages precision at the ranks where relevant items occur and then averages across users; it rewards retrieving multiple binary-relevant items early. DCG allows graded relevance and discounts lower ranks, commonly with $1/\log_2(i+1)$. NDCG divides DCG by the ideal DCG for that user, making scores more comparable across users with different relevance sets. Its contract must define gain, discount, cutoff, zero-IDCG behavior, and label scale.
 
-Then I add product and system metrics that ranking relevance alone misses. Coverage asks how much of the catalog, user base, or eligible inventory receives exposure. Novelty rewards recommending items that are less obvious or less globally popular. Diversity measures non-redundancy within a slate and must specify the similarity function. Watch-time/completion, conversion, and revenue are closer to product value but can be biased by exposure, position, price, session length, and delayed outcomes. Long-term metrics such as retention, repeated satisfaction, creator or seller health, or downstream value are strategically important but have longer feedback loops and harder causal attribution.
+AUC and log-loss evaluate a different object. AUC measures pairwise ordering probability over scored positives and negatives and is threshold-free, but it ignores top-$k$ concentration and can look strong while top recommendations are poor. Log-loss evaluates probabilistic predictions and heavily penalizes confident mistakes. If scores are used as probabilities—for expected value, auctions, thresholds, or risk—**calibration** matters: among predictions near $p$, the event should occur about fraction $p$ of the time. Good ranking does not imply good calibration, and good calibration does not imply good top-$k$ ranking.
 
-The metric should match the stage. Candidate generation is primarily recall-oriented because missed relevant items cannot be recovered downstream. A ranker is usually judged by top-heavy ranking metrics such as NDCG or MAP, often alongside calibration if probabilities feed thresholds or value calculations. Reranking adds diversity, coverage, constraint, and business metrics. Final product decisions require online experiments on user and business outcomes, with guardrails and segment analysis.
+Then I add **system- and product-level metrics**. Coverage asks how much of the catalog, users, or eligible inventory the system can meaningfully serve. Novelty measures how non-obvious or non-popular recommendations are, but must be defined relative to a reference popularity or user-history distribution. Diversity measures dissimilarity within a slate or across exposure; it depends critically on the item-similarity definition. These metrics often trade off against immediate relevance.
 
-At Staff depth, I would not accept a metric name without semantics. I would state, for example, whether Recall@$k$ uses all known positives or only positives eligible at recommendation time; what NDCG does when IDCG is zero; whether MAP ignores users with no positives or assigns zero; whether repeated impressions count; how ties are handled; whether metrics are macro-averaged per user/query or micro-averaged over events; and whether delayed conversions are censored. I would also diagnose regressions stage by stage: unchanged candidate Recall@$K$ with lower NDCG points toward ranking or labeling rather than retrieval, while offline NDCG up but online conversion down suggests objective mismatch, calibration, exposure bias, serving skew, or constraint effects.
+For product outcomes, I use metrics aligned to the vertical: watch time and completion for video, conversion and revenue for commerce, perhaps saves, hides, retention, or satisfaction for other surfaces. I distinguish **per-impression**, **per-user**, **per-session**, and **long-term** aggregation because optimizing one can create pathological behavior in another. Revenue alone can over-rank expensive items; watch time can reward addictive or overly long content; CTR can reward clickbait. Long-term metrics such as retention, repeat visits, satisfaction, creator or seller health, and churn are closer to durable value but are delayed, noisy, and harder to attribute.
+
+The Staff-level rule is: **match the metric to the stage and decision, then define semantics before measuring**. Retrieval metrics diagnose candidate-set ceiling; ranking metrics diagnose ordering; probabilistic metrics diagnose score semantics; coverage/diversity/novelty diagnose ecosystem behavior; and online product metrics validate actual utility. I would always inspect slices—new users, new items, head/tail inventory, geography, device, and traffic source—because aggregate gains can hide regressions. Finally, I would validate offline improvements with online experiments when the product outcome is causal and exposure-dependent, because logged offline metrics inherit the behavior and biases of the previous policy.
 
 ## Learn the Concepts
 
 ### Foundation
 
-A recommender produces an **ordered list of items**. Evaluation asks whether that list is useful, but “useful” can mean several different things. The core mental model is therefore:
+A recommendation system makes two broad kinds of decisions:
 
-> **A metric is a measuring instrument, and a metric contract defines exactly what the instrument is allowed to measure.**
+1. **Which items are worth considering?** This is retrieval or candidate generation.
+2. **In what order should those items be shown?** This is ranking and reranking.
 
-Before formulas, define the objects being measured:
+Metrics are measurements attached to those decisions. A useful mental model is:
 
-- A **user/query/context** is the situation for which recommendations are generated.
-- A **candidate set** is the set of items the system is allowed to consider.
-- A **ranked list** is the ordered output, for example $[i_1,i_2,\ldots,i_k]$.
-- A **relevant item** is an item counted as a positive under a specified label rule, such as purchased, clicked, watched past a threshold, or judged relevant.
-- The cutoff **@$k$** means only the first $k$ ranked items are evaluated.
-- A **binary relevance label** is usually $rel_i\in\{0,1\}$.
-- A **graded relevance label** allows levels such as $0,1,2,3$ for increasingly valuable outcomes.
-- **Macro-averaging** computes a metric per user/query and averages those values, giving each evaluation unit equal weight.
-- **Micro-averaging** pools events or counts first, giving high-activity units more weight.
+**candidate survival → ordering quality → score semantics → slate/catalog behavior → product outcome**
 
-A metric contract must settle details such as:
+Different metrics answer different questions. The first mistake to avoid is asking, “What is the best recommender metric?” There is no universal answer because each metric measures a different object.
 
-- What is one evaluation unit: user, session, query, impression, or request?
-- What items count as eligible?
-- What event defines relevance?
-- What is $k$?
-- What happens when fewer than $k$ items are returned?
-- What happens when an example has no relevant items?
-- Are repeated impressions or duplicate items allowed?
-- How are ties handled?
-- Is relevance binary or graded?
-- Are labels complete, delayed, censored, or exposure-dependent?
-- Is aggregation macro, micro, weighted, or segment-specific?
+#### Basic objects and terminology
 
-#### Precision@$k$
+For a user $u$:
 
-Precision@$k$ measures the fraction of the first $k$ recommendations that are relevant:
+- $G_u$ is the set of items considered relevant or positive for that user in the evaluation window.
+- $R_k(u)$ is the ordered list of the top $k$ recommended items.
+- $\operatorname{rel}_u(i)$ is the relevance label for the item at rank $i$; it may be binary, such as click/no-click, or graded, such as 0–3 relevance.
+- A **cutoff** $k$ says how far down the ranked list the metric looks.
+- A **candidate universe** is the set of items the system was allowed to choose from.
+- A **metric contract** is the complete definition of how a metric is computed: labels, population, cutoff, candidate universe, edge cases, averaging, deduplication, ties, censoring, and sampling.
+
+A metric name without its contract is incomplete. “Recall@100 = 0.72” is not fully interpretable until the evaluation population, relevance definition, candidate universe, and treatment of edge cases are known.
+
+#### Precision@k
+
+Precision@k asks: **Of the $k$ recommended items, how many are relevant?**
 
 $$
-\mathrm{Precision@}k = \frac{\#\{\text{relevant items in top }k\}}{k}.
+\operatorname{Precision@k}(u)
+=
+\frac{|R_k(u) \cap G_u|}{k}.
 $$
 
-It answers: **Of what was shown near the top, how much was good?**
+If the system recommends five items and two are relevant, Precision@5 is $2/5=0.4$.
 
-Precision is useful when recommendation slots are scarce or bad recommendations are costly. It does not care how many relevant items existed outside the top $k$.
+Precision rewards purity of the shown set. It does not care how many relevant items existed but were missed.
 
-#### Recall@$k$
+#### Recall@k
 
-Recall@$k$ measures the fraction of all relevant items that appear in the first $k$:
-
-$$
-\mathrm{Recall@}k = \frac{\#\{\text{relevant items in top }k\}}{\#\{\text{relevant items}\}}.
-$$
-
-It answers: **How much of the relevant set did the system recover?**
-
-Recall is especially important in candidate generation. If a relevant item is absent from the candidate set, no downstream ranker can recover it.
-
-#### HitRate@$k$
-
-HitRate@$k$ is binary per evaluation unit:
+Recall@k asks: **Of all relevant items for the user, how many survived into the top $k$?**
 
 $$
-\mathrm{HitRate@}k = \mathbf{1}[\text{at least one relevant item occurs in top }k].
+\operatorname{Recall@k}(u)
+=
+\frac{|R_k(u) \cap G_u|}{|G_u|}.
 $$
 
-Aggregated HitRate is the fraction of users/queries with at least one hit. It is simple, but it ignores whether there were one or many relevant items and ignores where inside the top $k$ the hit occurred.
+If a user has four relevant items and the top 20 contains three, Recall@20 is $3/4=0.75$.
+
+Recall is especially important for candidate generation because a later ranker cannot recover an item that retrieval discarded.
+
+#### HitRate@k
+
+HitRate@k asks only whether **at least one** relevant item appears in the top $k$:
+
+$$
+\operatorname{HitRate@k}(u)
+=
+\mathbf{1}\{R_k(u)\cap G_u\neq \emptyset\}.
+$$
+
+It is useful when one success is enough, but it throws away multiplicity. A user with one hit out of one relevant item and a user with one hit out of twenty both count as a hit.
 
 #### MRR
 
-**Mean Reciprocal Rank** focuses on the first relevant result. For one example:
+Mean Reciprocal Rank focuses on the **first relevant item**. If the first relevant result is at rank $r_u$:
 
 $$
-RR = \frac{1}{r},
+\operatorname{RR}(u)=\frac{1}{r_u}.
 $$
 
-where $r$ is the rank of the first relevant item. If there is no relevant item in the evaluated list, the usual convention is $RR=0$.
+Then MRR is the average of reciprocal rank across users or queries.
 
-Then:
+Ranks 1, 2, and 10 contribute $1$, $0.5$, and $0.1$, respectively. MRR is therefore appropriate when the user mainly needs one good result quickly.
 
-$$
-MRR = \frac{1}{N}\sum_{q=1}^{N} RR_q.
-$$
+#### MAP
 
-A first hit at rank $1$ gives $1$, rank $2$ gives $1/2$, rank $10$ gives $0.1$. MRR is appropriate when the first satisfactory result dominates the experience.
-
-#### Average Precision and MAP
-
-Average Precision rewards retrieving **multiple** relevant items early. For one evaluation unit:
+Average Precision rewards placing **multiple relevant items** early. For binary relevance:
 
 $$
-AP = \frac{1}{R}\sum_{r=1}^{L} P@r\cdot rel_r,
+\operatorname{AP@k}(u)
+=
+\frac{1}{Z_u}
+\sum_{i=1}^{k}
+\operatorname{Precision@i}(u)\,\operatorname{rel}_u(i),
 $$
 
-where $R$ is the number of relevant items under the chosen contract, $P@r$ is precision at rank $r$, and $rel_r$ is $1$ if the item at rank $r$ is relevant.
+where $Z_u$ is defined by the evaluation contract, commonly the number of relevant items up to the cutoff or the total number of relevant items. MAP is mean AP across users.
 
-Then:
-
-$$
-MAP = \frac{1}{N}\sum_{q=1}^{N} AP_q.
-$$
-
-A contract must specify what happens when $R=0$ and whether AP is truncated at $k$.
+AP only adds precision at ranks containing relevant items, so early relevant items improve later precision terms as well.
 
 #### DCG and NDCG
 
-DCG handles graded relevance and explicitly values higher positions more. A common form is:
+DCG handles **graded relevance** and rank discounting. A common version is:
 
 $$
-DCG@k = \sum_{r=1}^{k} \frac{2^{rel_r}-1}{\log_2(r+1)}.
+\operatorname{DCG@k}
+=
+\sum_{i=1}^{k}
+\frac{2^{\operatorname{rel}_i}-1}{\log_2(i+1)}.
 $$
 
-The gain term $2^{rel_r}-1$ makes higher relevance grades disproportionately valuable. The logarithmic denominator discounts results farther down the ranking.
+The numerator gives larger gain to highly relevant items. The denominator discounts items appearing lower in the list.
 
-The ideal ranking for the same relevance labels has score $IDCG@k$. Then:
-
-$$
-NDCG@k = \frac{DCG@k}{IDCG@k}.
-$$
-
-NDCG is typically in $[0,1]$ when gains are nonnegative. If $IDCG@k=0$, the implementation must define a policy, for example returning $0$ or excluding that evaluation unit. That choice is part of the metric contract.
-
-#### AUC
-
-For binary labels, ROC-AUC can be interpreted as:
+NDCG normalizes by the best possible DCG for the same relevance labels:
 
 $$
-P(s(x^+) > s(x^-)),
+\operatorname{NDCG@k}
+=
+\frac{\operatorname{DCG@k}}{\operatorname{IDCG@k}}.
 $$
 
-with tie handling defined appropriately: the probability that a random positive receives a higher score than a random negative.
+A perfect ordering gives 1.0 when IDCG is nonzero.
 
-AUC is a global pairwise-ordering metric. It is not top-heavy, so a model can have strong AUC and still perform poorly in the top few recommendation slots.
+#### AUC and log-loss
 
-#### Log-loss
-
-For a predicted probability $p$ and binary label $y$:
+AUC asks whether the model tends to assign higher scores to positives than negatives. One interpretation is:
 
 $$
-\ell_{\text{log}} = -\left[y\log p + (1-y)\log(1-p)\right].
+\operatorname{AUC}
+=
+P(s^+ > s^-),
 $$
 
-Log-loss rewards probabilities that are both directionally correct and numerically honest. Confident wrong predictions receive a large penalty.
+with a tie convention defined separately.
+
+AUC is a global pairwise-ordering metric. It is not inherently top-$k$.
+
+Binary log-loss measures probabilistic prediction quality:
+
+$$
+\ell(y,p)
+=
+-y\log p-(1-y)\log(1-p).
+$$
+
+Confidently predicting $p\approx 0$ for an event that occurs produces a very large penalty. Log-loss therefore evaluates probability quality rather than only ordering.
 
 #### Calibration
 
-A model is calibrated when events assigned probability near $p$ happen about a fraction $p$ of the time. For example, among recommendations scored near $0.20$ conversion probability, about $20\%$ should convert under the same evaluation conditions.
+A model is calibrated when predictions mean what they say probabilistically. Among events receiving predicted probability around 0.20, approximately 20% should occur, subject to sampling noise and conditioning choices.
 
-Calibration matters when probabilities are used for expected value, thresholds, auction logic, capacity allocation, or decision rules. A ranking model may order items correctly while being badly calibrated.
+Calibration is essential when downstream logic multiplies a probability by value, sets thresholds, or compares expected utilities.
 
-#### Coverage
+#### Coverage, novelty, and diversity
 
-Coverage measures how broadly the system uses the available space. Common variants include:
+These describe behavior that relevance metrics alone can miss.
 
-- **catalog coverage:** fraction of eligible items ever recommended;
-- **user coverage:** fraction of users for whom the system can produce recommendations;
-- **supplier/creator coverage:** fraction of providers receiving exposure.
+- **Coverage**: how much of the eligible catalog, user population, or provider inventory receives meaningful recommendations or exposure.
+- **Novelty**: how non-obvious or non-popular recommended items are, often measured from item popularity, self-information, or distance from user history.
+- **Diversity**: how dissimilar items within a slate or across exposure are. The answer depends on the chosen similarity representation: category, creator, embedding, taxonomy, or another semantic space.
 
-Coverage can reveal popularity collapse even when relevance metrics look strong.
+#### Product and long-term metrics
 
-#### Novelty
+Examples include:
 
-Novelty rewards recommendations that are less obvious or less globally common. One common information-style score for item $i$ is:
+- watch time;
+- completion rate;
+- conversion rate;
+- revenue or margin;
+- saves, likes, hides, reports;
+- repeat sessions;
+- retention;
+- satisfaction surveys;
+- churn;
+- creator or seller health.
 
-$$
-\mathrm{novelty}(i) = -\log P(i),
-$$
+These metrics are often delayed, exposure-dependent, and influenced by factors outside the recommender. They are therefore closer to product utility but harder to estimate cleanly offline.
 
-where $P(i)$ may be based on historical popularity or exposure frequency.
+#### Worked example
 
-High novelty is not automatically good; obscure but irrelevant items can score as novel. Novelty should be evaluated with relevance and satisfaction.
+Suppose a user has three relevant products: A, C, and E. The recommender returns:
 
-#### Diversity
+1. A
+2. B
+3. C
+4. D
+5. F
 
-Diversity asks whether items in one recommendation slate are meaningfully different. If $sim(i,j)$ is an item-similarity function, one simple intra-list diversity definition is:
+At $k=5$:
 
-$$
-ILD = \frac{2}{k(k-1)}\sum_{i<j} (1-sim(i,j)).
-$$
+- Precision@5 = $2/5 = 0.4$ because A and C are relevant.
+- Recall@5 = $2/3 \approx 0.667$ because two of the user's three relevant items were retrieved.
+- HitRate@5 = 1 because at least one relevant item appears.
+- Reciprocal rank = 1 because the first result is relevant.
 
-The result depends critically on how similarity is defined: category overlap, embedding cosine similarity, creator identity, topic, brand, or another representation. Therefore diversity has no complete meaning without the similarity contract.
+If the list instead starts B, D, A, C, F, Precision@5 and Recall@5 remain identical, but reciprocal rank drops to $1/3$ and DCG/NDCG drop because the relevant items moved downward. This shows why set-based metrics and rank-sensitive metrics measure different things.
 
-#### Watch-time and completion
+Important beginner distinctions:
 
-In media/feed systems, **watch-time** measures consumed duration, while **completion rate** measures the fraction of content consumed or the probability of crossing a completion threshold.
-
-Raw watch-time can favor long content. Completion can favor short content. Either can be gamed by content length, autoplay, weak negatives, or UI policy. Segmenting by content length and conditioning on exposure is often necessary.
-
-#### Conversion and revenue
-
-Conversion can mean purchase, signup, booking, install, or another downstream action. Revenue can be measured as total revenue, revenue per impression, revenue per session, contribution margin, or expected value.
-
-These metrics have delayed labels and can be affected by price, inventory, promotions, position, attribution windows, and repeat exposure. A metric contract must state attribution and censoring rules.
-
-#### Long-term metrics
-
-Long-term metrics include retention, repeated satisfaction, churn reduction, long-run watch quality, creator/seller health, or lifetime value. They matter because optimizing immediate clicks can damage future user experience or ecosystem health.
-
-Their main difficulty is causal attribution: they are slow, noisy, and influenced by many events between recommendation and outcome.
-
-#### Concrete worked example
-
-Suppose a user has four relevant items: $\{A,C,E,G\}$. The system returns the top five:
-
-$$
-[A,B,C,D,F].
-$$
-
-The binary relevance sequence is:
-
-$$
-[1,0,1,0,0].
-$$
-
-Then:
-
-$$
-Precision@5 = \frac{2}{5}=0.4,
-$$
-
-because two of five shown items are relevant.
-
-$$
-Recall@5 = \frac{2}{4}=0.5,
-$$
-
-because two of the four relevant items were recovered.
-
-$$
-HitRate@5 = 1,
-$$
-
-because at least one relevant item appears.
-
-The first relevant item is at rank $1$, so:
-
-$$
-RR=1.
-$$
-
-For Average Precision, relevant items occur at ranks $1$ and $3$. Precision at those ranks is $1/1=1$ and $2/3$. Under the standard AP definition, the denominator is the number of relevant items in the reference set, here $R=4$:
-
-$$
-AP@5 = \frac{1 + 2/3}{4} \approx 0.417.
-$$
-
-For truncated AP@$k$, the contract must still specify the exact cutoff convention, especially when $R>k$, and must define what happens when $R=0$. The key invariant is that AP normalization is tied to the relevant set rather than arbitrarily to the recommendation-list length.
-
-Now suppose graded relevance is $[3,0,2,0,0]$. DCG gives high gain to rank $1$, smaller gain to rank $3$, and discounts rank $3$ more heavily. NDCG compares that DCG with the best possible ordering of the same gains.
-
-This one example shows the central distinction: **Precision measures purity, Recall measures recovery, HitRate measures existence, MRR measures first-hit position, MAP measures repeated relevant hits with rank sensitivity, and NDCG measures discounted graded ordering quality.**
+- Precision and recall are not opposites; both can increase if the system improves.
+- HitRate does not measure how many relevant items were found.
+- MRR cares only about the first relevant result.
+- MAP and NDCG care about multiple relevant results and their ordering, but NDCG naturally supports graded labels.
+- AUC can improve even when top-$k$ ranking does not.
+- A well-ranked list is not automatically well calibrated.
+- Offline relevance is not the same as online causal product value.
+- A metric formula is not a full metric definition; the contract supplies the semantics.
 
 ### Core Interview Reasoning
 
-A compact reasoning structure for R04 is:
+A strong answer can be reconstructed with the sequence:
 
-1. **Define the metric contract.**
-2. **Separate metric families by what they measure.**
-3. **Match metrics to the system stage.**
-4. **State trade-offs and blind spots.**
-5. **Add product, segment, and online metrics.**
-6. **Explain edge cases and diagnosis.**
+**stage → decision being evaluated → metric family → metric contract → blind spot → complementary metric → online validation**
 
-#### 1. Define the metric contract first
+The sequence matters because it prevents listing metrics as a glossary.
 
-A metric contract is the explicit specification needed to make a reported number reproducible and interpretable. At minimum it should define:
+**1. Start with the stage.** Candidate generation needs ceiling/coverage metrics; ranking needs order-sensitive metrics; probability-producing models need probabilistic metrics; reranking needs constraint/diversity metrics; the product needs behavioral and long-term outcomes.
 
-- evaluation unit;
-- eligibility/candidate universe;
-- labels and relevance grades;
-- cutoff $k$;
-- duplicate/repeat handling;
-- empty-label behavior;
-- tie handling;
-- missing/unjudged treatment;
-- temporal attribution/censoring;
-- aggregation and weighting;
-- slices/segments;
-- version of the metric implementation.
+**2. State the decision each metric evaluates.** Precision@k asks about top-$k$ purity; Recall@k asks about relevant-item survival; MRR asks how early the first success occurs; MAP and NDCG ask about ordered relevance; AUC asks about global positive-vs-negative ordering; log-loss and calibration ask about probability semantics.
 
-This prevents “same metric name, different number” failures between notebooks, dashboards, experiment systems, and production monitoring.
+**3. Define the metric contract before interpreting a number.** At minimum specify: unit of evaluation, relevance label, cutoff $k$, candidate universe, temporal window, negative set, user inclusion rule, aggregation, duplicate handling, tie handling, and edge cases such as no positives or IDCG = 0.
 
-#### 2. Separate metric families
+**4. Name the blind spot.** Every metric discards information. Recall ignores ordering inside the retrieved set. MRR ignores every relevant item after the first. AUC underweights top-of-list behavior. NDCG depends on gain and discount choices. Revenue can reward expensive items even if user utility falls. Coverage can improve through irrelevant exposure.
 
-**Set/top-$k$ metrics:** Precision@$k$, Recall@$k$, HitRate@$k$.
+**5. Use complementary metrics rather than one scalar.** A retrieval stage might report Recall@1000 plus latency and source coverage. A ranker might report NDCG@10 plus calibration, diversity, and segment slices. A commerce surface might validate conversion, revenue, returns/cancellations, satisfaction, and seller concentration online.
 
-**Rank-sensitive metrics:** MRR, MAP, DCG/NDCG.
+**6. Slice the evaluation.** Aggregate metrics can hide failure on new users, long-tail items, sparse-history users, regions, devices, inventory classes, or provider groups. Segment metrics are part of the contract, not an afterthought.
 
-**Score/probability metrics:** AUC, log-loss, calibration.
+**7. Treat offline metrics as evidence, not proof of product impact.** Offline evaluation is based on logged exposure and labels generated by an existing policy. Candidate-set mismatch, position bias, selection bias, delayed outcomes, and sampled negatives can all distort apparent gains. When the goal is user or business value, an online experiment or another valid causal design is usually the final validation.
 
-**Catalog/slate health metrics:** coverage, novelty, diversity.
+A compact reconstruction structure for an interview is:
 
-**Product/business metrics:** watch-time, completion, conversion, revenue.
-
-**Long-horizon metrics:** retention, satisfaction, ecosystem health, long-term value.
-
-Each family answers a different question. No single offline metric captures the complete product objective.
-
-#### 3. Match metrics to stages
-
-A multi-stage recommender usually has candidate generation, ranking, reranking, and final product evaluation.
-
-- **Candidate generation:** Recall@$K$ is central because retrieval defines the maximum quality downstream stages can achieve. Source-specific and union recall are useful for multi-channel retrieval.
-- **Pre-rank/rank:** NDCG@$k$, MAP@$k$, MRR, or task-specific top-$k$ metrics capture ordering quality. AUC may be useful diagnostically but is rarely sufficient by itself for a top-of-list product.
-- **Probability-producing ranker:** add log-loss and calibration when score magnitude matters.
-- **Reranker/slate:** add diversity, novelty, coverage, constraint satisfaction, redundancy, and provider/category balance.
-- **Product launch:** online user/business metrics, guardrails, segment outcomes, latency, and reliability are required.
-
-#### 4. Understand the main trade-offs
-
-**Precision versus Recall:** At fixed model quality, increasing $k$ often increases Recall@$k$ but can reduce Precision@$k$ because more marginal items enter the list.
-
-**Relevance versus Diversity/Novelty:** Aggressive diversification can lower itemwise relevance while improving slate usefulness, discovery, or long-term satisfaction.
-
-**Ordering versus Probability Quality:** AUC/NDCG can improve while calibration worsens. This matters if downstream systems multiply scores by value or apply thresholds.
-
-**Short-term versus Long-term:** Click or watch-time gains can harm retention, satisfaction, provider health, or content quality.
-
-**Aggregate versus Segments:** An aggregate metric can improve while new users, tail items, a region, or a provider segment regresses.
-
-#### 5. Important edge cases
-
-**No relevant items:** Recall and AP may be undefined mathematically. The evaluator must choose to return zero, skip the unit, or use another documented policy.
-
-**Fewer than $k$ returned items:** Precision can divide by $k$ or by returned count depending on the contract. The distinction is material because dividing by returned count can hide retrieval failure.
-
-**Duplicate recommendations:** Duplicates usually should not receive repeated relevance credit and may indicate a serving bug.
-
-**Incomplete labels:** Historical interactions are not a complete relevance set. Unobserved items may be relevant but never exposed.
-
-**Delayed outcomes:** Purchases, subscriptions, or retention require attribution windows and censoring policies.
-
-**Position/exposure bias:** Observed clicks are affected by where and whether an item was shown, so offline metrics on logged behavior can reflect the old policy rather than pure relevance.
-
-**Ties:** AUC and rank metrics need deterministic or explicitly randomized tie handling.
-
-**Popular-item dominance:** Accuracy-style metrics can look good while coverage and novelty collapse.
-
-#### 6. How the pieces connect
-
-Metrics form a chain of evidence rather than one scoreboard:
-
-$$
-\text{candidate recall} \rightarrow \text{ranking quality} \rightarrow \text{slate quality} \rightarrow \text{online outcomes} \rightarrow \text{long-term outcomes}.
-$$
-
-A regression can be localized by seeing where this chain first degrades. For example:
-
-- candidate Recall@$1000$ down: retrieval/candidate-source problem;
-- Recall@$1000$ stable but NDCG@$20$ down: ranking/feature/objective problem;
-- offline ranking stable but diversity constraint violations rise: reranking/serving problem;
-- offline NDCG up but online conversion down: metric-objective mismatch, exposure bias, calibration, serving skew, latency, or changed user behavior.
+**Retrieval ceiling → ranking order → probability semantics → slate/catalog health → product outcome → contract + slices + online validation.**
 
 ### Deeper Reasoning and Derivations
 
-#### Why top-$k$ metrics are not interchangeable
+#### Precision, recall, and the candidate ceiling
 
-Assume a user has ten relevant items. System A retrieves one relevant item at rank $1$ and no others in the top $10$; System B retrieves six relevant items in the top $10$, with the first at rank $4$.
+Let $G_u$ be all relevant items for user $u$, and $R_k(u)$ the retrieved top-$k$. Recall@k is the fraction of $G_u$ that survives retrieval. If retrieval recall is 0.80, then even an oracle downstream ranker cannot place the missing 20% of relevant items in the final slate. This gives retrieval recall a special causal role: it bounds downstream opportunity under the candidate set.
 
-- MRR can prefer A because the first hit is earlier.
-- Recall@$10$ strongly prefers B because more of the relevant set is recovered.
-- Precision@$10$ also prefers B if both return ten items.
-- NDCG depends on the exact positions and grades of all relevant results.
+Precision@k uses $k$ in the denominator, so increasing $k$ often decreases precision while increasing recall. This is not necessarily a model regression. It may be the intended trade-off when retrieval expands the candidate set to give a stronger ranker more opportunities.
 
-The correct metric therefore depends on product semantics. A navigational task may care mostly about the first success; a discovery slate may care about multiple good options.
+The metric contract must define what happens when $|G_u|=0$. Common choices include excluding that user from recall aggregation or defining a special value. Setting recall to zero without thought mixes “system missed relevant items” with “no evaluable positive existed.”
 
-#### Why retrieval Recall@$K$ is a ceiling
+#### HitRate versus Recall
 
-Let $C_K(u)$ be the top-$K$ candidate set produced by retrieval for user/context $u$. A downstream ranker can only reorder items inside $C_K(u)$. If a relevant item $i^*$ is not in $C_K(u)$, then no ranker can place $i^*$ in the final top list.
+For a user with $|G_u|=1$, HitRate@k and Recall@k are identical. When $|G_u|>1$, they diverge. This makes HitRate suitable for leave-one-out protocols but potentially misleading for multi-positive domains such as feeds, playlists, or shopping sessions.
 
-Thus candidate recall constrains achievable final ranking quality. Improving the ranker cannot repair missing candidates; diagnosing final quality without candidate-recall telemetry can misattribute failure.
+A system can raise HitRate by finding one easy popular positive per user while failing to improve breadth over the user's other relevant items.
 
-#### Why AUC can disagree with top-$k$ quality
+#### Why reciprocal rank heavily rewards the top
 
-AUC averages ordering correctness over many positive-negative pairs. In a recommendation problem with thousands or millions of negatives, most pairs involve low-ranked items that users never see. A model can improve those pairwise relationships and raise AUC without improving the top ten positions.
+Reciprocal rank decays hyperbolically: rank 1 contributes 1, rank 2 contributes 0.5, rank 5 contributes 0.2, rank 10 contributes 0.1. The difference between ranks 1 and 2 is much larger than between ranks 9 and 10. That encodes a specific utility assumption: the first useful result is disproportionately valuable.
 
-Therefore AUC is useful for global discrimination but weak as the sole selection metric for top-of-list ranking.
+MRR is therefore aligned with navigational or one-answer behavior but not with a multi-item feed where the quality of the whole slate matters.
 
-#### Why log-loss and calibration are different from ranking quality
+#### MAP as precision accumulated at relevant ranks
 
-Suppose two models preserve identical item ordering:
+Suppose binary relevance over five ranks is $[1,0,1,1,0]$. Precision at relevant ranks is $1/1$, $2/3$, and $3/4$. AP averages these terms under the chosen normalization. Moving a relevant item earlier raises its own precision contribution and can raise later contributions, so AP captures both retrieval and ordering of multiple positives.
 
-- Model A predicts $[0.90,0.80,0.70]$.
-- Model B predicts $[0.60,0.40,0.20]$.
+However, MAP assumes binary relevance unless extended; a mild preference and a purchase can receive the same relevance indicator, which may be inappropriate for graded utility.
 
-Ranking metrics are identical if the order is unchanged. But if true event frequencies align with the second set, Model B has better probability semantics. Log-loss and calibration distinguish these models while NDCG or AUC may not.
+#### DCG, gains, discounts, and normalization
 
-This matters whenever a downstream system computes quantities such as:
+DCG can be written generically as:
 
 $$
-\mathrm{expected\ value} = P(\mathrm{conversion}) \times \mathrm{value}.
+\operatorname{DCG@k}
+=
+\sum_{i=1}^{k} g(\operatorname{rel}_i)d(i),
 $$
 
-#### Why NDCG normalizes
+where $g$ is a gain function and $d(i)$ is a decreasing discount. The common choices $g(r)=2^r-1$ and $d(i)=1/\log_2(i+1)$ encode two assumptions: moving from relevance 2 to 3 is more valuable than moving from 0 to 1, and top ranks matter more.
 
-Raw DCG can be higher for examples that simply have more or larger relevance grades. Dividing by IDCG compares the obtained ordering to the best ordering available for that same relevance set. The normalization makes per-query/user values more comparable before macro-averaging.
+NDCG divides by IDCG, the DCG from the ideal ordering of the same labels. This controls for differing amounts of attainable relevance. But the normalization creates an edge case when IDCG is zero. The contract must choose whether to exclude the example, define NDCG as zero, or use another policy.
 
-The normalization does not solve incomplete or biased labels. If the relevance set is wrong, NDCG can be computed perfectly and still measure the wrong thing.
+Because NDCG depends on the gain scale, labels such as click=1, cart=2, purchase=3 should not be chosen casually. Under exponential gain, purchase receives far more than three times the gain of click.
 
-#### MAP denominator semantics
+#### AUC's pairwise interpretation and why it can miss top-k quality
 
-Average Precision is sensitive to truncation conventions. Standard AP normalizes by the number of relevant items $R$. For AP@$k$, some evaluators cap the attainable denominator at $\min(R,k)$, while others retain $R$ and simply truncate the summed precision terms at $k$. Those are different metric contracts and must not be mixed. In every case, the denominator semantics are tied to the relevant set, not chosen arbitrarily from the output-list length.
+AUC is equivalent to the probability that a randomly drawn positive receives a higher score than a randomly drawn negative, with a tie rule. In highly imbalanced recommendation problems there may be millions of easy negatives. Correctly ordering those easy pairs can dominate AUC even if the model mishandles the hardest negatives competing for the top 10 slots.
 
-#### Exposure-dependent labels
+Therefore AUC is useful for broad ranking discrimination but weak as the only metric for top-k recommendation.
 
-Recommendation labels come from a logged policy. A missing interaction does not necessarily mean irrelevance because the item may never have been shown. Observed feedback is generated by both user preference and the exposure/examination process.
+#### Log-loss, proper scoring, and probability semantics
 
-A naïve offline metric can therefore reward a model for imitating the historical policy. Counterfactual evaluation, randomized data, propensity methods, careful negative construction, or controlled experiments may be required when policy bias is material.
+Expected log-loss is minimized by predicting the true conditional event probability under the model's information set. This makes log-loss a proper scoring rule. If downstream business logic computes expected value such as
 
-#### Metric gaming and proxy failure
+$$
+\operatorname{EV}(i)=P(\text{purchase}\mid x_i)\times \operatorname{margin}(i),
+$$
 
-A metric becomes a target and can cease to represent the original objective. Examples:
+then probability quality matters directly. A pure ordering score may produce excellent NDCG but unusable expected-value calculations.
 
-- optimizing CTR can encourage clickbait;
-- optimizing raw watch-time can overfavor long content;
-- optimizing conversion can over-concentrate on head items or high-intent users;
-- optimizing revenue can sacrifice user trust or margin;
-- optimizing novelty can surface obscure but irrelevant items;
-- optimizing catalog coverage can force low-quality exposure.
+Class reweighting, negative sampling, or biased logging can change the relationship between raw model scores and deployment probabilities, so calibration must be checked on a representative distribution.
 
-Robust evaluation uses a primary metric plus guardrails and slices rather than a single unconstrained proxy.
+#### Calibration is conditional frequency agreement, not ranking quality
 
-#### Diagnostic logic from metric movements
+Two models can produce exactly the same ordering but different calibration. If Model A outputs $[0.9,0.8,0.7]$ and Model B outputs $[0.3,0.2,0.1]$, ranking metrics are identical, yet probability semantics differ dramatically.
 
-A useful Staff-level pattern is to examine **joint movement**, not a single number.
+Calibration should be checked overall and by segments because aggregate calibration can hide segment-specific overconfidence or underconfidence. Reliability diagrams, expected calibration error, Brier score, or proper scoring rules can support this analysis, but binning choices themselves form part of the evaluation contract.
 
-- **Recall@$K$ down, NDCG down:** candidate generation may be failing; ranking may be downstream collateral damage.
-- **Recall@$K$ stable, NDCG down:** candidate pool is intact; inspect ranker features, labels, objective, model version, or serving.
-- **NDCG up, conversion down:** inspect metric alignment, position/exposure bias, calibration, business constraints, latency, and online population shift.
-- **NDCG stable, coverage down sharply:** popularity collapse or retrieval-source concentration may be occurring.
-- **Offline metrics stable, online outcome down:** inspect training-serving skew, stale features, serving version mismatch, UI changes, latency, or experimentation problems.
-- **Aggregate up, key segment down:** inspect weighting, support, cold-start behavior, and exposure distribution by segment.
+#### Coverage, concentration, novelty, and diversity require reference definitions
+
+Catalog coverage might be:
+
+$$
+\frac{\text{unique items recommended}}{\text{eligible catalog size}}.
+$$
+
+But this treats one impression and one million impressions equally. Exposure concentration metrics, long-tail share, entropy, or Gini-style statistics answer a different question.
+
+Novelty often uses inverse popularity, for example self-information $-\log p(i)$, but the popularity distribution must be defined over a specific window and event type. Diversity can use average pairwise distance in category or embedding space, but the result is only meaningful relative to that similarity function.
+
+Improving novelty or diversity mechanically can lower relevance. The appropriate objective is usually a measured trade-off or constrained optimization, not maximizing diversity in isolation.
+
+#### Product metrics are policy- and exposure-dependent
+
+CTR, watch time, conversion, and revenue are observed only for exposed items. A change in ranking changes who sees what, which changes the label-generating process. Offline logs therefore reflect the old policy. This creates selection and position bias and means that offline replay of a new policy may not estimate its causal online effect without additional assumptions or counterfactual methods.
+
+Long-term metrics are even more difficult because of delayed outcomes, censoring, repeated exposures, and interference. The closer a metric is to ultimate product value, the harder it may be to attribute rapidly and with low variance.
+
+#### Macro, micro, and weighted aggregation
+
+A metric can be averaged per user and then across users (macro), or computed from pooled events (micro). These answer different questions. Macro averaging gives each user equal weight; micro averaging gives heavy users more weight because they contribute more events. Weighted aggregation may intentionally prioritize revenue, traffic, or other strata.
+
+The aggregation rule can reverse conclusions when user activity is highly skewed, so it belongs in the metric contract.
+
+#### Candidate-set evaluation and sampled negatives
+
+Metrics computed against 100 sampled negatives are not necessarily comparable with metrics computed against the full catalog. The ranking problem is easier when the candidate universe is small or negatives are sampled uniformly rather than drawn from realistic hard candidates. Sampled-negative evaluation can substantially inflate Recall@k or NDCG@k and distort model comparisons if sampling interacts with popularity.
+
+The evaluation contract should therefore specify whether ranking occurs over the full corpus, a production-retrieved candidate set, or a sampled set, and how that set was constructed.
 
 ### Advanced Staff-Depth Considerations
 
-The reusable Staff-level backbone for this item is:
+The universal Staff reasoning loop is:
 
-`Baseline → Change → Mechanism → Measure → Act → Trade-off → Validate`
+**Baseline → Change → Mechanism → Measure → Act → Trade-off → Validate**
 
-Equivalently:
+A compressed form is:
 
-`Assumption → Mechanism → Evidence → Decision → Trade-off → Validation`
+**Assumption → Mechanism → Evidence → Decision → Trade-off → Validation**
 
-For this question, the baseline is: The baseline is a versioned metric contract: define evaluation unit, eligible universe, labels/gains, cutoff, empty/tie/duplicate semantics, aggregation, time horizon, and stage before interpreting any number. Stage metrics form a chain from candidate opportunity to ranking quality to slate quality to product/long-term outcomes.
-
-The eight subsections below apply that same loop from different angles. Each explanation teaches the mechanism first; the filled template then compresses it into a reusable interview scaffold.
+For R04, the baseline is the evaluation contract: which stage is being assessed, what counts as relevance, which candidate universe is eligible, how ranking position is valued, what population is aggregated, and what product outcome matters. A change in one of those assumptions can make an unchanged metric number mean something different. The mechanism is therefore often not “the model changed,” but “the mapping from behavior to metric changed.” The observables are stage-specific metric families, slices, score/calibration distributions, exposure distributions, and online outcomes. The Staff decision is to change the metric, its contract, the system objective, or the evaluation design only after identifying which semantic assumption failed.
 
 #### 1. Changed Constraints and Transfer Logic
 
-Metrics must change emphasis when the product or system constraint changes, while preserving the underlying decision question. Reducing candidate budget makes retrieval recall more binding; a one-slot surface shifts weight toward Precision@1/HitRate@1; graded utility calls for NDCG/expected value; tighter latency requires a quality-resource frontier rather than maximizing one metric.
+Metric choice is constraint-dependent. The invariant is that the metric must remain aligned with the decision being evaluated. What changes is the product regime: number of relevant items, interaction horizon, display surface, candidate budget, or business constraint. For example, if a single-slot recommendation becomes a 20-item feed, HitRate@1 no longer captures slate quality. The system now needs order-sensitive multi-item metrics and potentially diversity or redundancy terms.
 
-A useful reasoning chain is:
+A robust transfer process asks which utility assumption the old metric encoded. If that assumption no longer holds, the metric should change before model comparison proceeds. Otherwise the team can “improve” a metric that is now semantically obsolete.
 
-`changed assumption → affected mechanism/stage → invariant → broken assumption → consequence → redesign → metric impact → trade-off → validation`
-
-**Filled template for this item**
-
-- **Original assumption:** Retrieval returns about 1000 candidates and downstream ranking has enough opportunity.
-- **Changed constraint:** Candidate budget is reduced to 200 to meet latency.
-- **Invariant:** Final product utility remains the objective; retrieval still sets the downstream opportunity ceiling.
-- **Broken assumption:** Recall@1000 no longer describes the candidate set actually available to ranking.
-- **Consequence:** Relevant-item omission can dominate final quality even if conditional ranker NDCG remains strong.
-- **Design change:** Evaluate Recall@K and final quality across multiple candidate budgets; improve retrieval efficiency or adaptive budgets if recall collapses.
-- **Metric impact:** Report candidate count, Recall@K, final NDCG/product metric, and p95/p99 together.
-- **Trade-off:** Lower p99/compute versus lower candidate opportunity.
-- **Validation:** Choose the knee of the quality-latency frontier using online outcomes and stage guardrails.
+* Original assumption: one early relevant item is the dominant user utility.
+* Changed constraint: the product becomes a 20-item scrolling feed with many potentially relevant items.
+* Invariant: evaluation must reward useful items appearing early.
+* Broken assumption: quality is no longer determined primarily by the first relevant result.
+* Consequence: MRR can remain high while the rest of the slate is redundant or poor.
+* Design change: prioritize NDCG@k or MAP@k for ordering, plus diversity/coverage and product engagement metrics.
+* Metric impact: the evaluation becomes sensitive to multiple relevant items and slate composition.
+* Trade-off: more metrics increase interpretation complexity and may expose competing objectives.
+* Validation: compare offline metrics with session-level satisfaction/engagement in an online experiment.
 
 #### 2. Failure Modes and Diagnosis
 
-Metric incidents require checking both semantics and pipeline stage. Two dashboards can disagree because they use different label populations, empty-case rules, post-processing stages, or code versions even when both implementations are internally correct. Find the first contract or stage divergence before calling one number wrong.
+Metric failures can originate from label construction, candidate evaluation, formula implementation, aggregation, slicing, or objective mismatch. A common symptom is a large offline gain that does not reproduce online. The first task is to separate execution failure from semantic failure.
 
-**Filled template for this item**
+Use the chain:
 
-- **Symptom:** Two dashboards report materially different NDCG@20 for the “same” model/week.
-- **Stage decomposition:** candidate population → labels/gains → ranked list → post-processing/served list → aggregation/dashboard.
-- **Slices:** User/query eligibility, device, segment, label maturity, candidate source, and zero-positive cases.
-- **Competing hypotheses:** Different contract semantics; different populations/snapshots; different model/index/feature versions; ranked-versus-served list; implementation bug.
-- **Discriminating evidence:** Shared hand-computed fixtures and contract metadata for each result.
-- **Offline/online comparison:** Confirm whether dashboards evaluate raw ranker output or actual served/exposed slates.
-- **Replay/isolation:** Run both metric implementations on the same frozen fixture and dataset snapshot.
-- **First divergence:** First difference in contract, population, stage, or code output.
-- **Immediate mitigation:** Stop comparing/launching on unversioned metric names and publish contract metadata.
-- **Permanent prevention:** Shared metric library/fixtures, versioned definitions, lineage, and dashboard contract checks.
+**logged exposure → labels → candidate universe → scores/order → metric computation → aggregation/slices → online exposure → product outcome**
 
-Memory aid: `Symptom → Slice → Stage → Hypotheses → Evidence → First divergence → Fix`.
+If candidate recall is stable and NDCG rises, inspect whether labels, negative sampling, or offline candidate sets differ from production. If offline rankings are truly better under the intended contract but online behavior worsens, investigate calibration, diversity, business constraints, position/exposure effects, latency/serving regressions, and whether the offline metric is aligned with product utility.
+
+* Symptom: offline NDCG@10 improves 6%, but online conversion falls 4%.
+* Stage decomposition: labels/candidates → ranker scores → offline metric → serving → exposure → conversion.
+* Slices: new vs returning users, head vs tail items, device, category, traffic source, inventory state.
+* Competing hypotheses: evaluation leakage; sampled-negative artifact; score calibration shift; serving feature skew; diversity loss; price/inventory mix change.
+* Discriminating evidence: full-candidate replay, calibration curves, feature parity checks, candidate recall, exposure concentration, latency and timeout logs.
+* Offline/online comparison: reproduce production candidates and filters, then compare ranking metrics and product slices on identical requests.
+* Replay/isolation: deterministic replay with model/index/feature versions pinned.
+* First divergence: the earliest stage where treatment differs unexpectedly from the intended evaluation assumption.
+* Immediate mitigation: rollback or restore the prior objective/serving bundle if user harm is material.
+* Permanent prevention: versioned metric definitions, production-shaped replay, slice dashboards, and automated contract tests.
 
 #### 3. Latency and Resource Trade-offs
 
-Metrics should be interpreted on a joint quality-resource surface. Increasing candidate count can improve Recall@K but raise hydration/ranking p99; a heavier reranker can improve NDCG while violating the SLO. The decision is usually marginal quality per unit latency/compute, not maximum offline metric.
+Most evaluation metrics are offline and do not directly consume serving latency, but metric choice affects resource decisions. Raising retrieval $k$ can improve Recall@k while increasing ranker compute and p99 latency. Using a heavier ranker may improve NDCG but reduce throughput. Computing expensive diversity constraints online may improve slate quality while consuming deadline budget. Therefore quality metrics must be paired with resource metrics when comparing deployable systems.
 
-**Filled template for this item**
+The relevant budget is not “metric computation latency” but the system cost required to achieve a target point on the quality curve. A Staff evaluation compares Pareto frontiers such as Recall@1000 versus retrieval p99, or NDCG@10 versus ranker FLOPs and end-to-end p99.
 
-- **Budget:** User-facing p95/p99 and serving-cost envelope.
-- **Cost decomposition:** Retrieval depth + feature hydration + ranker compute + reranker/slate processing + evaluation/monitoring overhead where relevant.
-- **Dominant cost:** Often candidate-driven hydration/ranking or heavy reranking, depending on architecture.
-- **Quality driver:** More candidates/richer models improve opportunity and ordering.
-- **Cost driver:** They increase memory traffic, inference, network, and tail latency.
-- **Optimization knobs:** Candidate K, ANN effort, pre-ranking, feature set, model size, reranker complexity, caching/precompute.
-- **Fallback/degradation:** Smaller candidate/ranker path with hard constraints preserved and fallback traffic measured separately.
-- **Trade-off curve:** Recall@K, NDCG/product metric, calibration/guardrails versus p95/p99 and cost.
-- **Decision:** Select the operating point meeting the SLO without crossing an accepted quality/business-loss envelope.
-
-Memory aid: `Budget → Breakdown → Bottleneck → Knobs → Quality loss → Fallback`.
+* Budget: fixed end-to-end p99, for example 120 ms.
+* Cost decomposition: retrieval + feature hydration + ranker + reranker/constraints + orchestration.
+* Dominant cost: often candidate-dependent ranking/feature work after retrieval expands $k$.
+* Quality driver: higher candidate recall and stronger ranking over informative features.
+* Cost driver: candidate count, feature reads, model complexity, and reranking work.
+* Optimization knobs: candidate pruning, pre-ranking, caching, precompute, vectorization, batching, distillation, quantization, cheaper diversity approximations.
+* Fallback/degradation: smaller candidate count, cached/popular candidates, lighter ranker, deterministic constraint fallback.
+* Trade-off curve: report quality metrics against p95/p99 latency, throughput, memory, or cost.
+* Decision: choose a quality-resource operating point that satisfies the SLO rather than maximizing offline relevance unconstrained.
 
 #### 4. Scale and Capacity
 
-Evaluation itself becomes a system at large scale. Top-k computation, distributed aggregation, high-cardinality slices, deterministic dedup/ties, label snapshots, and uncertainty estimation must scale without changing metric semantics. Approximation is acceptable only when versioned and quantified.
+At small scale, full-catalog evaluation and per-request logging may be feasible. As users, items, and event volume grow, the first broken assumption is often that exact evaluation can scan all candidates or that every metric can be computed on all traffic at full granularity.
 
-**Filled template for this item**
+Scale can introduce sampled evaluation, distributed aggregation, approximate quantiles, delayed joins, and storage constraints. Those optimizations can change semantics. For example, sampled negatives make top-k metrics easier; approximate exposure counts can distort coverage; late conversion labels can make recent cohorts look worse. Capacity engineering must preserve the metric contract while reducing cost.
 
-- **Scaling dimension:** Users/items/evaluation events and slice cardinality grow by orders of magnitude.
-- **Baseline scale assumption:** Exact per-unit metric computation and centralized aggregation are cheap.
-- **First bottleneck:** Full sorting, memory, distributed aggregation, and high-cardinality slicing become expensive.
-- **Second-order effects:** Double counting, nondeterministic ties, inconsistent snapshots, and unstable small-slice estimates.
-- **Architectural response:** Top-k algorithms, distributed keyed aggregation, versioned label/candidate snapshots, and approximate methods with error bounds when needed.
-- **Partitioning/replication/caching/batching:** Partition by evaluation unit/time, combine associative statistics carefully, cache immutable fixtures/contracts.
-- **Consistency/freshness consequence:** Different partitions or dashboards can compute on mismatched label/model versions.
-- **Operational failure mode:** “Same” metric drifts because semantics/population changed under scale optimizations.
-- **Validation:** Golden fixtures, exact-vs-approx comparisons, deterministic reruns, confidence intervals, and cross-system parity tests.
-
-Memory aid: `What grows? → What stops fitting? → What bottlenecks? → How do we partition? → What new failure appears?`.
+* Scaling dimension: candidate universe grows from 100K to 100M items and evaluation traffic grows 100×.
+* Baseline scale assumption: exact full-catalog scoring and centralized metric aggregation are tractable.
+* First bottleneck: compute and I/O for candidate scoring plus event-log joins.
+* Second-order effects: distributed skew, delayed labels, storage growth, partial data, approximate aggregation, and slower recomputation.
+* Architectural response: stage-specific sampled diagnostics plus periodic exact or high-fidelity benchmark sets; distributed aggregation keyed by stable metric version.
+* Partitioning/replication/caching/batching: partition by date/user or request, batch score computations, cache static relevance metadata, replicate metric definitions as versioned code rather than ad hoc SQL.
+* Consistency/freshness consequence: different shards or jobs must use the same metric version and label cutoff.
+* Operational failure mode: mixed metric versions create a false trend break.
+* Validation: shadow new pipelines against a trusted reference implementation on fixed fixtures and representative full-fidelity samples.
 
 #### 5. Freshness, State, and Versioning
 
-Offline metrics are only as realistic as the state they evaluate. Stale eligibility, user history, embeddings, indexes, prices, or labels can make offline quality optimistic relative to serving. Preserve point-in-time state and version identifiers so quality can be sliced by state age and reproduction is possible.
+Metrics depend on state that changes over time: relevance labels, catalog eligibility, item popularity, user histories, experiment assignment, and delayed outcomes. Staleness can make an unchanged model appear better or worse.
 
-**Filled template for this item**
+A metric definition should therefore be versioned together with label windows, cutoff rules, filters, gain mappings, and candidate-set construction. Popularity-based novelty requires a time window; conversion metrics require mature attribution windows; coverage requires a contemporaneous eligible catalog. Recomputing yesterday's metric with today's catalog can silently alter the denominator.
 
-- **State that becomes stale:** Labels, candidate universe, user/item state, embeddings/indexes, model/features, eligibility, and metric code.
-- **Why freshness matters:** Evaluation may score items/features that would not exist or be valid at serving time.
-- **Required freshness:** Match serving-time eligibility and relevant state lag for the decision being evaluated.
-- **Refresh cost:** Snapshot generation, re-embedding/indexing, label maturation, and recomputation of large metric suites.
-- **Update architecture:** Versioned periodic snapshots plus targeted faster refresh for highly dynamic state.
-- **Version consistency:** Metric result must bind dataset/labels, candidate universe, model/index/features, and code/contract versions.
-- **Failure from version skew:** Offline gains can reflect newer labels/state than production actually used.
-- **Fallback:** Freeze a known-consistent evaluation snapshot rather than mix partially refreshed components.
-- **Measurement:** State age/version, label maturity, eligibility age, and quality by freshness bucket.
-- **Decision:** Refresh the state that materially changes measured decision quality, while preserving reproducibility.
-
-Memory aid: `What goes stale? → How fast does it matter? → What does refresh cost? → How do versions stay consistent?`.
+* State that becomes stale: labels, eligibility, popularity statistics, catalog inventory, and user-history context.
+* Why freshness matters: denominators and relevance judgments determine the meaning of the metric.
+* Required freshness: aligned to the product event horizon; some metrics can be daily while session intent may require near-real-time context.
+* Refresh cost: event processing, late-data reconciliation, joins, and recomputation.
+* Update architecture: immutable event logs plus versioned daily/streaming aggregates and late-arrival backfills.
+* Version consistency: metric code version, label cutoff, catalog snapshot, and model/index version should be recorded together.
+* Failure from version skew: apparent metric shifts caused by changed eligibility or label maturity rather than model behavior.
+* Fallback: hold back immature metrics, expose provisional versus finalized values separately, and retain stable benchmark windows.
+* Measurement: track late-label completion, denominator changes, and differences between provisional and finalized metrics.
+* Decision: optimize freshness only to the point required by the decision; prioritize semantic consistency over arbitrarily real-time dashboards.
 
 #### 6. Implementation, Serving, and Observability
 
-Treat every production metric as a versioned artifact. A trustworthy number should be reproducible from the metric contract, code version, label/data snapshot, evaluation population, candidate universe, model/index/feature versions, cutoff/gain rules, aggregation, and experiment assignment. Shared hand-computed fixtures are the interface tests between notebooks, batch jobs, dashboards, and online monitoring.
+A production metric system needs more than formulas. It needs a versioned library or evaluator, reproducible candidate and label construction, explicit aggregation semantics, test fixtures, telemetry linking recommendations to outcomes, and dashboards that preserve stage boundaries.
 
-**Filled template for this item**
+Offline and online metric definitions should share contracts where possible, but the data sources may differ. Serving should log request ID, user/context version, candidate source attribution, model/index/feature versions, scores, final slate, positions, eligibility/filter reasons, experiment assignment, and downstream outcomes. Without exposure logging, click or conversion metrics cannot be interpreted correctly.
 
-- **Conceptual object:** A metric contract plus a deterministic computation over a defined population/stage.
-- **Training/data implementation:** Build point-in-time labels/candidate sets and compute per-unit metrics under versioned semantics.
-- **Stored artifact/state:** Contract version, code hash, dataset/label snapshot, population definition, model/index/feature versions, results and uncertainty.
-- **Serving path:** Log retrieved → ranked → post-processed → served → exposed identities and versions so offline/online stages can be compared.
-- **Component contract:** All evaluators must agree on labels, eligibility, cutoff, gains/discounts, empty/tie/duplicate rules, and aggregation.
-- **Logging:** Request/unit IDs, candidate/served lists, scores, constraints, exposure, outcomes, versions, experiment assignment.
-- **Versioning:** Metric contract and code are versioned just like models.
-- **Failure mode:** Two correct systems report different values because their contracts/populations differ.
-- **Observability:** Metric deltas by stage/slice with uncertainty and contract/version metadata.
-- **Rollback:** Restore the prior contract/code/data snapshot when a metric implementation changes unexpectedly.
-- **Testing/replay:** Hand-computed fixtures and identical-request replay across offline/dashboard/experiment implementations.
-
-Memory aid: `Train → Store → Serve → Version → Log → Monitor → Roll back`.
+* Conceptual object: a versioned metric contract for each stage and product outcome.
+* Training/data implementation: point-in-time labels and candidate sets generated from immutable exposure/outcome logs.
+* Stored artifact/state: metric-definition version, evaluation dataset snapshot, gain/discount configuration, eligibility snapshot, and aggregation outputs.
+* Serving path: emit candidates, scores, final ranks, and exposure metadata needed to reconstruct evaluation.
+* Component contract: every metric declares population, labels, $k$, candidate universe, edge-case rules, and aggregation.
+* Logging: exposure, position, scores, candidate source, model/index/feature versions, experiment IDs, and outcome timestamps.
+* Versioning: metric definitions are code/config artifacts with stable IDs.
+* Failure mode: dashboard trends compare values computed under different semantics.
+* Observability: metric health checks include denominator size, missing labels, zero-positive rate, slice coverage, and event-lag distributions.
+* Rollback: preserve prior metric and model definitions so regressions can be replayed under consistent semantics.
+* Testing/replay: hand-computed fixtures, ideal/worst rankings, no-positive users, duplicates, ties, cutoff boundaries, sampled-negative tests, and deterministic production replay.
 
 #### 7. Vertical Transfer
 
-The mechanism should transfer; the assumptions must be re-derived. Use the checklist:
+The invariant across verticals is: **first identify the decision and data-generating process, then choose stage-appropriate metrics and define the contract.** What changes is relevance, exposure, delay, utility, and the cost of bad recommendations.
 
-`labels → candidate sources → objectives → features → constraints → evaluation → experiments → serving/freshness → ecosystem effects`
+For **e-commerce**, retrieval recall and NDCG may use purchase/cart relevance, but conversion, revenue, margin, returns, availability, and seller concentration matter. A purchase is delayed and exposure-dependent, and expensive items can dominate revenue metrics.
 
-Representative verticals:
+For **video/feed**, graded engagement may include watch time, completion, skips, hides, or satisfaction. A longer video naturally offers more watch-time opportunity, so raw watch time can be length-biased. Diversity, freshness, and session-level metrics matter strongly.
 
-- **Short-video feed:** **Invariant:** Metric-contract discipline transfers. **Different assumption:** Utility shifts from purchase to watch/completion/skip/session satisfaction; content length biases raw metrics. **Technical consequence:** Redefine gains, add fatigue/diversity/creator-health guardrails, and validate long-term retention.
-- **E-commerce:** **Invariant:** Stage metrics and contracts transfer. **Different assumption:** Conversion, revenue/margin, stock, price, delayed purchase, and seller exposure matter. **Technical consequence:** Use retrieval/ranking metrics for development plus conversion/value and inventory-aware online guardrails.
-- **Ads:** **Invariant:** Ranking/evaluation framework transfers. **Different assumption:** Calibrated probabilities, expected value, auctions, budgets, pacing, and advertiser/user constraints dominate. **Technical consequence:** Pair ordering metrics with calibration and auction/business outcomes.
-- **Marketplace:** **Invariant:** Metric portfolio transfers. **Different assumption:** Consumer utility and provider-side exposure/supply health are jointly important. **Technical consequence:** Measure concentration/coverage on both sides and guard against ecosystem harm.
-- **Notifications:** **Invariant:** Offline/online contract discipline transfers. **Different assumption:** Open/click is balanced against fatigue, opt-out, disablement, and send/no-send decisions. **Technical consequence:** Use conservative success metrics plus negative long-term guardrails.
+For **ads**, ordering quality is insufficient because scores may feed auctions or expected value. Calibration of pCTR/pCVR, advertiser value, budget pacing, frequency caps, and user-experience guardrails are central.
 
-**Filled transfer template — Short-video feed**
+For **notifications**, false positives are expensive because the system interrupts the user. Open or click rate alone can reward over-sending. Opt-outs, fatigue, downstream sessions, and long-term retention are necessary counterweights.
 
-- **Invariant:** Metric-contract discipline transfers.
-- **Different data-generating process:** Utility shifts from purchase to watch/completion/skip/session satisfaction; content length biases raw metrics.
-- **Different objective:** Re-derive the primary product utility for this vertical rather than copying the base objective.
-- **Different candidates/features:** Candidate sources and features should reflect the vertical-specific context and available signals.
-- **Different constraints:** Utility shifts from purchase to watch/completion/skip/session satisfaction; content length biases raw metrics.
-- **Metric change:** Retain transferable stage metrics, then add vertical-specific outcomes and guardrails.
-- **Serving change:** Redefine gains, add fatigue/diversity/creator-health guardrails, and validate long-term retention.
-- **Ecosystem effect:** Check creator/provider/seller/advertiser or user-side concentration where relevant.
-- **Validation:** Evaluate both transferable retrieval/ranking quality and the vertical-specific product outcome.
+For **marketplaces**, user relevance must be balanced with provider exposure, supply health, concentration, and inventory constraints.
 
-Memory aid: `Keep the mechanism; re-derive the assumptions.`
+Representative transfer template — e-commerce:
+
+* Invariant: retrieval and ranking metrics must reflect whether useful products survive and appear early.
+* Different data-generating process: purchases are sparse, delayed, and conditional on exposure, availability, price, and inventory.
+* Different objective: combine user relevance with conversion/value and durable satisfaction.
+* Different candidates/features: inventory, price, seller, category, substitutes/complements, and availability matter.
+* Different constraints: unavailable items cannot be served; seller concentration and business rules may constrain the slate.
+* Metric change: use Recall/NDCG plus conversion, revenue or margin, returns/cancellations, coverage, and seller-exposure slices.
+* Serving change: evaluate only eligible inventory at request time and log filters/version state.
+* Ecosystem effect: maximizing short-term conversion can over-concentrate exposure on head sellers or products.
+* Validation: online experiment with user and provider guardrails plus delayed conversion maturation.
 
 #### 8. Objective and Metric Mismatch
 
-Objective mismatch is central to R04. An offline metric can improve because the system optimized exactly what it rewards while the product outcome worsens because the metric omits calibration, causal exposure effects, value, UX, segments, or long-term utility. First rule out execution mismatch; then interrogate the proxy.
+Execution failure means the system failed to implement the intended objective—for example, stale features caused the ranker served online to differ from the model evaluated offline. Objective mismatch means the system correctly optimized a proxy that was not the true product goal—for example, NDCG on click labels improved, but the new ranking induced clickbait and reduced satisfaction.
 
-**Filled template for this item**
+This distinction is central to R04 because metrics define what “better” means. Before changing a model after an online regression, verify whether the treatment actually delivered the intended ranking under the intended contract. If yes, then the problem may be the metric itself, the labels, or omitted product factors.
 
-- **Offline/model metric:** NDCG@20 improves.
-- **Online/product outcome:** Conversion, retention, or another business/user metric declines.
-- **Execution verification:** Verify candidates, features, versions, ranker scores, reranking, latency/fallback, and served/exposed list.
-- **Metric semantics:** NDCG rewards discounted ordering under its relevance labels/gains.
-- **Blind spots:** Probability calibration, price/value, position/exposure bias, segment weighting, inventory, UX friction, and long-term effects.
-- **Missing product factor:** The relevance label/gain mapping may not encode actual conversion/value/satisfaction.
-- **Repair:** Revise labels/gains or objective portfolio; add calibration, business/long-term guardrails, and slice-specific metrics.
-- **Trade-off:** Better alignment often increases label delay/noise and creates multi-objective tension.
-- **Online validation:** Randomized experiment measuring primary product outcome, relevance metrics, calibration/constraints, latency, and segment guardrails.
-
-Memory aid: `Did we execute the objective incorrectly, or correctly optimize the wrong objective?`
+* Offline/model metric: NDCG@10 on click-based graded relevance.
+* Online/product outcome: short-term CTR rises, but repeat sessions and satisfaction fall.
+* Execution verification: serving replay confirms intended model, features, filters, and ranks were delivered.
+* Metric semantics: click labels reward immediate attraction, not durable satisfaction.
+* Blind spots: clickbait, redundancy, negative feedback, session abandonment, and long-term effects.
+* Missing product factor: satisfaction and repeated-use utility.
+* Repair: add negative feedback/quality labels, long-term guardrails, and multi-objective or constrained ranking.
+* Trade-off: short-term CTR may decline while durable user value improves.
+* Online validation: randomized experiment with mature retention/satisfaction outcomes and predefined guardrails.
 
 ## Material Follow-ups / Scenario Variants
 
-### Staff Variant — Candidate budget shrinks from 1000 to 200
+### Offline NDCG improves substantially, but online conversion drops. What do you do first?
 
-Suppose the original system retrieves $1000$ candidates with:
+First verify execution before declaring metric mismatch. Pin the production candidate set, features, model/index versions, filters, and final ranks and replay representative requests. If the intended ranking was not actually served, localize the first divergence and fix the serving/data issue. If execution is correct, then inspect whether offline evaluation used sampled negatives, stale eligibility, click-oriented relevance, or a candidate universe unlike production. Next compare calibration, exposure concentration, price/inventory mix, and key user/item segments. If the gain is real under the intended contract but conversion still drops, treat it as objective mismatch: the offline relevance proxy is not capturing the product outcome. Repair the objective or metric suite, then validate with another controlled experiment.
 
-$$
-Recall@1000 = 0.96, \qquad NDCG@20 = 0.45,
-$$
+### How would you choose between Recall@k and NDCG@k for candidate generation?
 
-and after a latency-driven change it retrieves only $200$ candidates with:
+Use Recall@k as the primary retrieval metric because candidate generation's job is to preserve relevant opportunities for downstream ranking. NDCG at retrieval can be secondary if the retrieval order is itself consumed or the downstream stage only scores a prefix. If the downstream ranker receives all $k$ candidates, fine-grained retrieval ordering is less important than whether the relevant items survived. Pair recall with latency, memory/cost, source-level marginal recall, and segment coverage.
 
-$$
-Recall@200 = 0.74, \qquad NDCG@20 = 0.46,
-$$
+### What should the contract say for users with no relevant items?
 
-while p99 latency improves from $160\text{ ms}$ to $85\text{ ms}$.
+Do not silently assign zero. A zero can mean either “the system failed to retrieve a positive” or “there was no positive to retrieve,” which are different states. Define whether such users are excluded from metrics whose denominator requires positives, evaluated with another metric, or assigned a special value. Always report the fraction of zero-positive evaluation units because excluding them can itself create selection bias.
 
-The first conclusion is that the ranker is not obviously worse. Conditional on the smaller candidate set, NDCG@20 is slightly higher. The important regression is upstream: retrieval is preserving a much smaller fraction of the relevant set. Because downstream rankers can only reorder items they receive, the candidate-stage quality ceiling has fallen.
+### Why can a model have higher AUC but worse Recall@10 or NDCG@10?
 
-The correct interpretation is therefore not "NDCG improved, so the system improved." It is:
-
-- retrieval quality decreased materially;
-- ranking quality conditional on retrieval remained roughly intact;
-- latency improved substantially;
-- the product decision is now a quality-versus-latency trade-off.
-
-The next step is to build a candidate-count frontier, for example at $K\in\{100,200,300,500,800,1000\}$, and measure at each point:
-
-- Recall@$K$;
-- final NDCG@$20$ or the main product metric;
-- feature-hydration cost;
-- ranker compute;
-- p95/p99 latency;
-- memory or serving cost where material.
-
-The decision should be based on **marginal quality gained per additional candidate under the latency budget**, not on maximizing Recall@$K$ or minimizing latency in isolation. If Recall collapses rapidly as $K$ shrinks, the retrieval system may need better candidate sources, more efficient ANN parameters, better pre-ranking, or selective/adaptive candidate budgets rather than a globally fixed smaller $K$.
-
-### Staff Variant — Offline NDCG improves but mobile conversion drops
-
-Suppose a new ranker changes offline NDCG@20 from $0.41$ to $0.46$, online conversion falls by $8\%$, Recall@1000 is unchanged, and the regression is concentrated on mobile while desktop is neutral.
-
-The diagnosis should proceed in order.
-
-**1. Localize by stage.** Unchanged Recall@1000 weakens the hypothesis that retrieval lost relevant candidates. The likely fault boundary is downstream: ranker features, ranking objective, calibration, reranking, serving, or product/UI behavior.
-
-**2. Slice the offline metric.** Recompute NDCG@20 by device. If mobile NDCG regressed offline while aggregate NDCG improved, the aggregate hid a segment regression. That is primarily an evaluation/weighting problem rather than an online-only failure.
-
-**3. Compare offline and online inputs for mobile.** If mobile NDCG also improved offline, compare mobile production with the offline evaluator on:
-
-- candidate IDs and candidate ordering;
-- feature values, missingness, preprocessing, and freshness;
-- model, index, and feature versions;
-- score distributions;
-- reranking/constraint outcomes;
-- timeout, cache, and fallback behavior.
-
-This tests for training-serving skew or a mobile-specific serving path problem.
-
-**4. Replay identical mobile requests.** Run the same logged requests through the old and new pipelines and compare:
-
-$$
-\text{candidates}
-\rightarrow
-\text{features}
-\rightarrow
-\text{scores}
-\rightarrow
-\text{reranked slate}
-\rightarrow
-\text{served/exposed slate}.
-$$
-
-The first divergence is the strongest lead for root cause.
-
-**5. If replay is equivalent, strengthen the objective-mismatch hypothesis.** If the mobile production pipeline uses the same candidates, features, model version, scores, and ranking logic as offline evaluation, then the system is faithfully executing the offline winner. The remaining question is whether NDCG's relevance labels adequately represent conversion for mobile users.
-
-Investigate whether mobile conversion depends on factors not captured in the offline relevance definition, such as price, inventory, shipping friction, screen real estate, UI position effects, purchase intent, or calibration. At that point the issue is not that production failed to execute the model; it is that the offline metric or label contract was an incomplete proxy for the business outcome.
-
-### Staff Variant — Two dashboards disagree on NDCG@20
-
-Suppose Dashboard A reports:
-
-$$
-NDCG@20 = 0.47,
-$$
-
-while Dashboard B reports:
-
-$$
-NDCG@20 = 0.42,
-$$
-
-for what is believed to be the same model and evaluation week.
-
-Do not start by assuming one dashboard has a coding bug. First verify that the two systems are computing the same mathematical object.
-
-**1. Compare the metric contract.** Check:
-
-- cutoff $k$;
-- relevance grades and gain function;
-- discount convention;
-- duplicate handling;
-- zero-positive / zero-IDCG policy;
-- tie handling;
-- truncation semantics;
-- macro versus micro averaging;
-- weighting by user/query/session.
-
-**2. Compare the evaluation population and labels.** Verify:
-
-- dataset snapshot;
-- evaluation time window;
-- user/query eligibility;
-- candidate universe;
-- delayed-label attribution window;
-- censoring policy;
-- filtering of invalid or unavailable items.
-
-**3. Compare model and pipeline versions.** Confirm the same model, index, feature versions, post-processing rules, and candidate-generation outputs were evaluated.
-
-**4. Compare ranked versus served/exposed slates.** One dashboard may evaluate the raw ranked list while another evaluates the post-processed or actually exposed list after availability filters, policy constraints, sponsored insertion, history suppression, timeouts, or fallbacks.
-
-**5. Reproduce both computations on a shared fixture.** Use a small hand-computed set of users/queries with known relevance grades and expected NDCG. If the contract, data, population, and versions all match but the numbers still differ, then an implementation bug becomes the leading hypothesis.
-
-The systems lesson is that a metric name is not an interface contract. A trustworthy metric result should be traceable to its metric-contract version, label/data snapshot, model/index/feature versions, evaluation population, and code version.
-
-### Staff Variant — Vertical transfer from e-commerce to short-video feed
-
-The mechanics of the evaluation framework remain invariant: define a metric contract, use stage-appropriate retrieval/ranking metrics, retain rank-aware evaluation, measure actual product outcomes, and add guardrails. What changes is the meaning of relevance and utility.
-
-For a short-video feed:
-
-- **Retrieval:** Recall@$K$ can remain useful, but the positive/relevant set should be based on feed-appropriate outcomes rather than purchase/cart labels.
-- **Ranking:** NDCG remains useful if graded relevance is redefined, for example with gains based on satisfied watch, completion, positive feedback, or skip/hide behavior. The gain mapping should reflect product utility rather than mechanically copying e-commerce grades.
-- **Immediate product metrics:** add watch-time, completion, skip rate, session continuation, hides/reports, and possibly qualified engagement rather than conversion/revenue as the primary outcomes.
-- **Slate metrics:** diversity, redundancy, freshness, creator concentration, and topical repetition become more important because sequential consumption amplifies slate composition effects.
-- **Long-term metrics:** retention, repeated-session satisfaction, creator ecosystem health, and fatigue become more central.
-- **Guardrails:** raw watch-time can favor long videos; completion can favor short videos; click/open metrics can reward sensational content; diversity can reduce immediate relevance if pushed too hard.
-
-Thus the invariant is the evaluation architecture, while the labels, gains, time horizon, product outcomes, and guardrails must change with the vertical.
+AUC averages pairwise ordering over positives and negatives across the entire score distribution. With many easy negatives, a model can improve a huge number of unimportant pairs while worsening the handful of hard competitors near the top. Recall@10 and NDCG@10 concentrate on the top of the ranked list, where product exposure occurs. The metrics therefore weight errors differently rather than contradicting each other.

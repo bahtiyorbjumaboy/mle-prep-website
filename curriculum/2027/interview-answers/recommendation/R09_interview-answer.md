@@ -2,14 +2,14 @@
 type: interview-answer
 item: "2027:R09"
 title: "Negative Sampling and False Negatives"
-created: "2026-10-04"
-updated: "2026-10-05"
+created: "2026-10-09"
+updated: "2026-10-09"
 tags:
   - recommendation
   - negative-sampling
   - retrieval
   - contrastive-learning
-  - sampling-bias
+  - exposure-bias
 ---
 
 ## Canonical Staff-Depth Question
@@ -18,597 +18,371 @@ Compare uniform, popularity-weighted, in-batch, hard, semi-hard, exposure-aware,
 
 ## Mastery Answer
 
-Negative sampling is a computational and statistical design choice: instead of contrasting each positive interaction against the full item catalog, training contrasts it against a sampled subset. The sampler therefore determines which distinctions the model is trained to make and, unless corrected, changes the effective training distribution.
+Negative sampling is necessary when the candidate universe is too large to score every non-positive item during training. The key point is that the negative sampler is not just an efficiency device: it defines which pairwise or multiclass comparisons the model sees, so it changes the effective training distribution and therefore the learned decision boundary.
 
-I would choose a sampler by first defining the deployment comparison set. Uniform negatives give broad catalog coverage and are cheap, but spend many updates on obviously irrelevant items. Popularity-weighted negatives better reflect frequently competing items and create harder comparisons, but can over-train against head items and hurt tail representation. In-batch negatives are very efficient because other examples' positives are reused as negatives, but their distribution is whatever the batch construction induces; popular items are often overrepresented, and another user's true positive can be a false negative. Hard negatives, such as top-scoring non-positives from the current retriever, are informative but can become dominated by mislabeled positives or near-duplicates. Semi-hard negatives keep informativeness while avoiding the most ambiguous examples. Exposure-aware negatives restrict or emphasize items the user actually had a chance to interact with, which makes "ignored" items more defensible negatives, but changes the target toward the logging policy's exposure distribution. Teacher-mined negatives use a stronger model to find confusable items and can accelerate learning, at the cost of teacher bias, mining freshness, and extra infrastructure.
+I would choose a sampler by starting from the deployment task. If serving ranks a retrieved candidate set, I want training negatives that resemble mistakes the model will actually need to resolve at serving time, while still preserving enough breadth that the model learns the global geometry.
 
-The central failure mode is treating "not observed positive" as "negative." In implicit-feedback systems, many unclicked or unpurchased items were never exposed, and some sampled negatives are latent positives. Accidental positives and false negatives create contradictory gradients: the objective pushes semantically or behaviorally relevant items away from the query/user. Typical mitigation is to mask known positives, deduplicate equivalent items, respect temporal interaction history, use exposure information when available, downweight or exclude suspicious hard negatives, and refresh mined negatives as the model changes.
+**Uniform negatives** sample items uniformly from the catalog. They are cheap, diverse, and useful early, but most are often trivially irrelevant, so gradients become low-information. **Popularity-weighted negatives** expose the model more often to popular items that are likely to appear or compete in production, but they can over-penalize popular items and amplify popularity bias unless corrected. **In-batch negatives** reuse other examples' positives as negatives, making large effective negative sets computationally cheap; however, they inherit the batch's sampling distribution and create accidental positives when two examples legitimately share an item. **Hard negatives** are high-scoring but non-labeled candidates, often retrieved by the current model. They focus learning near the decision boundary, but if mining is too aggressive they can be dominated by false negatives or outliers and destabilize training. **Semi-hard negatives** deliberately avoid the very hardest cases and often give a better information-to-noise trade-off. **Exposure-aware negatives** restrict or reweight negatives using impression/exposure logs so "not interacted with" is not automatically treated as "disliked"; this is crucial when labels are missing-not-at-random. **Teacher-mined negatives** use a stronger model to find semantically plausible competitors, improving training signal, but they transfer teacher bias and add mining cost and versioning complexity.
 
-Sampling also creates bias. If negatives are drawn from proposal distribution $q(i)$ rather than the distribution implied by the full-catalog objective or serving competition, the sampled loss optimizes a reweighted problem. When the desired objective is a full softmax or another known target distribution, one can apply proposal correction such as subtracting $\log q(i)$ from sampled logits or using importance weights, subject to variance and support constraints. Correction is not automatic: the appropriate method depends on the loss and what distribution the deployed system should rank against.
+There are two different biases to distinguish. First, **sampling bias**: the negative distribution used in training differs from the target candidate distribution. If the loss is intended to estimate a probability or a full-softmax objective, sampled examples may require importance or log-sampling-probability correction, such as subtracting $\log q(i)$ from sampled logits in sampled-softmax-style objectives. Second, **selection/exposure bias**: the logs themselves reflect what the previous policy chose to show. Sampling correction alone does not remove this causal bias.
 
-I would not select a sampler from training loss alone. I would compare sampler variants using full-catalog or serving-faithful retrieval evaluation, head/mid/tail and cold-item slices, candidate Recall@k, false-negative audits, realized negative-frequency diagnostics, and stability across refreshes. Under extreme popularity skew I would usually mix sources—for example some uniform coverage, some popularity- or exposure-aware negatives, and a controlled fraction of semi-hard or teacher-mined examples—then tune the mixture against deployment metrics rather than assuming the hardest sampler is best.
+A **false negative** is an item sampled as negative even though the user would consider it relevant. An **accidental positive** is the common in-batch form: another row's positive is valid for the current user/query too. I mitigate these with duplicate-positive masking, multi-positive labels, history or impression checks, semantic/graph-based filters, teacher confidence, or down-weighting uncertain negatives rather than asserting a hard zero label.
+
+Operationally, I validate the sampler, not just the final model. I log the realized negative distribution by popularity, source, rank, exposure status, and segment; measure false-negative proxies; compare uniform/popularity/in-batch/hard mixtures; and evaluate downstream Recall@k/NDCG plus calibration if scores are used probabilistically. I also ablate the sampler while keeping model architecture fixed.
+
+The Staff-level principle is: **the best negatives are informative, plausible competitors drawn in a way that approximates the serving problem without turning unlabeled relevance into false supervision**. As retrieval quality improves, I normally move from broad/easy negatives toward a controlled mixture of in-batch and mined hard or semi-hard negatives, with explicit masking/correction and monitoring for distribution drift.
 
 ## Learn the Concepts
 
 ### Foundation
 
-#### Central mental model
+A recommender rarely has a clean dataset containing, for every user, a label for every item. Suppose a catalog has one million items and user $u$ purchased item $i^+$. We know $i^+$ is positive evidence. We do **not** know that the other 999,999 items are negatives: most were never shown, many were never examined, and some could also be relevant.
 
-A recommender often learns from positive events such as clicks, watches, carts, or purchases. Suppose a user clicked item $A$. The training system needs examples that teach:
-
-> "Score $A$ above other items that could plausibly compete with it."
-
-The catalog may contain millions of items. Comparing $A$ against every other item on every training step is often too expensive. **Negative sampling** chooses a smaller set of comparison items.
+A training algorithm still needs comparisons. Negative sampling constructs a manageable subset of items that the model treats as competitors to the positive.
 
 A useful mental model is:
 
-**A negative sampler chooses the questions the model practices answering.**
+> positive item + sampled competitors → learning signal about what should outrank what
 
-If training repeatedly asks easy questions such as "Should this running-shoe shopper prefer the clicked shoe or a random industrial bolt?", the model may learn little about fine ranking. If training asks only extremely hard questions such as near-identical shoes, some of those "negatives" may actually be products the user would happily buy, so the labels become wrong.
-
-The goal is therefore not "find the hardest negatives." The goal is:
+Let a retrieval model assign a score $s(u,i)$. A simple sampled-softmax-style loss for one positive and a sampled set $N$ is
 
 $$
-\text{informative comparisons}
-\quad+\quad
-\text{reasonable label validity}
-\quad+\quad
-\text{distributional match to deployment}.
+L = -\log \frac{\exp(s(u,i^+))}
+{\exp(s(u,i^+))+\sum_{j\in N}\exp(s(u,j))}.
 $$
 
-#### Minimum terminology
+The gradient pushes $s(u,i^+)$ upward relative to the sampled competitors. If the sampled competitors are all absurdly irrelevant, the model quickly separates them and learns little. If the competitors are useful but mislabeled relevant items, the model receives destructive supervision. Negative sampling is therefore a signal-quality problem.
 
-**Positive:** an observed item treated as relevant for the training objective, such as a clicked or purchased item.
+**Uniform sampling.** Every item has equal sampling probability. This gives broad catalog coverage and low implementation complexity. Its main weakness is that a large catalog contains many obvious negatives.
 
-**Negative:** an item used as the contrasting class/example for that training event.
+**Popularity-weighted sampling.** Sample item $i$ with probability related to its empirical frequency, for example $q(i)\propto f_i^\alpha$. This creates more realistic competition with head items and can reduce the number of useless negatives. But the sampler itself now reflects popularity, which can bias training toward suppressing head items or underrepresenting tail geometry.
 
-**Implicit feedback:** behavior such as clicks or watches where absence of interaction does not prove dislike.
+**In-batch negatives.** With a batch of positive pairs $(u_b,i_b^+)$, each $i_{b'}^+$ can serve as a negative for $u_b$ when $b'\neq b$. A batch of size $B$ gives roughly $B-1$ negatives per example almost for free because the item embeddings are already computed. This is why large batches are attractive in two-tower contrastive training.
 
-**Exposure:** whether the user was actually shown or otherwise had a realistic chance to interact with an item.
+**Hard negatives.** A hard negative has a high model score but is not labeled positive. It is informative because it lies near the current boundary. Common mining sources are the current ANN index, a lexical/co-visitation retriever, or a stronger teacher.
 
-**False negative:** an item labeled or sampled as negative even though it is actually relevant to the user/query.
+**Semi-hard negatives.** These are plausible but not maximally confusing. They avoid wasting most training mass on trivial examples while reducing the false-negative/noise risk of the absolute hardest examples.
 
-**Accidental positive:** a sampled "negative" that is known to be positive under another observation or equivalence rule, such as another item the same user clicked or a duplicate product.
+**Exposure-aware negatives.** If impression logs exist, distinguish:
+- unexposed item;
+- exposed but not clicked/consumed;
+- exposed and positively interacted with.
 
-**Hard negative:** a non-positive item the model currently scores highly or finds very similar to the positive.
+An exposed-but-ignored item is usually stronger negative evidence than an arbitrary unexposed item, although even non-click can reflect position, examination, UI, or context rather than dislike.
 
-**Semi-hard negative:** an informative but not maximally ambiguous negative; it is closer to the decision boundary without being the most likely mislabeled example.
+**Teacher-mined negatives.** A high-capacity cross-encoder, mature ranker, or other teacher identifies items that are semantically close or highly competitive. These can be excellent training examples for a cheaper student retriever, but teacher errors and biases become part of the student's training distribution.
 
-**Proposal distribution $q(i)$:** the probability distribution used to sample item $i$ as a negative.
+**False negative.** A sampled item receives negative treatment even though it is actually relevant.
 
-**Sampling bias:** the training problem changes because sampled negatives occur with a different frequency from the comparison population one ultimately cares about.
+**Accidental positive.** In in-batch training, another example's positive may also be positive for the current example. For instance, two users in the same household may both legitimately purchase the same printer cartridge, or two near-duplicate queries may have the same relevant product.
 
-#### The sampler families
+**Worked example.** Suppose a user clicked running shoe A. From a one-million-item catalog:
+- a random refrigerator is a uniform but trivial negative;
+- a best-selling running shoe B is a popularity-weighted negative;
+- another user's clicked running shoe C in the same batch is an in-batch negative;
+- shoe D retrieved at rank 2 by the current model but not clicked is a hard negative;
+- a moderately similar shoe E at rank 40 could be semi-hard;
+- shoe F was actually shown above A and ignored, so it is an exposure-aware negative;
+- shoe G is selected by a strong cross-encoder as highly confusable, so it is teacher-mined.
 
-**Uniform sampling.** Every eligible catalog item has roughly equal probability of being sampled.
+The dangerous case is that shoe D or G may have been perfectly relevant but never exposed. Treating it as a definite negative would teach the model to suppress a good result.
 
-- Strength: broad coverage, simple, cheap.
-- Weakness: with a huge catalog, many negatives are trivial.
-- Typical effect: good global separation, weak pressure on realistic competitors.
-
-**Popularity-weighted sampling.** Frequently interacted-with items are sampled more often.
-
-- Strength: head items really do compete often at serving time; negatives are usually more informative.
-- Weakness: amplifies head-item dominance and may undertrain tail discrimination.
-- Variant: use a tempered distribution such as $q(i)\propto f_i^\alpha$ with $0<\alpha<1$ instead of raw popularity.
-
-**In-batch negatives.** In a batch of positive pairs $(u_1,i_1),\dots,(u_B,i_B)$, item $i_j$ is reused as a negative for user $u_k$ when $j\neq k$.
-
-- Strength: almost free additional negatives; matrix multiplication makes training efficient.
-- Weakness: the negative distribution inherits the batch's sampling distribution.
-- Risk: another row's positive may also be relevant to the current user.
-
-**Hard negatives.** Retrieve items that the current model scores highly but that are not labeled positive.
-
-- Strength: forces the model to distinguish confusing items.
-- Weakness: the hardest items have the highest chance of being unlabeled positives, substitutes, duplicates, or annotation errors.
-- Operational issue: mining must be refreshed because "hard" changes as the model changes.
-
-**Semi-hard negatives.** Select negatives that are more confusing than random negatives but avoid the very highest-scoring ambiguous cases.
-
-- Strength: often a better information-versus-label-noise trade-off.
-- Weakness: requires a policy for what counts as "semi-hard."
-
-**Exposure-aware negatives.** Prefer items that were actually shown to the user but not engaged with, or condition the negative definition on exposure.
-
-- Strength: "shown and ignored" is generally a stronger negative signal than "never shown."
-- Weakness: the logging policy determines what was exposed, so the model can inherit historical exposure bias.
-- Important distinction: exposure-aware does not mean unbiased; it means the negative label has a more defensible behavioral interpretation.
-
-**Teacher-mined negatives.** Use a stronger model, cross-encoder, production ranker, or ensemble to identify confusing candidates for a cheaper student/retriever.
-
-- Strength: high-information examples can improve a weaker model efficiently.
-- Weakness: teacher errors and preferences are transferred; mining adds compute and versioning complexity.
-
-#### Concrete worked example
-
-Assume a user purchased a trail-running shoe, and a training step needs four negatives from a catalog of one million products.
-
-A uniform sampler might return:
-
-- frying pan,
-- phone case,
-- office chair,
-- children's puzzle.
-
-All four may be valid negatives, but they are very easy.
-
-A popularity-weighted sampler might return:
-
-- bestselling road shoe,
-- popular sneaker,
-- hiking boot,
-- another popular trail shoe.
-
-These are more realistic competitors, but repeated use of popular products can cause the training distribution to be dominated by head items.
-
-A hard-negative miner might return:
-
-- same shoe in another color,
-- previous version of the same shoe,
-- competing trail shoe,
-- duplicate marketplace listing.
-
-These are highly informative, but the first, second, and fourth may actually be desirable to the user. Treating all of them as definite negatives creates false-negative gradients.
-
-An exposure-aware sampler may use products that were shown on the same recommendation surface but skipped. Those labels are behaviorally stronger, but they reflect what the old recommender chose to expose.
-
-A robust design might mix:
-
-- one uniform negative for catalog coverage,
-- one popularity-weighted or exposure-aware negative for realistic competition,
-- two semi-hard mined negatives for decision-boundary learning,
-
-while masking known purchases/clicks and duplicate-equivalent products.
+Important distinctions:
+- **unobserved is not negative**;
+- **hard is not necessarily correct**;
+- **sampled distribution is not automatically deployment distribution**;
+- **sampling correction is not the same as causal debiasing**;
+- **ranking quality and calibrated probability semantics are different goals**.
 
 ### Core Interview Reasoning
 
-A compact reasoning structure for R09 is:
+A strong interview reasoning sequence is:
 
-**1. State why sampling exists.**  
-The full candidate universe is too large, so training approximates the comparison problem with sampled items.
+**deployment candidate distribution → label semantics → sampler family → bias/noise controls → correction → validation**
 
-**2. Compare samplers by three axes.**
+1. **Start with the serving problem.**  
+   Ask what items compete at inference. A first-stage retriever over a huge catalog has a different negative distribution from a heavy ranker operating on 500 retrieved candidates. The training sampler should support the stage's actual discrimination task.
 
-- **informativeness:** does the negative produce useful gradient?
-- **label validity:** how likely is the "negative" actually relevant?
-- **distribution match:** does training resemble the candidate competition seen at deployment?
+2. **Define what "negative" means.**  
+   In implicit-feedback systems, absence of interaction is usually missing data, not a clean zero. Exposure logs materially strengthen label semantics. Delayed conversion, repeat impressions, user history, and multiple positives complicate binary labels.
 
-**3. Explain the bias/noise mechanisms.**
+3. **Choose a difficulty spectrum rather than one magical sampler.**  
+   Easy/broad negatives establish global separation and coverage. Harder negatives refine local boundaries. Industrial systems often use mixtures because each sampler has different failure modes.
 
-- non-interaction is not necessarily a negative;
-- the sampling proposal $q(i)$ reweights item frequency;
-- hard/in-batch sampling can create false negatives;
-- exposure data itself is policy-biased.
+4. **Control false negatives.**  
+   Before increasing hardness, add masking or uncertainty handling:
+   - do not sample known positives;
+   - mask duplicate positives in a batch;
+   - use multi-positive objectives where appropriate;
+   - exclude recent historical positives;
+   - use impression/context evidence;
+   - avoid top teacher candidates when teacher confidence implies likely relevance;
+   - down-weight uncertain negatives.
 
-**4. Explain mitigation/correction.**
+5. **Correct when the objective requires it.**  
+   If items are sampled from $q(i)$ rather than the population distribution, the uncorrected loss optimizes the sampled task. For sampled-softmax-like objectives, a standard correction adjusts the sampled logit using the sampling probability:
+   $$
+   \tilde{s}(u,i)=s(u,i)-\log q(i).
+   $$
+   This compensates for items appearing more frequently solely because the sampler chose them more frequently. The exact correction depends on the loss and sampling procedure.
 
-- masks and deduplication;
-- temporal positive-history checks;
-- semi-hardness or confidence weighting;
-- proposal-distribution correction where mathematically appropriate;
-- mixtures of samplers;
-- regular negative-pool refresh.
+6. **Validate the sampler directly.**  
+   Measure realized sampling distributions, hardness, false-negative proxies, and downstream metrics. Do not compare only training loss because a sampler can make the objective harder while producing a better model, or easier while producing a worse one.
 
-**5. Validate against deployment.**
+Trade-offs:
+- more hardness → better local discrimination, but more label noise;
+- larger in-batch sets → better efficiency, but more accidental positives and batch-distribution dependence;
+- popularity weighting → more realistic head competition, but stronger popularity distortion;
+- exposure-aware labels → stronger supervision, but inherit logging-policy and examination bias;
+- teacher mining → high-quality competitors, but extra compute and teacher dependence.
 
-Use serving-faithful or full-catalog metrics and slices, not sampled training loss alone.
-
-This structure works because it moves from **objective → sampler mechanism → induced bias/noise → correction → validation**.
-
-#### Why each sampler changes the gradient
-
-Suppose a two-tower model gives a score
-
-$$
-s(u,i)=z_u^\top z_i.
-$$
-
-For one positive item $i^+$ and sampled negative set $N$, a common contrastive loss is
-
-$$
-L
-=
--\log
-\frac{\exp(s(u,i^+)/\tau)}
-{\exp(s(u,i^+)/\tau)+\sum_{j\in N}\exp(s(u,j)/\tau)}.
-$$
-
-A negative with very low score contributes little to the denominator and therefore little gradient. A high-scoring negative contributes much more. This is why hard negatives can be sample-efficient.
-
-But if that high-scoring item is actually relevant, the same large gradient becomes harmful: training strongly pushes apart a pair that should perhaps remain close.
-
-This produces the fundamental hard-negative trade-off:
-
-$$
-\text{more informative}
-\Longleftrightarrow
-\text{often more ambiguous}.
-$$
-
-#### Why in-batch negatives are efficient
-
-With batch size $B$, compute user embeddings and item embeddings once:
-
-$$
-U\in\mathbb{R}^{B\times d},
-\qquad
-V\in\mathbb{R}^{B\times d}.
-$$
-
-Then
-
-$$
-S=UV^\top
-$$
-
-produces all $B^2$ pair scores. The diagonal contains the intended positive pairs, while off-diagonal entries can serve as negatives.
-
-This converts one positive per row into roughly $B-1$ cheaply available negatives. The caveat is that these are sampled according to how positive items enter the batch, not uniformly from the catalog.
-
-#### Why popularity weighting can help and hurt
-
-If item $i$ appears with frequency $f_i$, a popularity sampler might use
-
-$$
-q(i)\propto f_i^\alpha.
-$$
-
-When $\alpha=0$, this becomes uniform. Larger $\alpha$ increasingly favors popular items.
-
-Benefits:
-
-- popular items are plausible competitors;
-- more sampled negatives have nontrivial scores;
-- head-item discrimination improves.
-
-Risks:
-
-- tail items receive little negative-side training;
-- the effective prior can become even more popularity-heavy than serving requires;
-- the model may learn overly strong repulsion from popular items or weak geometry in the tail.
-
-A tempered $\alpha$ or mixture sampler is often preferable to an extreme.
-
-#### Sampling bias versus false-negative noise
-
-These are different problems.
-
-**Sampling bias:** a truly negative item is sampled too often or too rarely relative to the target comparison distribution.
-
-**False-negative noise:** the item should not have been labeled negative in the first place.
-
-Importance weighting can address certain forms of sampling bias. It cannot magically repair a wrong label. A mislabeled positive with a very large importance weight can be even more damaging.
+Meaningful edge cases include:
+- multiple positives for the same user/query;
+- duplicates or near-duplicates;
+- rapidly changing catalogs;
+- long-tail items that rarely appear in mined sets;
+- delayed labels;
+- repeated exposures;
+- retriever changes that shift what counts as "hard";
+- a sampler that is correct on average but poor for new users or tail segments.
 
 ### Deeper Reasoning and Derivations
 
-#### Full-softmax target versus sampled objective
-
-Suppose the intended conditional model is
+Negative sampling changes the empirical objective because the expectation is taken under the sampling distribution. Suppose the desired negative expectation is under a target distribution $p(i)$, but negatives are drawn from $q(i)$. For some per-negative quantity $g(i)$,
 
 $$
-p(i\mid u)
+\mathbb{E}_{i\sim p}[g(i)]
 =
-\frac{\exp(s(u,i))}
-{\sum_{j\in\mathcal I}\exp(s(u,j))}.
+\mathbb{E}_{i\sim q}\left[\frac{p(i)}{q(i)}g(i)\right],
 $$
 
-The denominator over all items $\mathcal I$ may be too expensive. Sampled objectives approximate it using negatives drawn from $q(j)$.
+provided $q(i)>0$ wherever $p(i)>0$. This is the basic importance-sampling identity. It explains why nonuniform sampling can require weights or log-probability corrections if the estimator is meant to represent the original target distribution.
 
-If frequent proposal items are included without correction, the learner sees them disproportionately often. For sampled-softmax-style objectives, a common correction adjusts a sampled logit by its proposal probability:
+However, modern contrastive objectives are not always trying to estimate an unbiased full-catalog probability. Sometimes the sampled objective is intentionally chosen because it emphasizes a useful decision boundary. In that case "bias" is not automatically bad; the key question is whether the biased training task aligns with serving.
 
-$$
-\tilde s(u,j)=s(u,j)-\log q(j),
-$$
+For in-batch negatives, let the batch be drawn from a data distribution whose item marginal is $q_{\text{batch}}(i)$. Then the negative distribution is approximately that marginal, not uniform over items. Popular items appear more often because they appear as positives more often. This is one reason in-batch negatives can implicitly act like popularity sampling.
 
-with exact details depending on the estimator and sampling scheme.
-
-The intuition is that an item should not look more competitive merely because the sampler selected it frequently.
-
-This correction requires:
-
-- $q(j)$ to be known or estimable;
-- the target objective to justify the correction;
-- sufficient support: items relevant to the target cannot have zero sampling probability;
-- manageable variance.
-
-If $q(j)$ is tiny, importance-style factors can become unstable. Clipping or a mixture with uniform sampling can trade some bias for lower variance.
-
-#### False-negative mechanism
-
-Assume user $u$ has latent relevant set $R_u$, but logs reveal only observed positive subset $O_u\subset R_u$.
-
-Naive sampling draws from
+In two-tower retrieval, a common corrected logit has the form
 
 $$
-\mathcal I\setminus O_u.
+\ell(u,i)=\frac{u^\top v_i}{\tau}-\log q(i),
 $$
 
-A sampled item can still lie in
+where $\tau$ is a temperature and $q(i)$ approximates the probability that item $i$ is sampled as a negative. The correction reduces the artificial advantage/disadvantage caused by sampling frequency. If $q(i)$ is poorly estimated, stale, or mismatched to the actual batching/mining process, the correction can itself be wrong.
 
+**Why hard-negative mining can collapse.** Consider a model that retrieves its top non-labeled candidates. Early in training, high-scoring candidates may be high because of representation errors. Later, high-scoring candidates increasingly include genuinely relevant alternatives. Therefore hardness and false-negative rate can rise together. If every mined item near the positive is forced downward, the model can destroy useful semantic neighborhoods. A mixture with easier negatives, positive filtering, or semi-hard selection often stabilizes training.
+
+**Hard-negative curriculum.** One practical progression is:
+1. broad uniform/popularity negatives;
+2. large in-batch negatives;
+3. mined negatives from a reasonably trained retriever;
+4. refreshed mining as the model evolves;
+5. controlled teacher mining or cross-model mining.
+
+This is not a universal schedule, but it follows the principle that the model must first possess enough structure for "hardness" to be meaningful.
+
+**Exposure-conditioned semantics.** Suppose $E$ means exposed and $Y$ means interaction. Observing $Y=0$ without knowing $E$ mixes two cases:
+- $E=0$: user had no opportunity to interact;
+- $E=1,Y=0$: user had an opportunity but did not interact.
+
+The second provides more evidence against relevance, but still depends on examination and position. Thus exposure-aware negative sampling improves semantic validity without fully solving policy bias.
+
+**False-negative impact.** For a pairwise loss such as
 $$
-R_u\setminus O_u,
+L=-\log \sigma(s(u,i^+)-s(u,i^-)),
 $$
+if $i^-$ is actually relevant, the gradient explicitly forces $s(u,i^+)>s(u,i^-)$ even though the desired ordering may allow both to score highly. With many such errors, the representation can fragment semantically coherent regions and hurt Recall@k.
 
-which is a false negative.
-
-This set can be large when:
-
-- exposure is sparse;
-- conversion is delayed;
-- users interact with substitutes but only one purchase is observed;
-- item duplicates/variants exist;
-- labels are censored by time;
-- the surface historically showed only a narrow subset of the catalog.
-
-The key point is epistemic: "not observed positive" means **unknown**, not necessarily negative.
-
-#### Why harder mining raises false-negative risk
-
-A model's high-scoring candidates are often close to the positive in semantic or behavioral space. That is exactly why they are useful training examples, but closeness is also evidence that they may genuinely satisfy the user.
-
-Therefore the probability
-
-$$
-P(\text{false negative}\mid \text{very hard candidate})
-$$
-
-can be substantially higher than
-
-$$
-P(\text{false negative}\mid \text{uniform random candidate}).
-$$
-
-Hard-negative mining should therefore be paired with filtering, confidence controls, deduplication, or semi-hard bands.
-
-#### Exposure-aware reasoning
-
-Suppose item $j$ was never shown. The event "no click on $j$" contains almost no preference information because the user had no opportunity to click.
-
-If item $j$ was shown in a visible position and ignored, the non-click carries more information. But even then, position, UI, trust, context, and competition affect examination.
-
-So an exposure-aware negative is better interpreted as:
-
-> "This item was available under the logging policy and did not receive the target action."
-
-It is not equivalent to:
-
-> "The user dislikes this item."
-
-This distinction matters when transferring the model to a new exposure policy.
-
-#### Diagnosing a bad sampler
-
-Common symptoms and hypotheses:
-
-**Training loss improves, full-catalog Recall@k worsens.**
-- sampled task has become too easy or too distribution-specific;
-- correction is wrong or absent;
-- mined negatives are stale.
-
-**Head recall improves, tail recall falls.**
-- popularity-weighted negatives dominate;
-- batch construction overrepresents head items;
-- insufficient uniform/tail coverage.
-
-**Embedding neighborhoods lose obvious substitutes.**
-- false negatives are repelling semantically valid alternatives;
-- hard-negative miner is too aggressive.
-
-**Performance jumps on sampled evaluation but not production-like evaluation.**
-- evaluation uses the same biased negative sampler as training;
-- sampled metrics do not reflect full-catalog competition.
-
-**Hard-negative training becomes unstable after several epochs.**
-- negatives became stale as the retriever changed;
-- hardest examples are increasingly false negatives;
-- teacher/current-model score scale changed.
+**Sampler evaluation should be stage-aware.** For retrieval, emphasize candidate Recall@k, hit rate, tail coverage, and ANN interaction. For ranking, emphasize NDCG/MRR/conversion-oriented metrics and calibration if probabilities are consumed downstream. The same negative scheme need not be optimal for both stages.
 
 ### Advanced Staff-Depth Considerations
 
-The reusable Staff-level backbone for this item is:
-
-`Baseline → Change → Mechanism → Measure → Act → Trade-off → Validate`
-
-Equivalently:
-
-`Assumption → Mechanism → Evidence → Decision → Trade-off → Validation`
-
-For this question, the baseline is: The baseline is that the negative sampler defines the comparisons the model practices. Good sampling balances informativeness, label validity, and match to the deployment comparison distribution. Sampling bias and false-negative noise are distinct: reweighting can correct some proposal bias, but no importance weight can make a mislabeled positive into a true negative.
-
-The eight subsections below apply that same loop from different angles. Each explanation teaches the mechanism first; the filled template then compresses it into a reusable interview scaffold.
-
 #### 1. Changed Constraints and Transfer Logic
 
-As catalog size, popularity skew, exposure sparsity, or churn changes, the sampler mixture should change rather than defaulting to “harder.” Huge catalogs make uniform negatives easier; skew can let head items dominate; sparse exposure weakens exposure-aware coverage; fast-changing catalogs stale mined pools. Preserve broad support and defensible labels.
+**Baseline.** A two-tower retriever for a large catalog uses in-batch negatives plus a small mined-hard-negative pool, duplicate-positive masking, and measured logQ correction.
 
-A useful reasoning chain is:
+**If the catalog grows 100×:** uniform negatives become even more dominated by trivial items. Increase efficient broad coverage through larger in-batch/cross-batch pools, then mine candidates from the serving index. Validate that tail items remain represented rather than allowing popularity and mining loops to erase them.
 
-`changed assumption → affected mechanism/stage → invariant → broken assumption → consequence → redesign → metric impact → trade-off → validation`
+**If exposure logs become available:** stop treating arbitrary non-interactions as equivalent. Use exposed-but-ignored examples more heavily, preserve unexposed examples as weak or unlabeled data, and account for position/examination effects when interpreting non-clicks.
 
-**Filled template for this item**
+**If labels are delayed:** avoid mining recent "non-converters" as hard negatives before the attribution window closes. Use censoring logic or delayed-label-safe windows. Otherwise the hardest recent items may simply be pending positives.
 
-- **Original assumption:** Current mix of uniform/in-batch/mined negatives gives useful coverage and hardness.
-- **Changed constraint:** Popularity becomes extremely skewed and catalog grows sharply.
-- **Invariant:** Training should preserve informative comparisons across the serving universe without systematic false-negative or tail collapse.
-- **Broken assumption:** Raw popularity/in-batch frequency no longer approximates a healthy competition distribution.
-- **Consequence:** Head items dominate the denominator while tail geometry receives weak coverage; false negatives can rise for popular items.
-- **Design change:** Temper popularity, stratify head/mid/tail, mix uniform/exposure/semi-hard sources, and mask known positives/equivalents.
-- **Metric impact:** Track realized negative frequency, false-negative audits, head/mid/tail Recall@K, norm/score distributions, and full-catalog quality.
-- **Trade-off:** More balanced coverage can reduce average hardness/sample efficiency.
-- **Validation:** Compare sampler mixtures on deployment-faithful retrieval and tail/cold slices, not sampled training loss alone.
+**If latency forces a smaller candidate set:** the retriever's local ordering quality becomes more important because downstream rankers have less room to recover. Mine more serving-like competitors and evaluate Recall at the reduced candidate budget, not only at a generous $k$.
+
+**If privacy constraints remove user history:** false-negative filters based on historical positives weaken. Shift toward contextual/exposure evidence, item semantics, aggregate signals, and conservative uncertainty handling.
+
+The invariant is that the sampler should produce informative competitors while preserving valid label semantics. What changes is the best proxy for the serving candidate distribution and the available evidence for whether an item is truly negative.
 
 #### 2. Failure Modes and Diagnosis
 
-Sampler regressions often masquerade as representation or ANN failures. Diagnose the realized training distribution and false-negative rate, then isolate serving infrastructure. A tail-only recall loss after popularity-heavy sampling points toward training distribution only if exact retrieval also shows it and ANN/index controls are healthy.
+**Symptom: training loss improves, retrieval Recall@100 falls.**
+Competing hypotheses:
+- hard negatives contain many false negatives;
+- popularity weighting over-suppresses head items;
+- logQ correction is wrong;
+- mining index is stale or from a mismatched model;
+- duplicate positives are not masked.
 
-**Filled template for this item**
+Discriminating evidence:
+- slice sampled negatives by known-positive overlap and semantic similarity;
+- compare exact scores before/after sampler change;
+- inspect realized $q(i)$ and correction values;
+- rerun with fixed architecture and previous sampler;
+- measure Recall by popularity and user-history segment.
 
-- **Symptom:** Head recall improves but tail recall drops after switching to popularity-heavy/in-batch negatives.
-- **Stage decomposition:** batch/data sampling → negative source/masks → loss/correction → learned embeddings → exact retrieval → ANN serving.
-- **Slices:** Item popularity/head-mid-tail, user sparsity, item age, sampler source, hardness, batch frequency, model/index version.
-- **Competing hypotheses:** Head-heavy proposal; missing logQ/importance correction where justified; false negatives; batch construction; ANN serving issue.
-- **Discriminating evidence:** Realized q(i), per-source frequencies, known-positive mask rate, false-negative audit, exact per-bucket recall.
-- **Offline/online comparison:** Use full-catalog/serving-faithful evaluation rather than sampled evaluation built from the same proposal.
-- **Replay/isolation:** Train/evaluate a stable uniform/stratified baseline and compare exact retrieval before ANN.
-- **First divergence:** Training/exact retrieval if tail loss exists before ANN; serving if exact is healthy.
-- **Immediate mitigation:** Reduce hard/popularity fraction, restore stratified/uniform coverage, refresh pools, strengthen masks.
-- **Permanent prevention:** Sampler-source logging, distribution dashboards, false-negative audits, versioned mining pools, and exact-serving regression gates.
+Immediate mitigation: revert to the last known-good sampler or reduce hard-negative weight.  
+Permanent prevention: sampler dashboards, mined-set versioning, false-negative tests, controlled ablations, and rollout gates.
 
-Memory aid: `Symptom → Slice → Stage → Hypotheses → Evidence → First divergence → Fix`.
+**Symptom: aggregate Recall improves but tail-item exposure collapses.**
+Hypothesis: popularity/in-batch distributions dominate training. Check negative and positive marginals by popularity decile, candidate-source recall, and long-tail slices. Correct by mixing samplers, stratifying, capping head-item negative frequency, or using segment-aware objectives where product goals require it.
+
+**Symptom: performance degrades only after several mining rounds.**
+Hypothesis: iterative hard-negative mining has become self-reinforcing. The model mines its own blind spots or increasingly mines unlabeled positives. Compare mining rounds, overlap, hardness histograms, label confidence, and embedding-neighborhood purity.
 
 #### 3. Latency and Resource Trade-offs
 
-Negative sampling moves cost into training rather than request serving, but hard/teacher mining can dominate training-cycle resources. In-batch negatives trade larger batches/memory for many cheap comparisons; ANN/teacher mining adds retrieval passes, storage, filtering, and refresh orchestration. Judge the sampler by quality gained per training-cycle cost and freshness burden.
+Negative sampling is primarily a training concern, but it changes serving economics indirectly. Better negatives can improve retrieval quality at fixed embedding dimension and candidate count, potentially avoiding a larger model or larger ANN probe budget.
 
-**Filled template for this item**
+Resource costs include:
+- item-embedding computation for negative sets;
+- all-gather/network cost for cross-device in-batch negatives;
+- ANN retrieval for mined negatives;
+- teacher inference for teacher-mined negatives;
+- storage and refresh of mined-negative datasets;
+- extra masking/deduplication metadata.
 
-- **Budget:** Training-step memory/throughput plus acceptable mining wall-clock and refresh cost.
-- **Cost decomposition:** Sampling + extra encodes/batch matrix + ANN/teacher mining + pool storage/filtering + loss computation.
-- **Dominant cost:** Periodic hard/teacher mining and large-batch memory for sophisticated samplers.
-- **Quality driver:** More/harder realistic negatives improve decision-boundary learning.
-- **Cost driver:** Mining many candidates/teachers and large batches increase compute, memory, and pipeline complexity.
-- **Optimization knobs:** In-batch reuse, semi-hard bands, cached pools, ANN mining depth, refresh cadence, mixture fractions, stratified samplers.
-- **Fallback/degradation:** Revert to stable uniform/popularity/stratified mixture if miner is unavailable or unstable.
-- **Trade-off curve:** Full-catalog Recall@K/segments/false-negative rate versus training throughput, memory, and mining cost.
-- **Decision:** Use the cheapest sampler mixture that materially improves deployment-like retrieval without unacceptable noise.
+For a local batch size $B$ across $G$ workers, cross-device in-batch negatives can expose roughly $BG-1$ competitors per example but may require all-gathering embeddings. If embeddings are dimension $d$ in $b$ bytes per coordinate, one gathered item-embedding tensor is on the order of $BGdb$ bytes per step per participating worker, ignoring framework overhead. At large scale, communication rather than dot products can dominate.
 
-Memory aid: `Budget → Breakdown → Bottleneck → Knobs → Quality loss → Fallback`.
+A Staff answer should compare marginal quality per unit training cost, not maximize negative count blindly.
 
 #### 4. Scale and Capacity
 
-At 100M+ items, full-catalog comparison is impossible per step and uniform negatives become overwhelmingly easy. Scalable training therefore needs efficient in-batch/sampled proposals plus selective hard mining, while preserving support across head/tail/new items and maintaining tractable pool refresh.
+At very large item counts:
+- exact full-softmax becomes infeasible;
+- mining infrastructure must itself be scalable;
+- stale mined negatives become a serious lifecycle issue;
+- duplicate/near-duplicate detection may need approximate structures;
+- long-tail support can disappear because mining repeatedly samples head competition.
 
-**Filled template for this item**
+Capacity planning should estimate:
+- positives per training window;
+- negatives per positive;
+- storage footprint of materialized mined sets;
+- refresh frequency;
+- ANN mining QPS;
+- teacher scoring throughput;
+- cross-device communication.
 
-- **Scaling dimension:** Catalog grows 100K → 100M items and training volume increases.
-- **Baseline scale assumption:** Simple uniform/popularity sampling yields enough informative negatives without expensive mining.
-- **First bottleneck:** Uniform hardness collapses and full-catalog mining/evaluation becomes expensive.
-- **Second-order effects:** Larger item-frequency skew, storage for mined pools, ANN mining infrastructure, stale pool versions, and tail undercoverage.
-- **Architectural response:** In-batch negatives, stratified/mixture samplers, ANN/teacher mining on selected examples, and tractable exact/high-recall benchmark subsets.
-- **Partitioning/replication/caching/batching:** Alias/stratified tables, distributed batch negatives, sharded mining indexes, cached versioned pools.
-- **Consistency/freshness consequence:** Sampler/miner/index versions can drift from the model and catalog.
-- **Operational failure mode:** Training appears healthy on sampled metrics while full-catalog tail quality deteriorates.
-- **Validation:** Deployment-like Recall@K, sampler distribution, false-negative audits, training throughput, pool refresh time, and projected-scale tests.
-
-Memory aid: `What grows? → What stops fitting? → What bottlenecks? → How do we partition? → What new failure appears?`.
+If 1 billion positive examples each store 50 negative item IDs as 64-bit integers, IDs alone require about
+$$
+10^9 \times 50 \times 8 \approx 400\text{ GB},
+$$
+before metadata, compression, or replicas. This can motivate online or partially materialized mining rather than storing every negative set.
 
 #### 5. Freshness, State, and Versioning
 
-Hardness is model-relative. A pool mined by version $v$ becomes easier, irrelevant, or differently mislabeled as the model/catalog evolves. Freshness telemetry should measure pool age and current-model hardness, not only wall-clock timestamps.
+A mined negative is stateful: it was produced by a specific model, embedding space, item corpus, index, filters, and timestamp.
 
-**Filled template for this item**
+Track at least:
+- mining model version;
+- item-embedding/index version;
+- catalog snapshot;
+- feature/data window;
+- sampler configuration;
+- teacher version if used.
 
-- **State that becomes stale:** Hard/teacher negative pools, miner model/index, catalog eligibility, known-positive history, and exposure context.
-- **Why freshness matters:** Stale negatives stop being informative or include deleted/changed items; masks may miss new positives.
-- **Required freshness:** Refresh when current-model hardness/overlap materially decays, with faster cadence in high-churn catalogs.
-- **Refresh cost:** ANN/teacher passes, storage writes, filtering, and orchestration.
-- **Update architecture:** Versioned periodic mining with incremental refresh for high-value/changed segments when practical.
-- **Version consistency:** Training examples should record miner model, index, catalog snapshot, sampler config, and mask version.
-- **Failure from version skew:** A pool generated under old geometry can distort current training or include invalid items.
-- **Fallback:** Semi-hard/in-batch/stratified sampler when mined pool is stale or unavailable.
-- **Measurement:** Pool age, current-model score/hardness, topK persistence, invalid/false-negative rate, and version metadata.
-- **Decision:** Refresh based on information decay and catalog/model change, not a fixed cadence alone.
+If the query tower changes while the mining index remains old, "hardness" is no longer measured in the current representation space. If the catalog changes rapidly, deleted or unavailable items can contaminate training. If a teacher is updated, negative difficulty may jump abruptly.
 
-Memory aid: `What goes stale? → How fast does it matter? → What does refresh cost? → How do versions stay consistent?`.
+Safe practice includes immutable versioned mining jobs, explicit compatibility checks, sample-level provenance, and rollback to a known sampler/index tuple.
 
 #### 6. Implementation, Serving, and Observability
 
-A production sampler is a versioned data-generation component. Every negative should have source/proposal metadata where feasible, masks should use temporal known-positive/equivalence rules, mined pools should bind to miner/index/catalog versions, and evaluation must be independent enough not to reproduce the same sampling pathology.
+Implementation should make the sampler an explicit, testable component rather than buried in the dataloader.
 
-**Filled template for this item**
+Useful interfaces expose:
+- sampler type and mixture weights;
+- random seed/version;
+- exclusion sets;
+- exposure constraints;
+- hardness source;
+- $q(i)$ or enough information to compute correction;
+- provenance/version metadata.
 
-- **Conceptual object:** A proposal mechanism q(i|context) plus masking/correction policy defining training comparisons.
-- **Training/data implementation:** Sample/mine negatives, apply known-positive/equivalence/exposure filters, compute corrections/weights when justified, log source/hardness.
-- **Stored artifact/state:** Sampler config, alias/strata tables, mined pools, miner/index/catalog versions, mask/positive-history state.
-- **Serving path:** No direct sampler in online serving, but training distribution should represent the candidates the deployed retriever competes against.
-- **Component contract:** Proposal probabilities/source, eligibility universe, positive masks, objective/correction semantics, and mining version.
-- **Logging:** Negative source, q(i) when needed, popularity bucket, hardness score, mask/filter reason, miner/index version, pool age.
-- **Versioning:** Sampler mixture, correction rule, miner/index/catalog snapshot, and known-positive rules.
-- **Failure mode:** Sampled loss improves while full-catalog retrieval deteriorates because evaluation shares the same biased proposal.
-- **Observability:** Realized negative distribution, mask rate, false-negative audits, hardness, head/tail recall, exact-vs-ANN serving quality.
-- **Rollback:** Restore a stable sampler mixture/pool and compatible correction/objective settings.
-- **Testing/replay:** Fixed batches should reproduce sampling/masking distributions under seeded/versioned configs.
+Tests should cover:
+- positives are never sampled as hard negatives when known;
+- duplicate positives in a batch are masked;
+- sampling frequencies match configured distributions statistically;
+- zero-probability support bugs are detected;
+- deleted/unavailable items are excluded;
+- delayed-positive windows are respected;
+- correction terms match the actual sampler.
 
-Memory aid: `Train → Store → Serve → Version → Log → Monitor → Roll back`.
+Observability should include:
+- negative source mix;
+- item-popularity deciles;
+- score/hardness quantiles;
+- false-negative proxy rate;
+- duplicate-positive mask rate;
+- sampler entropy/coverage;
+- per-segment sample composition;
+- mining freshness/version skew;
+- downstream retrieval/ranking metrics by slice.
+
+Serving does not execute the sampler, but serving candidate logs should feed sampler validation because deployment candidates define the distribution that training is supposed to prepare for.
 
 #### 7. Vertical Transfer
 
-The mechanism should transfer; the assumptions must be re-derived. Use the checklist:
+**E-commerce.** Purchases are sparse and delayed; exposure and availability matter. A non-purchase of an unavailable or never-shown item is meaningless. Hard negatives from substitute products can be useful, but complements may be relevant rather than negatives.
 
-`labels → candidate sources → objectives → features → constraints → evaluation → experiments → serving/freshness → ecosystem effects`
+**Video/feed.** Multiple items can be relevant in the same session. Dwell/completion/skip semantics are richer than click/non-click. In-batch negatives from globally popular videos create many accidental positives.
 
-Representative verticals:
+**Ads.** Exposure is explicit, but auction policy strongly selects which ads are shown. Non-clicks are observed under position, price, budget, and eligibility constraints. Sampling must preserve auction-relevant competition and should not be mistaken for causal debiasing.
 
-- **Video/feed:** **Invariant:** Sampler principles transfer. **Different assumption:** Skip/dwell after meaningful exposure may be stronger negatives; interruption/session context complicates labels. **Technical consequence:** Prefer exposure-aware/semi-hard negatives with session-aware false-negative caution.
-- **E-commerce:** **Invariant:** Sampler principles transfer. **Different assumption:** Substitutes, variants, and delayed purchases create many latent positives. **Technical consequence:** Mask equivalents/history and avoid treating unpurchased substitutes as definite negatives.
-- **Ads:** **Invariant:** Proposal/correction logic transfers. **Different assumption:** Exposure is auction/policy-conditioned and calibration matters downstream. **Technical consequence:** Use exposure/auction-aware negatives and validate calibration/auction outcomes.
-- **Marketplace:** **Invariant:** Coverage and false-negative logic transfer. **Different assumption:** Provider exposure is policy-concentrated and supply eligibility varies. **Technical consequence:** Stratify/provider-aware sampling so old exposure policy does not freeze provider concentration.
-- **Search:** **Invariant:** Hard-negative logic transfers. **Different assumption:** Near-miss lexical/semantic documents can be genuinely relevant under incomplete judgments. **Technical consequence:** Mine hard negatives but use judgment/multi-positive filters and evaluate unbiased relevance sets.
+**Marketplace.** Provider exposure and inventory constraints matter. Popularity-weighted negatives can amplify concentration. Evaluate both consumer relevance and supply/provider slices.
 
-**Filled transfer template — Video/feed**
+**Notifications.** The candidate universe is small and highly policy-filtered. Overly broad catalog negatives may be irrelevant to the decision actually made at send time; use decision-set or eligibility-aware negatives.
 
-- **Invariant:** Sampler principles transfer.
-- **Different data-generating process:** Skip/dwell after meaningful exposure may be stronger negatives; interruption/session context complicates labels.
-- **Different objective:** Re-derive the primary product utility for this vertical rather than copying the base objective.
-- **Different candidates/features:** Candidate sources and features should reflect the vertical-specific context and available signals.
-- **Different constraints:** Skip/dwell after meaningful exposure may be stronger negatives; interruption/session context complicates labels.
-- **Metric change:** Retain transferable stage metrics, then add vertical-specific outcomes and guardrails.
-- **Serving change:** Prefer exposure-aware/semi-hard negatives with session-aware false-negative caution.
-- **Ecosystem effect:** Check creator/provider/seller/advertiser or user-side concentration where relevant.
-- **Validation:** Evaluate both transferable retrieval/ranking quality and the vertical-specific product outcome.
-
-Memory aid: `Keep the mechanism; re-derive the assumptions.`
+Across verticals, the invariant is to model the actual choice set and observation process before defining a negative.
 
 #### 8. Objective and Metric Mismatch
 
-Negative sampling can optimize the sampled training task rather than the deployed retrieval problem. A lower sampled loss may simply mean the sampler became easier or more self-consistent. First verify representation and serving; then ask whether q(i), correction, and labels approximate the intended full-catalog competition and product objective.
+A sampler can improve the sampled training objective while hurting the product objective.
 
-**Filled template for this item**
+Examples:
+- hard-negative training improves pairwise separation but decreases catalog coverage;
+- popularity negatives improve head-query Recall but harm tail discovery;
+- exposure-aware negatives improve click prediction but still inherit position bias;
+- teacher mining improves NDCG but produces poorly calibrated scores;
+- aggressive false-negative filtering improves semantic neighborhoods but removes useful discrimination among close substitutes.
 
-- **Offline/model metric:** Sampled training/validation loss improves.
-- **Online/product outcome:** Full-catalog/ANN Recall@K or downstream product quality worsens.
-- **Execution verification:** Compare exact and ANN serving quality, model/index versions, and candidate universe before blaming sampling.
-- **Metric semantics:** Sampled loss measures discrimination against negatives drawn from the chosen proposal.
-- **Blind spots:** Unseen catalog regions, false negatives, tail coverage, exposure policy, and final product utility.
-- **Missing product factor:** The proposal distribution may not represent deployed candidate competition or relevance semantics.
-- **Repair:** Change sampler mixture, masks, correction/importance weights when justified, and evaluate full-catalog/serving-faithful slices.
-- **Trade-off:** More deployment-faithful/harder negatives cost more and can increase false-negative noise/variance.
-- **Online validation:** Exact/ANN Recall@K, head/tail/cold slices, false-negative audits, training cost, and controlled product experiment when warranted.
+Therefore evaluate a chain of metrics:
+1. sampler diagnostics;
+2. training objective;
+3. stage metric such as Recall@k or NDCG;
+4. slice metrics such as tail/new-user/locale;
+5. score semantics/calibration if consumed downstream;
+6. online product metrics.
 
-Memory aid: `Did we execute the objective incorrectly, or correctly optimize the wrong objective?`
+If offline ranking improves while online utility drops, investigate whether the sampler changed the learned notion of relevance, coverage, diversity, or exposure rather than assuming serving is at fault.
 
 ## Material Follow-ups / Scenario Variants
 
-### Extreme popularity skew
+### Why can in-batch negatives be both efficient and biased?
 
-If a recommender has a highly skewed catalog, raw popularity-weighted sampling may make nearly every update about the same head items. A better approach is usually to temper popularity, stratify by head/mid/tail, or mix popularity with uniform and semi-hard negatives. The correct mixture should be chosen from deployment-like Recall@k and segment metrics rather than from sampled loss.
+They reuse embeddings already computed for other positives, so the marginal cost per negative is low and a batch of size $B$ creates roughly $B-1$ competitors per example. But those negatives are distributed according to the batch's positive-item marginal, not necessarily the serving candidate distribution. Popular items can be overrepresented, and legitimate shared positives become accidental negatives. Use representative batching, duplicate/multi-positive masking, optional sampling correction, and validation against the actual serving candidate distribution.
 
-A tail-recall regression after introducing popularity-heavy negatives should first be checked by comparing the realized negative-frequency distribution with catalog/serving frequencies, then by measuring head/mid/tail candidate recall. If the regression is isolated to the tail, reducing the popularity exponent or adding explicit tail/uniform coverage is a direct experiment.
+### When would you prefer hard negatives over uniform negatives?
 
-### Hard negatives outperform early, then degrade
+Prefer hard negatives once the model has enough quality that its high-scoring errors are meaningful and the label pipeline can control false negatives. They are especially valuable when serving must discriminate among semantically similar candidates. Keep some broad negatives for global geometry/coverage, use semi-hard examples when the hardest set is noisy, and verify gains with fixed-model sampler ablations.
 
-An early gain followed by degradation is consistent with a mined pool becoming stale or with training moving toward increasingly ambiguous false negatives. Measure current-model hardness of the stored pool, false-negative rate, duplicate/substitute rate, and pool age. Refreshing the pool or moving to semi-hard bands is preferable to blindly mining ever-harder examples.
+### Does subtracting $\log q(i)$ solve exposure bias?
 
-### Exposure-aware negatives after a policy change
+No. A log-sampling-probability correction addresses distortion introduced because the training sampler draws items with unequal probability. Exposure bias is upstream: the historical policy determined what users had a chance to interact with. Correcting $q(i)$ does not make unexposed items observed counterfactual outcomes. Exposure/position/policy bias needs appropriate logging, experimental data, propensity/counterfactual methods, or other causal assumptions.
 
-When a new recommender changes what users see, negatives collected under the old exposure policy are no longer a neutral sample of the new candidate space. Exposure-aware training can still be useful, but the model is partly learning the old policy's support. Mix broader negatives, preserve exploration where possible, and evaluate on slices that the old policy rarely exposed.
+### A harder-negative rollout improves offline Recall@100 but online CTR falls. What do you check?
 
-### When to apply sampling correction
+First verify that the offline gain is real by reproducing it with a fixed evaluation set and exact candidate semantics. Then inspect whether false negatives increased, whether head/tail and new-user slices shifted, whether the training sampler no longer matches serving candidates, and whether score calibration or downstream thresholds changed. Also rule out serving-version skew. If candidate recall improved but CTR fell, the model may be retrieving more technically relevant but less click-worthy/diverse/fresh items, so examine downstream ranker interaction and product-objective mismatch rather than attributing the issue solely to retrieval quality.
 
-Correction is appropriate when the training objective is intended to approximate a target such as full-catalog softmax and the proposal distribution is known. A log-proposal or importance correction compensates for items being sampled with unequal probability.
+### How should negative sampling change as a retriever matures?
 
-Correction is not a universal fix. It does not repair false-negative labels, may increase variance when proposal probabilities are tiny, and can be inappropriate when the deliberately reweighted sampler represents the desired training objective rather than a computational approximation.
-
-### Diagnosing tail-only recall loss
-
-A tail-only recall loss can arise when popularity-weighted or in-batch sampling makes head items dominate the contrastive denominator. The diagnostic sequence is:
-
-1. compare realized negative frequencies by popularity bucket;
-2. verify batch construction is not head-heavy;
-3. measure per-bucket embedding norm and retrieval recall;
-4. compare against a uniform or stratified baseline;
-5. test a tempered/mixed sampler;
-6. verify ANN/index effects separately so sampling is not blamed for a serving-layer problem.
-
-The expected answer is not simply "use uniform negatives." It is to localize whether the tail regression comes from sampling distribution, representation learning, or retrieval infrastructure, and then restore enough tail coverage without discarding informative negatives.
+Early training can rely more on broad uniform/popularity/in-batch negatives to establish coarse geometry. As quality improves, introduce serving-like hard or semi-hard negatives, refresh them periodically, and increase filtering/masking because false-negative risk rises with semantic quality. Keep a mixture rather than converging to only the hardest examples, and continuously validate the realized sampler distribution against current serving traffic.

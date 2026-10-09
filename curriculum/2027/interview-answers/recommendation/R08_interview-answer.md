@@ -2,8 +2,8 @@
 type: interview-answer
 item: "2027:R08"
 title: "Two-Tower Retrieval"
-created: "2026-10-03"
-updated: "2026-10-05"
+created: "2026-10-09"
+updated: "2026-10-09"
 tags:
   - recommendation
   - retrieval
@@ -18,559 +18,575 @@ Explain user/query and item/content towers, factorization constraints, ANN servi
 
 ## Mastery Answer
 
-A two-tower retriever learns two functions: a user/query tower $f(x)$ and an item/content tower $g(y)$. Each independently maps its inputs into the same $d$-dimensional embedding space, and retrieval uses a cheap decomposable similarity such as dot product,
+A two-tower retriever learns two separate functions: a user/query tower maps request-side information into an embedding, and an item/content tower maps each candidate item into an embedding in the same vector space. Retrieval scores are usually a dot product or cosine-like similarity. The architectural point is that the score factorizes as a function of the request embedding and a separately precomputable item embedding. That factorization is what makes large-scale retrieval possible: item embeddings can be computed offline, indexed once, and searched with approximate nearest-neighbor methods, while only the request tower runs online.
+
+The main benefit is therefore not merely representation learning; it is a serving contract. A richer cross-feature model could score a user-item pair more accurately, but if its score depends on arbitrary joint interactions that cannot be decomposed, then every item would need online pairwise scoring. With millions of candidates, that is usually infeasible for first-stage retrieval. Two-tower retrieval intentionally gives up some interaction expressiveness to obtain sublinear ANN search over a large catalog.
+
+Training typically uses positive user-item pairs with sampled negatives. For a batch of request embeddings \(u_i\) and item embeddings \(v_j\), a common loss treats the matching item as the correct class among the batch:
 
 $$
-s(x,y)=f(x)^\top g(y).
+\mathcal{L}_i
+=
+-\log
+\frac{\exp(s(u_i,v_i)/\tau)}
+{\sum_j \exp(s(u_i,v_j)/\tau)}
 $$
 
-That factorization is the central design constraint: the score must be computable from a query embedding and a precomputed item embedding. In exchange, the item side can be encoded offline, stored in an ANN index, and searched against millions of items at serving time. The cost is reduced cross-feature expressivity compared with a joint ranker or cross-encoder, so two-tower models are usually candidate generators rather than final rankers.
+where \(s\) is often a dot product or cosine similarity and \(\tau\) is the temperature. Lower temperature sharpens the softmax and increases the penalty for confusing near negatives; too low can produce unstable, overly peaky gradients. In-batch negatives are computationally efficient, but they induce a sampling distribution: popular items appear more often as negatives, accidental positives may be mislabeled, and the learned scores can absorb popularity effects rather than pure affinity.
 
-Training is commonly contrastive or sampled-softmax-like. A positive pair should score above sampled negatives. With normalized embeddings, dot product becomes cosine similarity, which removes embedding norm as a ranking signal and stabilizes the geometry; without normalization, norms can encode confidence or popularity but can also grow and dominate ranking. A temperature $\tau$ rescales logits, for example
+Normalization changes the geometry. If embeddings are L2-normalized, dot product equals cosine similarity, so ranking depends on angle and embedding norms cannot encode popularity or confidence. Without normalization, norms matter: large-norm items can dominate scores even with mediocre directional match. That can be useful if norm intentionally carries confidence or popularity, but it can also create runaway head-item bias. The choice must match training, ANN metric, and serving.
 
-$$
-p(i\mid q)=\frac{\exp(s(q,i)/\tau)}{\sum_j \exp(s(q,j)/\tau)},
-$$
+Popularity correction addresses the fact that sampled-softmax or in-batch training does not necessarily estimate the desired deployment score. If negatives are sampled from distribution \(Q(i)\), an item that appears frequently can receive distorted logits. A logQ-style correction subtracts a term proportional to \(\log Q(i)\) from the training logit so the model is not rewarded merely because an item is frequently sampled. The exact correction depends on the objective and sampler; it is not a universal “remove popularity” knob.
 
-so smaller $\tau$ sharpens the distribution and increases gradient emphasis on close competitors. Temperature and normalization therefore need to be considered together.
+Serving must be designed jointly with training. The item tower is usually run in batch or incrementally to produce versioned item embeddings, which are loaded into an ANN index. The user/query tower runs online using sufficiently fresh request features. Model version, item-embedding version, normalization convention, ANN metric, and index version must be compatible. A classic failure is deploying a new query tower against an old item index: exact scoring under matched embeddings may still look fine offline, while ANN production recall collapses because the two sides no longer inhabit the same learned space.
 
-Negative sampling defines the effective training task. Uniform negatives are broad but often too easy; in-batch or popularity-weighted negatives are efficient and harder but change the sampled item distribution. If negatives are sampled from probability $Q(i)$, the learned logits can absorb that sampling bias. A logQ correction adjusts the score used in the sampled-softmax objective, typically by subtracting $\log Q(i)$ from the logit, so the model is not forced to treat frequent sampling itself as evidence that an item should rank lower. The exact correction depends on the sampling objective and assumptions; it should not be added mechanically when those assumptions do not hold.
-
-Serving must be designed with training. Item embeddings are usually recomputed asynchronously and loaded into a versioned ANN index; the online request computes only the user/query embedding and searches that index. This creates a model-index compatibility contract: query-tower version, item-tower version, embedding dimensionality, normalization convention, distance metric, and ANN index version must agree. A new item tower generally requires re-embedding the catalog and building or incrementally updating the index before traffic is switched atomically. Query-side freshness is different: recent session/context features may be incorporated per request, while slower user-state features may come from caches or feature stores. Item-side freshness depends on catalog change rate and embedding refresh cadence.
-
-At Staff depth, I would evaluate the whole retrieval system rather than only the model loss: exact top-$k$ versus ANN Recall@$k$, candidate recall by segment and cold-start slice, latency and p99, index memory/build/update cost, embedding-norm distributions, score distributions, and version/freshness telemetry. If exact retrieval is good but ANN recall drops after a rollout, I would first suspect index configuration, metric mismatch, normalization mismatch, or model/index version skew rather than retraining the model. If both exact and ANN quality degrade, I would move upstream to data, negatives, objective, or representation drift.
+Freshness is asymmetric. Request embeddings often need seconds-to-minutes freshness for session intent, while item embeddings may tolerate minutes-to-hours depending on catalog churn. If item state changes rapidly—availability, policy, inventory, creator status—those constraints should not be encoded only in stale embeddings; use filters, fresh metadata, or downstream reranking. Evaluation should therefore separate representation quality from ANN quality: measure exact-retrieval Recall@K, ANN recall relative to exact top-K, end-to-end candidate recall, latency, index freshness, and segment behavior. A strong two-tower design is a coupled training-and-serving system, not just two neural networks.
 
 ## Learn the Concepts
 
 ### Foundation
 
-The central mental model is: **learn one vector for the request and one vector for every candidate, then retrieve candidates whose vectors are close.**
+A recommendation system often starts with a huge candidate universe: perhaps 10 million items, videos, products, ads, or creators. The system cannot afford to run an expensive model on every possible item for every request. It therefore uses a retrieval stage whose job is to reduce the universe to a manageable candidate set, such as 10M items to 1K–5K candidates.
 
-A recommendation system may need to choose a few hundred candidates from millions of items. Scoring every user-item pair with a heavy neural network is usually too expensive. A two-tower system solves this by separating the computation into two independent encoders:
+A two-tower model solves this by learning two encoders:
 
-- the **user/query tower** turns request-side information into a vector;
-- the **item/content tower** turns each candidate into a vector;
-- the two vectors are compared with a simple similarity function.
+- the **user/query tower** converts request-side context into a vector \(u \in \mathbb{R}^d\);
+- the **item/content tower** converts each candidate item into a vector \(v_i \in \mathbb{R}^d\);
+- a simple similarity function such as \(u^\top v_i\) scores compatibility.
 
-If the user tower produces $u\in\mathbb{R}^d$ and the item tower produces $v\in\mathbb{R}^d$, a common score is
+The important phrase is **separate encoders in a shared space**. Because the item vector does not depend on the current user at scoring time, item embeddings can be precomputed. That property makes indexing possible.
 
-$$
-s(u,v)=u^\top v.
-$$
+#### Why the architecture is called “factorized”
 
-A larger dot product means the vectors are more aligned under the learned geometry.
+Suppose the ideal relevance function were an arbitrary function \(f(x_{\text{user}}, x_{\text{item}})\). If the model needs both sides jointly at every hidden layer, then scoring one user against 10 million items requires 10 million forward passes.
 
-The word **tower** does not imply a particular neural architecture. A tower may contain embedding lookups, MLPs, text/image encoders, feature crosses that stay entirely on one side, or other transformations. The key property is independence: the user tower cannot inspect candidate-specific features while computing $u$, and the item tower cannot inspect request-specific features while computing $v$.
-
-That independence enables **precomputation**. If the catalog has ten million items, the system can compute the ten million item vectors ahead of time and put them in a vector index. At request time it computes one user vector and performs nearest-neighbor search.
-
-Several terms are fundamental:
-
-- **Embedding:** a learned dense vector representing an object or context.
-- **Positive pair:** a request-item pair treated as desirable, such as a clicked, watched, purchased, or otherwise relevant item.
-- **Negative:** an item used as a contrastive alternative to the positive during training.
-- **Candidate generation / retrieval:** the stage that tries to recover a high-recall subset of the catalog.
-- **ANN:** approximate nearest-neighbor search, which trades a small amount of recall for much lower latency or memory cost than exact search.
-- **Recall@$k$ for retrieval:** among the items that should have been retrieved, how many appear in the top $k$ candidates.
-- **Factorization constraint:** the score must separate into a request representation and an item representation so the item side can be precomputed.
-
-A useful distinction is retrieval versus ranking. A retriever answers, "Which few hundred or few thousand items deserve further consideration?" A downstream ranker can then use expensive cross-features such as user-item interactions, real-time inventory, price sensitivity, or pairwise contextual features that the two-tower factorization cannot express directly.
-
-#### Worked example
-
-Suppose a music app has one million songs. A user has recently listened to acoustic folk and indie tracks.
-
-The user tower might use:
-
-- recent artists and genres;
-- long-term listening history;
-- country/language;
-- current device or session context.
-
-It maps those features to
+A two-tower model restricts the score to something like
 
 $$
-u=[0.8,\ 0.1,\ -0.2].
+s(x_{\text{user}}, x_{\text{item}})
+=
+g(x_{\text{user}})^\top h(x_{\text{item}})
 $$
 
-Three song embeddings are
+where \(g\) and \(h\) are the towers. The interaction is delayed until the final vector similarity. This is a **factorization constraint**: it sacrifices arbitrary pairwise interaction in exchange for scalable retrieval.
 
-$$
-v_A=[0.7,\ 0.2,\ -0.1],\qquad
-v_B=[-0.1,\ 0.9,\ 0.4],\qquad
-v_C=[0.6,\ 0.0,\ -0.3].
-$$
+#### A concrete example
 
-Their dot products are
+Imagine a music app with 5 million tracks.
 
-$$
-u^\top v_A=0.60,\qquad
-u^\top v_B=-0.07,\qquad
-u^\top v_C=0.54.
-$$
+The user tower might consume:
 
-So $A$ and $C$ are natural retrieval candidates and $B$ is not. In a real system the ANN index performs this comparison against the whole catalog efficiently rather than looping over every song.
+- user ID;
+- recent listening history;
+- session context;
+- locale;
+- device;
+- time of day.
 
-The important operational insight is that the song vectors can be computed before the request arrives. Only the user vector is request-time work.
+The item tower might consume:
+
+- track ID;
+- artist;
+- genre;
+- language;
+- audio/content representation;
+- freshness or release metadata.
+
+Assume both towers output 128-dimensional vectors. Before serving, the platform computes a vector for every track and inserts those vectors into an ANN index.
+
+When a user opens the app:
+
+1. the user tower computes one 128-D request embedding;
+2. the ANN index retrieves, say, the nearest 2,000 item vectors;
+3. downstream rankers use richer cross-features on only those 2,000 candidates.
+
+The two-tower is therefore a **candidate generator**, not necessarily the final ranker.
+
+#### Important distinctions
+
+**Two-tower vs matrix factorization.** Matrix factorization learns user-ID and item-ID latent vectors directly. A two-tower generalizes this idea by allowing each side to be a learned function of many features. That supports side information and some cold-start behavior.
+
+**Two-tower retrieval vs cross-encoder/ranker.** Two-tower retrieval has weak interaction but scalable search. A cross-encoder or interaction-heavy ranker can model richer pairwise relationships but usually cannot scan the whole catalog.
+
+**Exact nearest-neighbor vs ANN.** Exact search evaluates the similarity to every stored item vector. ANN returns an approximation much faster by avoiding a full scan. ANN introduces a second source of recall loss beyond the model itself.
+
+**Dot product vs cosine similarity.** Dot product depends on both angle and vector magnitude. Cosine depends only on angle. L2-normalizing both embeddings turns dot product into cosine similarity.
 
 ### Core Interview Reasoning
 
-A compact reasoning structure for R08 is:
+A compact reasoning sequence for this question is:
 
-**representation → factorization → training objective → geometry → sampling correction → ANN serving → freshness/versioning → diagnosis.**
+**retrieval goal → factorized architecture → training objective and negatives → embedding geometry → sampling/popularity correction → ANN serving → freshness/versioning → evaluation/failure modes**
 
-#### 1. Representation
+#### 1. Start from the retrieval goal
 
-Define two encoders,
+The first-stage retriever must search a very large candidate universe under a tight latency budget. Its primary obligation is high candidate recall at manageable cost. Final ranking precision is delegated to later stages.
 
-$$
-u=f_\theta(x),\qquad v=g_\phi(y),
-$$
+That framing explains why the architecture is intentionally constrained.
 
-where $x$ is request-side context and $y$ is item-side content or metadata. Both outputs must lie in the same vector space.
+#### 2. Explain the factorized architecture
 
-The user/query tower may use identity, history, session features, context, or query text. The item/content tower may use item ID, metadata, text, images, category, creator, or other item-side signals.
+The request tower and item tower map heterogeneous features into the same embedding space. The final score must be decomposable enough for precomputed items and ANN search, most commonly a dot product.
 
-The towers need not have identical architecture or inputs. They only need compatible output dimension and scoring semantics.
+The benefit is that item computation moves off the online critical path. The cost is reduced cross-feature expressiveness.
 
-#### 2. Factorization constraint
+#### 3. Explain the training objective and negative distribution
 
-The defining constraint is that the score decomposes:
+Positive interaction pairs alone do not define a contrastive objective. Training needs alternatives that the positive should outrank.
 
-$$
-s(x,y)=\operatorname{sim}(f_\theta(x),g_\phi(y)).
-$$
+A common in-batch softmax uses one positive per row and other batch items as negatives. This is efficient because one matrix multiplication produces all pairwise logits.
 
-With dot product, the serving system can precompute $g_\phi(y)$ once per item. This is what makes million-scale retrieval practical.
+But the negative sampler changes the statistical task. Uniform, popularity-biased, in-batch, and hard negatives expose the model to different alternatives. A model can optimize the training loss while learning the wrong retrieval boundary for production.
 
-The limitation is expressivity. A feature like "this user's favorite brand matches this item's brand" can only influence the score through the two independently constructed vectors. A downstream ranker that sees both sides jointly can model richer pairwise interactions.
+#### 4. Explain geometry: normalization, temperature, and norms
 
-The core trade-off is therefore:
+If embeddings are normalized, the score is purely angular. This prevents item norm from becoming an uncontrolled shortcut and makes ANN metric semantics simpler.
 
-**more factorization → cheaper large-scale retrieval, less pairwise expressivity.**
+If not normalized, norms participate in ranking. Popular or frequently updated items can learn larger norms and dominate retrieval. Sometimes that is deliberate, but it must be measured.
 
-#### 3. Training objective and negatives
+Temperature rescales logits before the softmax. Smaller temperature sharpens distinctions and amplifies gradients among similar candidates; larger temperature softens them. It changes optimization geometry, not serving latency directly.
 
-The system needs the positive item to score above alternatives. With one positive item $i^+$ and sampled candidate set $C$, a common softmax-style loss is
+#### 5. Explain logQ/popularity correction
 
-$$
-\mathcal{L}
-=-\log
-\frac{\exp(s(q,i^+)/\tau)}
-{\sum_{j\in C}\exp(s(q,j)/\tau)}.
-$$
+If an item is likely to appear as a sampled negative because it is popular, the raw sampled-softmax problem is not identical to ranking against the true candidate distribution. A correction such as subtracting \(\log Q(i)\) from logits can compensate for the sampling distribution.
 
-The negative set matters because the model only learns distinctions that training exposes. Easy uniform negatives may teach coarse separation. Harder negatives teach fine distinctions but can introduce false negatives or instability.
+The reasoning is:
 
-In-batch negatives are computationally attractive: in a batch of positive pairs, another example's positive item can serve as a negative for the current query. This provides many negatives without separate item encoding, but the batch's item-frequency distribution becomes part of the learning problem.
+sampling process → distorted class frequency → biased logits/gradients → correction tied to sampler probability.
 
-#### 4. Normalization and embedding norms
+It is incorrect to describe logQ as universally “removing popularity.” It corrects a specific sampling-induced term under the assumed objective.
 
-If vectors are L2-normalized,
+#### 6. Explain ANN serving
 
-$$
-\hat u=\frac{u}{\|u\|_2},\qquad
-\hat v=\frac{v}{\|v\|_2},
-$$
+The item tower produces a large embedding table. The ANN index organizes those vectors for fast top-K lookup. The query tower computes the request vector online. The serving score metric must match training geometry: dot product, cosine, or L2 conventions cannot drift silently.
 
-then
+End-to-end retrieval quality has at least two ceilings:
 
-$$
-\hat u^\top \hat v=\cos\theta.
-$$
+1. **representation ceiling:** would exact top-K under the learned embeddings contain the relevant item?
+2. **ANN ceiling:** does the approximate index recover the exact top-K neighbors?
 
-The ranking depends only on angular similarity. This often makes ANN geometry easier to reason about and prevents large norms from winning merely because of scale.
+This decomposition is crucial for debugging.
 
-Without normalization, the score is
+#### 7. Explain freshness and version coupling
 
-$$
-u^\top v=\|u\|\,\|v\|\cos\theta.
-$$
+Item embeddings can be precomputed only if their acceptable freshness allows it. Query embeddings may depend on rapidly changing user/session state and therefore often need online computation.
 
-Norms then become part of the ranking function. That may be useful if norm legitimately encodes confidence, certainty, or item prominence, but it can also create popularity or training-frequency artifacts and unstable score distributions.
+At minimum, production should track:
 
-There is no universal rule that normalized embeddings are always better. The important interview answer is to state what ranking signal normalization removes and to match the ANN metric to the trained geometry.
+- query-tower model version;
+- item-tower model version;
+- item-embedding generation version;
+- ANN index version;
+- normalization/similarity configuration;
+- feature snapshot/version.
 
-#### 5. Temperature
+A new tower should not silently query an index created from incompatible weights.
 
-Temperature scales logits:
+#### 8. Close with evaluation and failure modes
 
-$$
-z_i=\frac{s(q,i)}{\tau}.
-$$
+Measure:
 
-A smaller $\tau$ makes softmax probabilities more concentrated. The loss then reacts more strongly to small score differences among the strongest competitors. A larger $\tau$ smooths the distribution.
+- exact Recall@K on a time-correct evaluation set;
+- ANN recall relative to exact top-K;
+- end-to-end candidate recall;
+- segment/cold-start recall;
+- latency percentiles;
+- index age and embedding freshness;
+- norm distributions if unnormalized;
+- popularity concentration/coverage;
+- online product metrics after downstream ranking.
 
-With normalized embeddings, raw cosine scores live in a bounded range, so temperature is especially important because it controls the effective logit scale. If embeddings are not normalized, changing vector norms can partly play the same scale role, making optimization harder to interpret.
-
-#### 6. Sampling bias and logQ correction
-
-Suppose negatives are sampled from distribution $Q(i)$ rather than from the full catalog uniformly. Popular items may appear many more times during training simply because they are sampled more often.
-
-A sampled-softmax correction can modify the training logit to something like
-
-$$
-\tilde s(q,i)=s(q,i)-\log Q(i).
-$$
-
-Intuitively, if an item appears often because the sampler chooses it often, the model should not confuse that sampling frequency with evidence that the item itself deserves a lower model score.
-
-The correction is not a generic "popularity penalty." It is tied to the probability with which candidates entered the sampled objective. If $Q(i)$ is estimated incorrectly, if the objective is not the sampled-softmax formulation that justifies the correction, or if the serving target intentionally includes popularity effects, blindly applying logQ can be wrong.
-
-#### 7. ANN serving
-
-The serving pattern is asymmetric:
-
-1. run the item tower offline or asynchronously for the catalog;
-2. store item embeddings in a versioned ANN index;
-3. on each request, compute the query/user embedding;
-4. search the ANN index for top-$k$ nearest items;
-5. send those candidates downstream for ranking/reranking.
-
-Exact nearest-neighbor search is useful as an offline reference. ANN introduces an additional approximation error, so evaluation should separate:
-
-- **representation quality:** does exact vector search recover good candidates?
-- **index quality:** does ANN recover the exact-vector top results sufficiently well?
-
-That separation is essential for debugging.
-
-#### 8. Freshness and versioning
-
-The two towers have different freshness properties.
-
-The request tower can incorporate current context at request time: a new query, current session clicks, device, location, or recently updated user state. The practical limit is feature availability and request latency.
-
-The item tower is often precomputed, so an item-model change or item-content change does not affect retrieval until embeddings are refreshed and indexed. Freshness therefore depends on:
-
-- how often item embeddings are recomputed;
-- how quickly new items enter the index;
-- whether updates are incremental or require rebuilds;
-- whether deletes/tombstones are handled correctly;
-- whether the request tower and item index share compatible versions.
-
-The key system invariant is: **a query embedding must be searched against item embeddings produced under a compatible scoring contract.**
+This makes failures localizable instead of treating “retrieval got worse” as one undifferentiated problem.
 
 ### Deeper Reasoning and Derivations
 
-#### Why two towers scale
+#### Factorization is the serving-enabling constraint
 
-Let $N$ be catalog size and $C_f$ the cost of a heavy joint user-item scorer. A naive joint scorer costs roughly $O(NC_f)$ per request because it must evaluate each pair.
-
-A two-tower system pays the item-encoding cost asynchronously. Per request it pays for one query encoding plus ANN search. Depending on the index, ANN may examine only a small fraction of the $N$ items. The architectural gain is not merely a faster neural network; it is the ability to move most candidate-side computation off the request path.
-
-#### Why the factorization loses information
-
-Suppose a desired score depends on a rich interaction $h(x,y)$. A two-tower model requires that this interaction be representable approximately as a dot product of separate embeddings:
+The score
 
 $$
-h(x,y)\approx f(x)^\top g(y).
+s(u,i)=g(u)^\top h(i)
 $$
 
-This imposes a low-dimensional compatibility structure. If an interaction requires highly specific cross-features that cannot be compressed into the shared embedding space, retrieval quality saturates even if the towers become deeper. That is why multi-stage systems often use a two-tower retriever for recall and a joint ranker for precision.
+can be computed in two phases:
 
-#### Why normalization changes the hypothesis class
+1. compute \(h(i)\) once for every item and store it;
+2. compute \(g(u)\) per request and perform nearest-neighbor search.
 
-Without normalization,
-
-$$
-s(u,v)=\|u\|\|v\|\cos\theta.
-$$
-
-The model can improve a score either by changing direction or by increasing norm. With normalization, it can only change direction. Therefore normalization is not a cosmetic numerical trick; it changes which functions the model can represent.
-
-A common failure mode is norm inflation. If increasing norms keeps making the positive softmax logit larger, the model may exploit magnitude instead of learning a well-structured angular space. Regularization, normalization, temperature, and loss design interact with this behavior.
-
-#### Why temperature matters to gradients
-
-For softmax probability
+If the score instead contained an arbitrary joint network
 
 $$
-p_i=\frac{\exp(s_i/\tau)}{\sum_j\exp(s_j/\tau)},
+s(u,i)=F(g(u), h(i), \phi(u,i)),
 $$
 
-smaller $\tau$ enlarges score differences before softmax. For the positive logit, the gradient magnitude is proportional to roughly $(p_{+}-1)/\tau$; for negatives it is roughly $p_j/\tau$. Thus temperature changes not only probability sharpness but also gradient scale and how aggressively the model separates close candidates.
+where \(\phi(u,i)\) contains pairwise interaction features, then the full \(F\) must generally run per candidate. The two-tower architecture therefore trades interaction capacity for the ability to separate offline and online computation.
 
-Very small temperature can make optimization brittle and over-focus on hard examples. Very large temperature can make the task too smooth and reduce separation.
+This trade-off can be viewed as a computational budget allocation: use a low-interaction model where candidate count is enormous, then reintroduce richer interaction after aggressive pruning.
 
-#### Why negative sampling defines the model's effective world
+#### In-batch softmax and temperature
 
-The full-catalog objective asks the positive to beat every other item. Training cannot usually compare against millions of items per example, so it approximates that problem with sampled negatives.
+For a batch of size \(B\), let \(u_i\) be request \(i\)'s embedding and \(v_i\) its positive item. Define logits
 
-If negatives are too easy, the training loss can become low without learning the fine-grained distinctions required at serving. If negatives are too hard, false negatives become common: an item may be unobserved for the current request but actually relevant. In-batch negatives additionally overrepresent items according to the batch sampling process. Therefore candidate sampling is part of the statistical objective, not only an efficiency trick.
+$$
+z_{ij}=\frac{u_i^\top v_j}{\tau}.
+$$
 
-#### Why logQ correction exists
+The probability assigned to item \(j\) for request \(i\) is
 
-Consider a negative sampler that draws popular item $A$ ten times as often as niche item $B$. Without correction, $A$ participates in the softmax denominator far more often. The optimizer can reduce loss by suppressing $A$ more strongly, even when that difference partly reflects sampler frequency rather than user preference.
+$$
+p(j\mid i)
+=
+\frac{\exp(z_{ij})}
+{\sum_{k=1}^{B}\exp(z_{ik})}.
+$$
 
-Subtracting $\log Q(i)$ from the sampled logit compensates for the proposal distribution in objectives where sampled candidates approximate the full softmax. The deeper point is to distinguish three quantities:
+The loss for request \(i\) is
 
-- the **catalog or target distribution** the model should rank over;
-- the **training sampling distribution** $Q$;
-- the **product's intended popularity prior**.
+$$
+\mathcal{L}_i=-\log p(i\mid i).
+$$
 
-They are not automatically the same.
+A smaller \(\tau\) magnifies differences between similarities. If the positive and a hard negative have scores \(0.70\) and \(0.65\):
 
-#### ANN failure versus representation failure
+- at \(\tau=1\), the logit gap is \(0.05\);
+- at \(\tau=0.1\), the gap is \(0.5\).
 
-A clean diagnostic uses exact search as a control.
+Thus temperature changes how strongly the optimization focuses on near-boundary confusions.
 
-If exact top-$k$ quality is healthy but ANN quality is poor, the learned embeddings are probably adequate. Investigate:
+The danger is that extremely low temperature can make a few hard or mislabeled negatives dominate the gradient.
 
-- ANN search parameters;
-- index build errors;
-- wrong distance metric;
-- normalization mismatch;
-- stale or mixed embedding versions;
-- filters that remove neighbors;
-- insufficient search breadth or probes.
+#### Normalization and the role of embedding norms
 
-If exact search is also poor, ANN is not the primary problem. Investigate:
+For unnormalized embeddings,
 
-- training labels;
-- positive-pair construction;
-- negative distribution;
-- false negatives;
-- feature drift;
-- stale user features;
-- tower architecture or capacity;
-- objective mismatch.
+$$
+u^\top v
+=
+\lVert u\rVert \lVert v\rVert \cos\theta.
+$$
 
-This component-isolation logic is one of the most important Staff-level reasoning patterns for retrieval systems.
+Therefore the score can increase either because the vectors point in more similar directions or because their norms grow.
 
-#### Failure modes
+After L2 normalization,
 
-Important failure modes include:
+$$
+\hat u^\top \hat v = \cos\theta.
+$$
 
-- **false negatives:** semantically relevant items are treated as negatives;
-- **sampling bias:** training negatives do not reflect the intended retrieval universe;
-- **popularity distortion:** item frequency leaks into scores or sampling in unintended ways;
-- **embedding norm explosion/collapse:** magnitudes become pathological or vectors lose useful spread;
-- **representation collapse:** many inputs map to insufficiently distinct embeddings;
-- **train/serve mismatch:** serving uses a different similarity metric or normalization convention;
-- **model/index skew:** the query tower and item index come from incompatible checkpoints;
-- **stale item embeddings:** item content changed but the index still reflects old state;
-- **stale user state:** request embeddings omit important recent intent;
-- **ANN recall loss:** approximate search misses neighbors that exact search would return;
-- **cold start:** ID-heavy towers cannot represent unseen users or items well without content/context features;
-- **overly restrictive factorization:** important cross-features cannot be represented at retrieval stage.
+The ranking then depends only on angular alignment.
+
+This is not automatically superior. Norm can sometimes encode useful certainty, popularity, or frequency. The Staff-level question is whether norm is an intentional signal with a monitored interpretation or an accidental shortcut created by the data and objective.
+
+A practical diagnostic is to plot item embedding norm against item frequency/popularity. A strong monotonic relationship may reveal that norm is functioning as a popularity prior.
+
+#### Why sampled negatives alter the objective
+
+Suppose the ideal denominator ranges over all catalog items, but training only samples negatives from \(Q(i)\). Items with larger \(Q(i)\) appear more often and affect gradients more frequently. The sampled training distribution therefore differs from the full-catalog distribution.
+
+Under objectives derived from sampled softmax/noise-contrastive reasoning, the logit can be corrected using the sampling probability, schematically:
+
+$$
+z'_i = z_i - \log Q(i).
+$$
+
+The exact coefficient/form depends on how examples were sampled and how the loss is constructed. The conceptual role is to compensate for known exposure induced by the sampler, not to erase all real-world popularity effects.
+
+If production itself is popularity-skewed and popularity is part of relevance, blindly removing that signal can hurt.
+
+#### Exact retrieval recall versus ANN recall
+
+Let \(T_K(u)\) be the exact top-K items according to the learned embedding score and \(A_K(u)\) be the ANN result.
+
+ANN recall relative to exact retrieval can be measured as
+
+$$
+\operatorname{ANNRecall@K}(u)
+=
+\frac{|T_K(u)\cap A_K(u)|}{|T_K(u)|}.
+$$
+
+Separately, recommendation relevance recall asks whether truly relevant held-out items occur in retrieved candidates.
+
+These metrics answer different questions:
+
+- low exact model recall means the representation/training is poor;
+- high exact model recall but low ANN recall means the index/search configuration is poor;
+- high both but bad online outcomes points downstream or to objective mismatch.
+
+#### Query/item freshness is asymmetric
+
+User intent can change within seconds; item semantics may change more slowly. But some item-side state changes rapidly: availability, inventory, policy eligibility, price, trend status, or creator status.
+
+Embedding all rapidly changing state into the item tower forces expensive re-embedding and index updates. A robust design often separates:
+
+- relatively stable semantic representation in the embedding;
+- fast-changing eligibility/state in filters or fresh side stores;
+- richer context interactions in downstream ranking.
+
+This is a serving consequence of the factorization constraint.
+
+#### Version compatibility is an invariant
+
+Training creates a joint coordinate system. If query tower \(g_{\theta_q}\) and item tower \(h_{\theta_i}\) are trained together, then the resulting vectors are meaningful relative to each other.
+
+Serving query vectors from model version \(M_2\) against item embeddings generated by incompatible version \(M_1\) can destroy that geometry even when vector dimensions match.
+
+The compatibility invariant is therefore stronger than “same schema.” It is:
+
+**same learned embedding-space contract.**
+
+That contract includes weights, preprocessing, normalization, dimension, similarity metric, and sometimes tokenizer/vocabulary or feature definitions.
 
 ### Advanced Staff-Depth Considerations
 
-The reusable Staff-level backbone for this item is:
+Staff reasoning for this item follows:
 
-`Baseline → Change → Mechanism → Measure → Act → Trade-off → Validate`
+**Baseline → Change → Mechanism → Measure → Act → Trade-off → Validate**
 
-Equivalently:
+A two-tower baseline assumes a factorized retrieval score, a known negative-sampling process, compatible embedding geometry, an ANN index built from the matching item tower, and freshness budgets for both request and item state. When something changes—catalog scale, sampler, tower version, freshness need, latency target—the task is to identify which part of that contract breaks, measure the first divergence, redesign the minimum necessary component, and validate both retrieval quality and operational behavior.
 
-`Assumption → Mechanism → Evidence → Decision → Trade-off → Validation`
+Compressed form:
 
-For this question, the baseline is: The baseline is a factorized retrieval system: a request/query tower and item/content tower produce compatible embeddings, the item side is precomputed in a versioned ANN index, the request side is computed online, and a simple similarity retrieves high-recall candidates. Training geometry, normalization/temperature/sampling, ANN metric, and model-index versions form one serving contract.
+**Assumption → Mechanism → Evidence → Decision → Trade-off → Validation**
 
-The eight subsections below apply that same loop from different angles. Each explanation teaches the mechanism first; the filled template then compresses it into a reusable interview scaffold.
+For R08, the main assumptions are factorization, shared-space compatibility, sampler semantics, and freshness. The main observables are exact Recall@K, ANN recall, score/norm distributions, popularity concentration, index age/version, query-embedding latency, and online candidate contribution.
 
 #### 1. Changed Constraints and Transfer Logic
 
-Constraint changes often leave the two-tower abstraction intact while forcing index/lifecycle changes. A 100× larger catalog stresses memory and ANN design; high item churn requires incremental updates/delta indexes; rapidly changing session intent stresses query-side freshness; tighter latency changes ANN breadth, dimension, partitions, and candidate count.
+Two-tower retrieval is robust only while its central invariants remain valid: the score must remain ANN-searchable, query and item embeddings must share a compatible space, and the feature/state used by each tower must meet the product's freshness needs.
 
-A useful reasoning chain is:
+A changed constraint should be propagated mechanistically. For example, suppose product requirements change from daily catalog updates to near-real-time item creation. The representation objective may still be correct, but the assumption that item embeddings can be rebuilt in one nightly batch breaks. That causes new items to be absent or stale in the index, creating a candidate recall failure concentrated in fresh items. The redesign should target the update architecture: incremental embedding generation, delta indexing, or a fallback candidate source—not necessarily the model.
 
-`changed assumption → affected mechanism/stage → invariant → broken assumption → consequence → redesign → metric impact → trade-off → validation`
+Filled template:
 
-**Filled template for this item**
-
-- **Original assumption:** A 5M-item index with current embedding dimension/search settings fits memory and p99.
-- **Changed constraint:** Catalog grows to 500M items while p99 must remain below about 40 ms.
-- **Invariant:** Query and item embeddings remain comparable under the same scoring/normalization contract and retrieval recall stays acceptable.
-- **Broken assumption:** Raw vectors/ANN overhead and search fan-out no longer fit the previous memory/latency architecture.
-- **Consequence:** Memory/replication, shard routing, rebuild time, and approximate-search error become dominant.
-- **Design change:** Reduce/compress dimension, use quantization/partitioning/sharding, tune ANN breadth, and manage shadow/incremental index generations.
-- **Metric impact:** Exact retrieval quality, ANN Recall@K, p99, memory/replica, build/update time, and segment/cold-item recall.
-- **Trade-off:** Compression/partition pruning reduce cost but can lower ANN recall or representation capacity.
-- **Validation:** Capacity benchmark the quality-memory-p99 frontier with exact-search control and rollout/failure tests.
+- Original assumption: item embeddings and the ANN index can be refreshed in large periodic batches.
+- Changed constraint: new items must become retrievable within five minutes.
+- Invariant: query and item embeddings must remain in the same learned space and use the same similarity contract.
+- Broken assumption: nightly item embedding/index refresh is now too stale.
+- Consequence: fresh-item candidate recall collapses even though offline model quality on existing items is unchanged.
+- Design change: add incremental item embedding generation plus a delta/shadow index merged into the serving path.
+- Metric impact: improve fresh-item Recall@K and index-age SLO while monitoring ANN recall and p99.
+- Trade-off: higher serving/index complexity and update cost.
+- Validation: replay recent-item queries against old and incremental paths, then canary with fresh-item slices and version telemetry.
 
 #### 2. Failure Modes and Diagnosis
 
-Always separate representation failure from ANN/index failure. Exact vector retrieval is the control: if exact quality is healthy but ANN quality collapses, investigate metric/normalization/index/search/versioning; if exact quality also degrades, move upstream to data, negatives, tower features, objective, or representation capacity.
+The critical debugging principle is to decompose retrieval into stages:
 
-**Filled template for this item**
+**training data/sampler → tower outputs → exact vector ranking → ANN approximation → filters/fallbacks → downstream ranker → exposure**
 
-- **Symptom:** ANN Recall@100 drops sharply after deployment while exact retrieval on the same embeddings remains strong.
-- **Stage decomposition:** feature/preprocess → query tower → item tower/embedding build → ANN index → filters/shards → candidate output.
-- **Slices:** Index shard, item age, popularity, user/session activity, model/index version, normalization mode, filter path.
-- **Competing hypotheses:** Query/index version skew; wrong ANN metric; normalization mismatch; incomplete shard/index; search breadth too low; filter/tombstone bug.
-- **Discriminating evidence:** Exact-vs-ANN topK, version metadata, norm distributions, index completeness, search-parameter sweeps.
-- **Offline/online comparison:** Reproduce serving normalization, metric, filters, and exact item embedding generation.
-- **Replay/isolation:** Search the same query embeddings against exact vectors and old/new ANN indexes.
-- **First divergence:** ANN/index stage if exact candidate quality is unchanged.
-- **Immediate mitigation:** Route to last healthy index/search config or fallback retrieval channel.
-- **Permanent prevention:** Compatibility bundles, shadow-index validation, exact-vs-ANN regression gates, and atomic rollout.
+Typical failures include:
 
-Memory aid: `Symptom → Slice → Stage → Hypotheses → Evidence → First divergence → Fix`.
+- representation regression;
+- query/item feature skew;
+- normalization or metric mismatch;
+- query tower/item index version skew;
+- stale item embeddings;
+- stale user/session features;
+- ANN search parameter regression;
+- false-negative or sampler-distribution shift;
+- uncontrolled norm/popularity effects;
+- post-ANN filtering that removes too many candidates.
+
+The first diagnostic split is exact versus approximate retrieval. If exact top-K under the deployed embeddings is already poor, focus on data/model/feature geometry. If exact retrieval is healthy but ANN results are poor, focus on index version, metric, build, search parameters, filtering, and corruption.
+
+Filled template:
+
+- Symptom: production candidate Recall@1000 drops immediately after a model rollout.
+- Stage decomposition: query features → query tower → exact embedding scores → ANN index → filtering → candidate output.
+- Slices: model version, index version, user segment, item age, popularity, locale.
+- Competing hypotheses: representation regression; incompatible query tower and item index; ANN parameter/config regression.
+- Discriminating evidence: compare exact top-K using the deployed query and item embeddings; compare ANN recall against that exact set; inspect version tuples.
+- Offline/online comparison: offline matched-version exact retrieval remains healthy while online ANN recall collapses.
+- Replay/isolation: replay production queries against old index/new index and old/new query tower combinations.
+- First divergence: new query tower against old item-embedding index.
+- Immediate mitigation: route back to the previous compatible tower/index pair.
+- Permanent prevention: atomic model+index deployment with explicit compatibility manifests and launch checks.
 
 #### 3. Latency and Resource Trade-offs
 
-Two-tower architecture removes item encoding from the request path but online cost still includes feature fetches, query-tower inference, ANN search, filtering, network/shard fan-out, and serialization. Quality knobs—dimension, ANN breadth, partitions, candidate count, real-time features—must be tuned jointly with p99.
+For first-stage retrieval, the dominant online costs are usually request-tower inference plus ANN lookup, not item-tower computation, because item embeddings are precomputed.
 
-**Filled template for this item**
+A simple critical-path model is
 
-- **Budget:** Retrieval p99 around 40 ms in the large-catalog scenario.
-- **Cost decomposition:** Query features + query tower + ANN/shard routing + filters + network + candidate serialization.
-- **Dominant cost:** ANN/search fan-out and query feature/model cost, depending on index architecture.
-- **Quality driver:** Larger dimension/search breadth/partitions/candidate K and fresher query features can improve recall.
-- **Cost driver:** They increase compute, memory traffic, fan-out, and network/tail latency.
-- **Optimization knobs:** Dimension, float16/int8/PQ, HNSW/IVF-style parameters, partition pruning, query model size, K, caching, batch/colocation.
-- **Fallback/degradation:** Popularity/co-visitation/content/cached candidates or a lower-effort ANN path.
-- **Trade-off curve:** Exact/ANN Recall@K and final product quality versus p95/p99, memory, and QPS cost.
-- **Decision:** Choose ANN/model settings on the knee while preserving critical cold/segment recall.
+$$
+L_{\text{retrieval}}
+=
+L_{\text{query tower}}
++
+L_{\text{ANN}}
++
+L_{\text{filter/merge}}
++
+L_{\text{network/orchestration}}.
+$$
 
-Memory aid: `Budget → Breakdown → Bottleneck → Knobs → Quality loss → Fallback`.
+Quality increases may come from larger embeddings, heavier query towers, more ANN probes/efSearch, or a larger candidate count. Each has a different resource cost. Increasing ANN search effort can recover more exact neighbors but raises CPU/memory bandwidth and p99. Increasing embedding dimension raises index RAM, memory bandwidth, network transfer, and tower compute. Increasing candidate count also pushes cost downstream into hydration and ranking.
+
+Safe optimizations include precomputing stable request features, distilling the query tower, reducing embedding dimension after measured ablation, quantizing vectors, tuning ANN search depth, partitioning the index, batching where traffic allows, and maintaining a cheap fallback retriever.
+
+Filled template:
+
+- Budget: 25 ms p99 for candidate retrieval inside a larger ranking budget.
+- Cost decomposition: 4 ms query tower + 15 ms ANN + 3 ms filtering + 3 ms orchestration.
+- Dominant cost: ANN search and memory access.
+- Quality driver: search depth/probe count and candidate count.
+- Cost driver: index size, embedding dimension, and search breadth.
+- Optimization knobs: vector compression, ANN parameter tuning, partitioning, smaller dimension, query-tower distillation.
+- Fallback/degradation: cached/popularity/co-visitation candidates or lower ANN search depth under overload.
+- Trade-off curve: ANN Recall@K versus p99 latency and RAM.
+- Decision: choose the lowest-cost point that keeps candidate recall above the downstream ranker's required ceiling.
 
 #### 4. Scale and Capacity
 
-At hundreds of millions of items, raw embedding memory is only the start; ANN graph/codebooks/metadata, replication, shards, build time, and rolling generations multiply footprint. Scale planning should include delete/update churn and the capacity to keep old/new indexes simultaneously during safe rollout.
+The first scaling break is often item-index memory rather than neural-network FLOPs. For \(N\) items, dimension \(d\), and \(b\) bytes per coordinate, raw vector memory is approximately
 
-**Filled template for this item**
+$$
+M_{\text{vectors}} = N d b.
+$$
 
-- **Scaling dimension:** Item count grows 5M → 500M with 128-D embeddings.
-- **Baseline scale assumption:** One/few in-memory replicas and straightforward full index rebuilds are manageable.
-- **First bottleneck:** Raw vector + ANN overhead + replication and query fan-out exceed memory/latency budgets.
-- **Second-order effects:** Longer rebuilds, more shards, partial rollout risk, cache effects, and delete/tombstone accumulation.
-- **Architectural response:** Compression/quantization, partitioned/sharded ANN, incremental/delta indexes, controlled replication, and capacity-aware rolling builds.
-- **Partitioning/replication/caching/batching:** Route queries to relevant partitions when safe, replicate hot/critical shards, batch embedding builds, cache hot vectors/results.
-- **Consistency/freshness consequence:** More generations/shards increase mixed-version and partial-index risk.
-- **Operational failure mode:** Query tower points to an incomplete/new index generation and quality collapses without service errors.
-- **Validation:** Memory model, projected QPS/p99, exact-vs-ANN recall, build/update/delete throughput, and failover/canary tests.
+For 100 million items, \(d=256\), and float32 (\(b=4\)), raw vectors alone require about 102.4 GB before ANN graph/centroid/codebook overhead and replication. HNSW can add substantial graph memory; IVF/PQ can reduce resident memory at the cost of approximation and build complexity.
 
-Memory aid: `What grows? → What stops fitting? → What bottlenecks? → How do we partition? → What new failure appears?`.
+As scale increases, secondary bottlenecks appear: index rebuild time, replication cost, update propagation, shard routing, fan-out, and tail latency. “Add machines” is not enough because sharding changes query coordination and consistency.
+
+Filled template:
+
+- Scaling dimension: catalog grows from 10M to 100M items.
+- Baseline scale assumption: full-precision embeddings plus one in-memory ANN replica fit comfortably.
+- First bottleneck: RAM per replica and memory bandwidth.
+- Second-order effects: slower rebuilds, higher replication cost, more shard fan-out, worse p99.
+- Architectural response: compression/quantization plus partitioned ANN and shard-aware routing.
+- Partitioning/replication/caching/batching: replicate hot partitions, cache head-query/request results selectively, batch offline item encoding.
+- Consistency/freshness consequence: more components must receive compatible index updates.
+- Operational failure mode: partial rollout creates mixed index versions across shards.
+- Validation: capacity model plus load test measuring ANN recall, p95/p99, memory, rebuild time, and update lag.
 
 #### 5. Freshness, State, and Versioning
 
-Freshness is multi-clock: current session/user state affects the query embedding, item metadata affects item embeddings, catalog changes affect index contents, and model versions define the geometry itself. A fresh query against stale/incompatible item vectors is still a stale retrieval system.
+Two independent clocks matter:
 
-**Filled template for this item**
+1. **request-side freshness** — recent user/session state used to produce the query embedding;
+2. **item-side freshness** — item features, item embeddings, and the ANN index.
 
-- **State that becomes stale:** User profile, session intent, item content/availability, item embeddings, ANN index, model/preprocessing parameters.
-- **Why freshness matters:** Recent intent/new items/content changes are invisible until represented and indexed; mixed geometry can destroy retrieval.
-- **Required freshness:** Seconds/minutes for session intent; product-dependent minutes/hours for item insertion; atomic for geometry-changing model/index versions.
-- **Refresh cost:** Feature reads, item re-embedding, index insert/delete/rebuild, cache invalidation, and shadow capacity.
-- **Update architecture:** Online query encoding + incremental item embedding/index updates + periodic shadow rebuild/compaction.
-- **Version consistency:** Query tower, item tower, preprocessing, dimension, normalization, distance metric, and ANN index are a compatibility bundle.
-- **Failure from version skew:** Numerically valid embeddings are incomparable across geometry/checkpoint versions.
-- **Fallback:** Keep previous compatible bundle; use fresh-item content side channel until main index catches up.
-- **Measurement:** Session-state age, item embedding age, index insertion lag, generation/version, and recall by age/version.
-- **Decision:** Spend freshness where intent/content churn affects retrieval, while rolling geometry changes atomically.
+Request embeddings may need per-request recomputation because session intent changes rapidly. Item embeddings are often batch or incrementally refreshed. If item availability changes faster than embeddings can be rebuilt, enforce availability as a fresh filter rather than waiting for representation refresh.
 
-Memory aid: `What goes stale? → How fast does it matter? → What does refresh cost? → How do versions stay consistent?`.
+Versioning is a hard correctness contract. The serving request should be traceable to a tuple such as:
+
+\[
+(\text{query-tower model}, \text{item-tower model}, \text{item-embedding build}, \text{ANN index}, \text{feature schema}, \text{similarity config})
+\]
+
+Compatible versions should roll out atomically or through controlled shadow/canary pairs.
+
+Filled template:
+
+- State that becomes stale: session features, item embeddings, catalog eligibility, ANN index.
+- Why freshness matters: stale request state misses current intent; stale item state misses or wrongly includes candidates.
+- Required freshness: request state seconds-to-minutes; semantic item embeddings hours; eligibility near-real-time, depending on product.
+- Refresh cost: tower inference, embedding generation, index insertion/rebuild, cache invalidation.
+- Update architecture: online request tower + incremental item embedding stream + periodic compacted index.
+- Version consistency: compatibility manifest binds tower weights, embedding build, normalization, dimension, and index.
+- Failure from version skew: query vectors search the wrong learned coordinate system, collapsing nearest-neighbor quality.
+- Fallback: previous compatible model/index pair plus non-neural retrieval channel.
+- Measurement: index age, embedding age, update lag, version tuple distribution, fresh-item Recall@K.
+- Decision: keep fast-changing policy/eligibility state out of slow semantic embeddings when possible.
 
 #### 6. Implementation, Serving, and Observability
 
-Training and serving must be designed together. The deployable artifact is not merely a checkpoint; it includes tower checkpoints, preprocessing, normalization/temperature assumptions, item embeddings, ANN metric/index generation, feature schema, and compatibility metadata. Safe rollout builds and validates the candidate-side state before routing matching query embeddings to it.
+A production implementation needs more than two model classes.
 
-**Filled template for this item**
+Training needs reproducible positive-pair construction, sampler logging, duplicate-positive masking, deterministic feature definitions, and evaluation that can run exact retrieval over a manageable corpus.
 
-- **Conceptual object:** A decomposable similarity space supporting precomputed item retrieval.
-- **Training/data implementation:** Build positive/negative pairs, train towers/objective, validate exact retrieval, norm/score behavior, and sampling correction assumptions.
-- **Stored artifact/state:** Query/item tower checkpoints, preprocessing, item embeddings, ANN index, feature schema, metric/normalization config, version manifest.
-- **Serving path:** Fetch request state → query tower → compatible ANN index → filters → topK candidates → downstream ranker.
-- **Component contract:** Dimension, preprocessing, normalization, score/distance metric, tower/index generation, item eligibility.
-- **Logging:** Query/model/index versions, norm/score distributions, ANN parameters, latency, filters, candidate IDs, item age/freshness.
-- **Versioning:** Compatibility bundle with atomic routing pointer and retained previous bundle.
-- **Failure mode:** Exact model quality is healthy but serving uses wrong metric or mixed index generation.
-- **Observability:** Exact-vs-ANN benchmark, serving recall proxies, p99, index completeness, age/version slices, norm/score drift.
-- **Rollback:** Switch routing to the previous complete compatibility bundle.
-- **Testing/replay:** Shadow index, exact-vs-ANN fixtures, canary traffic, and mixed-version rejection tests.
+The item pipeline needs model export, batch/incremental embedding generation, vector validation, index construction, quality checks, version manifests, and publication.
 
-Memory aid: `Train → Store → Serve → Version → Log → Monitor → Roll back`.
+The serving path needs online feature retrieval, query-tower inference, ANN lookup, filters, timeout/fallback behavior, and downstream attribution. Every request should log enough information to reconstruct which model/index pair produced the candidates.
+
+Key observability includes:
+
+- query embedding norm and distribution;
+- item embedding norm distributions;
+- exact-vs-ANN recall from sampled shadow/replay traffic;
+- candidate source contribution;
+- empty/low-candidate rates;
+- index age/update lag;
+- version mismatch counts;
+- p50/p95/p99 by stage;
+- segment recall and popularity/coverage shifts.
+
+Filled template:
+
+- Conceptual object: factorized request/item compatibility score.
+- Training/data implementation: time-correct positive pairs plus explicit negative-sampling policy.
+- Stored artifact/state: item embeddings, ANN index, model weights, feature schema, sampler metadata.
+- Serving path: request features → query tower → ANN lookup → filters → candidate set.
+- Component contract: same embedding dimension, normalization, similarity function, and compatible weight family.
+- Logging: request/model/index versions, latency, candidate IDs/scores, norms, fallback reason.
+- Versioning: immutable versioned model and index artifacts with compatibility manifests.
+- Failure mode: silent mixed-version serving after partial deploy.
+- Observability: exact-vs-ANN replay, version dashboards, candidate recall slices, latency histograms.
+- Rollback: atomically restore the last known-compatible query-tower/index pair.
+- Testing/replay: offline exact retrieval, ANN parity tests, shadow queries, version-skew fault injection.
 
 #### 7. Vertical Transfer
 
-The mechanism should transfer; the assumptions must be re-derived. Use the checklist:
+The invariant that transfers is the same: a request-side representation and candidate-side representation must support cheap similarity search. What changes is the data-generating process, freshness, objective, and candidate semantics.
 
-`labels → candidate sources → objectives → features → constraints → evaluation → experiments → serving/freshness → ecosystem effects`
+**E-commerce/items.** Item availability, inventory, price, seller, and substitution/complement relations matter. Stable semantic embeddings can retrieve candidates, but live inventory and policy must often be enforced outside the vector representation.
 
-Representative verticals:
+**Video/feed.** Session intent can shift quickly, so query embeddings need strong short-term sequence features and very fresh state. Watch/completion labels are richer than clicks, and freshness/diversity may dominate final candidate utility.
 
-- **E-commerce:** **Invariant:** Factorized retrieval transfers. **Different assumption:** Inventory/catalog churn, value, and new-item content matter. **Technical consequence:** Use content-rich item tower with rapid insertion and downstream availability/value ranking.
-- **Video/feed:** **Invariant:** Two-tower retrieval transfers. **Different assumption:** Session intent changes rapidly and content/creator signals dominate. **Technical consequence:** Make query tower session-fresh and item/content embeddings multimodal with fast indexing.
-- **Ads:** **Invariant:** Factorized candidate retrieval transfers. **Different assumption:** Eligibility/targeting, budgets, pacing, and auction logic constrain the candidate universe. **Technical consequence:** Retrieve only eligible campaigns/creatives or combine retrieval with strict eligibility filtering.
-- **Search:** **Invariant:** Query/item towers transfer. **Different assumption:** Exact identifiers/lexical matches may not be preserved by dense geometry. **Technical consequence:** Use lexical/hybrid retrieval in parallel and treat query tower as query encoder.
-- **Marketplace:** **Invariant:** Factorized retrieval transfers. **Different assumption:** Geography, provider availability, and supply health change relevance. **Technical consequence:** Include supply/context features and downstream two-sided constraints.
+**Ads.** Retrieval must respect campaign eligibility, targeting, budgets, policy, and pacing. ANN can retrieve semantically relevant ads, but economic and auction semantics usually belong downstream.
 
-**Filled transfer template — E-commerce**
+**Marketplace.** Provider-side exposure, supply health, and geographic/serviceability constraints can make pure user-item affinity insufficient.
 
-- **Invariant:** Factorized retrieval transfers.
-- **Different data-generating process:** Inventory/catalog churn, value, and new-item content matter.
-- **Different objective:** Re-derive the primary product utility for this vertical rather than copying the base objective.
-- **Different candidates/features:** Candidate sources and features should reflect the vertical-specific context and available signals.
-- **Different constraints:** Inventory/catalog churn, value, and new-item content matter.
-- **Metric change:** Retain transferable stage metrics, then add vertical-specific outcomes and guardrails.
-- **Serving change:** Use content-rich item tower with rapid insertion and downstream availability/value ranking.
-- **Ecosystem effect:** Check creator/provider/seller/advertiser or user-side concentration where relevant.
-- **Validation:** Evaluate both transferable retrieval/ranking quality and the vertical-specific product outcome.
+Filled transfer template for e-commerce:
 
-Memory aid: `Keep the mechanism; re-derive the assumptions.`
+- Invariant: precompute item vectors and retrieve by request-vector similarity.
+- Different data-generating process: clicks/carts/purchases are conditioned on exposure, inventory, and price.
+- Different objective: not just engagement; conversion, value, returns, and customer satisfaction matter.
+- Different candidates/features: products with text/image/category/brand plus user/session intent.
+- Different constraints: availability, seller policy, geographic fulfillment, duplicate variants.
+- Metric change: candidate Recall@K plus conversion-value and coverage slices.
+- Serving change: fresh inventory/eligibility filters after ANN and possibly before downstream ranking.
+- Ecosystem effect: over-retrieving head sellers/items can reduce catalog exposure and long-term supply health.
+- Validation: evaluate head/tail, new-item, out-of-stock, and seller slices online and offline.
 
 #### 8. Objective and Metric Mismatch
 
-A two-tower model can improve its contrastive loss or even exact Recall@K without improving the product if the retrieval objective/sampling distribution is misaligned with final utility. Conversely, ANN can fail execution while the model objective is fine. Use exact-vs-ANN controls first, then evaluate whether recovered candidates are the right candidates for downstream value.
+A two-tower system can execute its intended objective perfectly and still harm the product.
 
-**Filled template for this item**
+**Execution failure** means the system failed to serve the learned objective: stale features, wrong index, ANN recall loss, normalization mismatch, or version skew.
 
-- **Offline/model metric:** Contrastive loss/exact Recall@K improves.
-- **Online/product outcome:** Final engagement/conversion is flat or worse.
-- **Execution verification:** Check exact-vs-ANN recall, query/index versions, normalization/metric, filters, freshness, and candidate survival downstream.
-- **Metric semantics:** Retrieval Recall@K rewards presence of labeled positives in the candidate set.
-- **Blind spots:** Downstream value, candidate diversity, false-negative labeling, sampling bias, pairwise cross-features, and business constraints.
-- **Missing product factor:** The retrieval labels/objective may not match final user/business utility or candidate distribution.
-- **Repair:** Improve positive/negative construction, sampling correction/objective, add complementary retrieval channels, or retrain downstream stages for the new candidate distribution.
-- **Trade-off:** More aligned/harder retrieval training can raise false-negative risk and system complexity.
-- **Online validation:** Exact+ANN retrieval metrics, downstream survival/ranking, p99, segment/cold-start slices, and controlled product experiment.
+**Objective mismatch** means exact retrieval faithfully returns items favored by the learned score, but that score is a poor proxy for product value. For example, optimizing click-based positives may over-retrieve clickbait or familiar head items while hurting purchase conversion, satisfaction, diversity, or long-term retention.
 
-Memory aid: `Did we execute the objective incorrectly, or correctly optimize the wrong objective?`
+The distinction determines the fix. Execution failures need engineering/model-serving repair. Objective mismatch needs changes to labels, sampling, weighting, constraints, or downstream objective design.
+
+Filled template:
+
+- Offline/model metric: exact Recall@200 on held-out clicks.
+- Online/product outcome: conversion and long-term satisfaction fall despite higher click-candidate recall.
+- Execution verification: matched versions, ANN recall, feature parity, and latency are healthy.
+- Metric semantics: offline recall rewards retrieval of previously clicked items, not necessarily purchase/satisfaction value.
+- Blind spots: exposure bias, repeated head items, delayed conversion, diversity, inventory.
+- Missing product factor: purchase intent and user satisfaction.
+- Repair: richer positive weighting/multi-objective labels, exposure-aware negatives, and downstream constraints/reranking.
+- Trade-off: may give up some click recall for higher value or diversity.
+- Online validation: controlled experiment with conversion/satisfaction primary metrics and latency/coverage guardrails.
 
 ## Material Follow-ups / Scenario Variants
 
-### Exact retrieval is strong, but ANN Recall@100 drops sharply after deployment
+### Why not just use a cross-encoder over the whole catalog?
 
-First separate model quality from index quality. Run the new query embeddings against the new item embeddings using exact top-$k$. If exact quality is healthy, the representation is probably not the primary failure.
+A cross-encoder can model richer user-item interactions, but its score cannot generally be decomposed into a request vector and a precomputable item vector. Scoring millions of items online would require millions of pairwise forward passes. Use the two-tower to create a high-recall candidate set, then spend interaction-heavy compute on hundreds or thousands of survivors. The exception is a tiny catalog or a setting where offline precomputation of all request-item pairs is possible.
 
-Then verify, in order:
+### Exact retrieval is good, but production candidate recall is poor. What do you check first?
 
-1. query-tower checkpoint and item-index version;
-2. embedding dimension and preprocessing;
-3. whether normalization is applied identically at train, index-build, and query time;
-4. whether the ANN index uses the intended metric, such as inner product versus cosine/L2;
-5. ANN search parameters and candidate breadth;
-6. index completeness, shard loading, filters, tombstones, and partial rebuilds.
+First compare ANN results with exact top-K under the exact same deployed query and item embeddings. If ANN recall relative to exact is low, inspect index version, similarity metric, normalization, search parameters, filtering, corruption, and partial-shard behavior. If ANN recall is high but relevance recall is low, the problem is in training data, features, sampler, or representation rather than ANN.
 
-A sudden deployment-linked collapse with healthy exact retrieval is especially suggestive of version or geometry mismatch.
+### When should embeddings be normalized?
 
-### The catalog grows from 5M to 500M items, while p99 must stay below 40 ms
+Normalize when angular similarity is the intended semantic contract and you do not want vector norm to act as an implicit popularity/confidence signal. Leave embeddings unnormalized only when norm has a deliberate, validated role and the ANN index supports the matching metric. In either case, training and serving must use the same convention, and norm distributions should be monitored.
 
-The base two-tower model may remain appropriate, but the index strategy must change. Estimate raw embedding memory first. For 500M items with 128 float32 values,
+### What changes if the catalog has extremely rapid item churn?
 
-$$
-500\text{M}\times128\times4\text{ bytes}\approx256\text{ GB}
-$$
-
-before ANN graph/metadata overhead or replication. Multiple replicas can turn this into a terabyte-scale memory problem.
-
-Possible design changes include reduced dimension, float16/int8 or product quantization, partitioned search, sharding, compressed ANN structures, fewer searched partitions, and careful replication. Each optimization must be measured against Recall@$k$ and p99 rather than assumed safe.
-
-### A new item tower is ready, but re-embedding the catalog takes six hours
-
-Do not deploy the new query tower against the old index unless compatibility has been explicitly validated. The safer approach is to build the new item embeddings and a shadow index under a new version, validate it, then switch query-tower and index routing atomically.
-
-If six-hour freshness is unacceptable, redesign the lifecycle: incremental embedding generation for changed items, delta indexes, warm shadow replicas, or a content/popularity fallback channel for very new items. The operational requirement may force the index architecture to change even if the modeling architecture stays the same.
-
-### Two-tower Recall@1000 plateaus even after making both towers much deeper
-
-This can be a structural factorization limit rather than an optimization problem. If relevance depends on rich request-item cross-features that cannot be compressed into independent vectors, deeper separate towers may not fix it.
-
-Possible responses are to add better one-sided features, improve negatives/objective, increase embedding capacity, add additional retrieval channels, or accept that the retriever should optimize recall while a downstream joint ranker handles fine-grained interactions. The key diagnostic is whether exact retrieval in the learned embedding space has saturated despite adequate training and data.
-
-### New items have poor recall even though their metadata is available
-
-Check whether the item tower truly uses content features or mostly memorizes item IDs. An ID-heavy tower has no learned representation for unseen IDs. Strengthen content-derived features, train with cold-start slices, or use a separate content retrieval channel.
-
-Serving also matters: even a good content encoder cannot retrieve a new item before its embedding reaches the index. Separate representation cold start from index-ingestion freshness in both metrics and diagnosis.
+The architecture needs an incremental item-embedding and index-update path, possibly with a small delta index merged with a larger stable index. New items may also need a content-based or popularity fallback before sufficient behavioral data exists. Fresh eligibility should be handled independently from semantic embedding freshness when possible. Rollout must preserve the model/index compatibility contract throughout incremental updates.

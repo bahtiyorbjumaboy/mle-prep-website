@@ -1,13 +1,13 @@
 ---
 type: interview-answer
 item: "2027:R06"
-title: "Collaborative, Content, Co-visitation, Graph, and Hybrid Retrieval"
-created: "2026-10-05"
-updated: "2026-10-05"
+title: "Multi-Channel Recommendation Retrieval"
+created: "2026-10-09"
+updated: "2026-10-09"
 tags:
-  - recommendation
-  - candidate-generation
-  - retrieval
+  - recommendation-systems
+  - candidate-retrieval
+  - collaborative-filtering
   - hybrid-retrieval
 ---
 
@@ -17,433 +17,340 @@ Compare matrix factorization, item-item/co-visitation, content similarity, graph
 
 ## Mastery Answer
 
-I treat these as complementary candidate generators, not mutually exclusive end-to-end recommenders. Candidate generation has one primary job: reduce a huge catalog to a few hundred or thousand plausible items while preserving high recall under a strict latency and compute budget. The downstream ranker can only reorder what retrieval supplies, so missed candidates create a hard quality ceiling.
+I would treat these methods as complementary candidate generators rather than as mutually exclusive replacements. The retrieval stage is trying to produce a relatively small set with high recall for the downstream ranker under strict latency and cost constraints. Each source encodes a different inductive bias, so a strong production system usually fans out across several sources, deduplicates the union, preserves source attribution, and allocates budgets based on marginal recall rather than folklore.
 
-**Popularity/trending** is cheap, robust, and valuable for cold users and fallback, but it is weakly personalized and can reinforce exposure feedback loops. **Item-item/co-visitation** uses behavioral proximity—items viewed, clicked, watched, or purchased together or sequentially. It is interpretable, precomputable, and strong for session/local intent, but new items are sparse and raw co-occurrence inherits popularity and exposure bias. **Matrix factorization** learns low-dimensional user and item factors from interactions, capturing global collaborative structure beyond direct co-occurrence; it is strong for warm users/items but has structural cold-start limits. **Content similarity** uses item metadata or text/image/audio representations, so it can serve new items and semantic substitutes, but it only knows what the content representation captures and can miss collaborative taste or complements. **Graph propagation** uses multi-hop user-item or heterogeneous relations and can capture higher-order structure, but adds update, sampling, hub-bias, and serving complexity. **Learned embedding retrieval**, typically a two-tower design, learns user/query and item embeddings for the retrieval objective and scales with ANN, but introduces negative-sampling bias, false negatives, embedding/index freshness, version compatibility, and the representational constraint of a simple retrieval-time similarity function.
+**Matrix factorization** learns user and item vectors from the interaction matrix. It is strong when collaborative signal is dense enough and latent taste explains behavior, but it struggles with new users/items and can overrepresent historical exposure. It is cheap to serve if user and item factors are precomputed, and ANN can scale retrieval over large catalogs.
 
-In production I usually use **multi-channel fan-out**. Sources run in parallel where possible, each receives a candidate quota, outputs are deduplicated, and source attribution is preserved for ranking features and debugging. Quotas should be based on recall-versus-cost curves and **marginal recall**, not standalone recall. If source B has high Recall@K but returns almost the same relevant items as source A, it may add little value. A lower-standalone-recall content source can be more valuable if it uniquely retrieves relevant cold items.
+**Item-item or co-visitation retrieval** uses observed transitions or co-occurrence such as “users who viewed A also viewed B.” It is simple, interpretable, fresh, and often excellent for session intent, complements, and substitutes. Its weakness is that it can amplify popularity and exposure bias, and sparse items have weak neighborhoods.
 
-Quotas should also adapt to the available signal. Cold users can emphasize popularity and content; warm users can emphasize collaborative or learned embeddings; strong current-session intent can emphasize co-visitation. I would monitor per-source latency and timeouts, candidate counts, overlap, marginal Recall@K, coverage, cold-start slices, freshness, and downstream outcomes. Every source needs a deadline and deterministic fallback. The design principle is not “use every model”; it is to use the smallest complementary set of sources whose union gives strong relevant coverage within the serving budget.
+**Content similarity** retrieves items using metadata, text, image, taxonomy, or other item features. It handles new-item cold start and can enforce semantic similarity, but it may produce narrow or redundant candidates and cannot discover collaborative taste that is absent from content features.
+
+**Graph propagation** treats users, items, creators, categories, or other entities as nodes and interactions as edges. Multi-hop propagation can capture richer relationships than direct co-visitation, but the extra hops increase compute, staleness risk, and popularity leakage; unrestricted propagation can also wash out personalization.
+
+**Popularity or trending** is the simplest source and is indispensable as a robust fallback, especially for new users and source failures. Global popularity is usually too blunt, so I prefer segmented and time-decayed variants. The danger is feedback-loop concentration if popularity becomes both the exposure mechanism and the training signal.
+
+**Learned embeddings**, including two-tower retrieval, learn a representation specifically for the retrieval objective and can combine collaborative, content, and context features. They can generalize beyond exact co-occurrence, but their quality depends heavily on training data, negative sampling, freshness, and index/model version consistency. They also introduce ANN and embedding lifecycle complexity.
+
+In production I would define candidate channels, per-channel budgets, and a deterministic fallback. Suppose the ranker consumes 1,000 unique candidates. I might initially request 400 from learned embeddings, 250 from co-visitation, 150 from MF, 100 from content, and 100 from trending, but the actual allocation should come from **marginal recall**: how many additional relevant items each source contributes after accounting for overlap and cost. I would log source membership for every candidate, deduplicate before expensive feature hydration/ranking, and distinguish source credit from final ranker credit because one item may arrive from several channels.
+
+Evaluation should include per-source recall, union recall, overlap, unique contribution, recall by user/item coldness and session state, latency, failure rate, freshness, and downstream ranker outcomes. A source with high standalone recall can still have low marginal value if another source already retrieves the same items. Conversely, a smaller source may be worth preserving if it uniquely covers cold-start, tail, or intent-shift segments. The Staff-level decision is therefore not “which retrieval algorithm wins?” but “what portfolio of retrieval mechanisms gives the best quality, coverage, robustness, freshness, and cost under the downstream candidate budget?”
 
 ## Learn the Concepts
 
 ### Foundation
 
-A large recommender normally cannot run its most expensive ranking model against every catalog item. A common pipeline is:
+A recommender usually cannot score every item with its most expensive ranking model. If a catalog has millions of items, the system first performs **candidate retrieval**: quickly shrink the universe from millions of items to perhaps hundreds or thousands that have a plausible chance of being relevant. A slower ranker can then use richer features on that much smaller set.
 
-$$
-\text{user/session context}
-\rightarrow
-\text{candidate generation}
-\rightarrow
-\text{ranking}
-\rightarrow
-\text{reranking/constraints}
-\rightarrow
-\text{results}.
-$$
+The central mental model is:
 
-If the catalog has 10 million items but the ranker can score only 500 within the latency budget, candidate generation performs roughly:
+**Different candidate sources are different ways of answering, “What small subset of the catalog is worth spending ranking compute on for this request?”**
 
-$$
-10{,}000{,}000 \rightarrow 500.
-$$
+They differ because they use different evidence.
 
-Its main objective is therefore **high recall**. If a relevant item never enters the candidate set, no downstream ranker can recover it.
+- **Collaborative evidence:** what many users collectively interacted with.
+- **Co-visitation evidence:** what tends to occur near the current item/session.
+- **Content evidence:** what items are intrinsically similar in metadata or representation.
+- **Graph evidence:** what is reachable through useful multi-hop relationships.
+- **Popularity evidence:** what is broadly or recently popular.
+- **Learned representation evidence:** what a trained model predicts to be close in a task-specific embedding space.
 
-A useful retrieval metric is Recall@K. If $G_u$ is the set of relevant items for user $u$ and $C_K(u)$ is the top-$K$ candidate set,
+A candidate generator is not usually responsible for producing the final order. Its first responsibility is **recall under a budget**: avoid losing good items before the ranking stage can see them. This creates a critical retrieval ceiling. If the truly relevant item never enters the candidate set, no downstream ranker can recover it.
 
-$$
-\operatorname{Recall@K}(u)=\frac{|G_u\cap C_K(u)|}{|G_u|}.
-$$
+Suppose a catalog has 10 million products and the final ranker can score only 1,000 per request. Candidate retrieval must reduce 10,000,000 items to roughly 1,000 while retaining as many relevant items as possible. If the best item is absent from those 1,000, even a perfect ranker cannot put it first.
 
-The six candidate-source families answer different questions:
+Several basic terms matter:
 
-- **Popularity/trending:** What is broadly popular or rising now?
-- **Co-visitation:** What tends to be consumed near the item/session the user is in now?
-- **Matrix factorization:** What latent collaborative taste matches this user?
-- **Content similarity:** What is semantically or attribute-wise similar?
-- **Graph propagation:** What is connected through useful higher-order relations?
-- **Learned embeddings:** What representation can be trained to retrieve relevant items for the product objective?
+- **Candidate source/channel:** one retrieval mechanism producing candidate IDs and often a retrieval score.
+- **Fan-out:** querying several candidate sources, often in parallel.
+- **Quota/budget:** how many candidates a source may return.
+- **Deduplication:** merging duplicate item IDs retrieved by multiple sources.
+- **Source attribution:** recording which sources retrieved each item.
+- **Union recall:** recall of the combined candidate set.
+- **Marginal recall:** additional relevant items contributed by one source beyond what the other sources already retrieved.
 
-**Popularity/trending.** Rank items from aggregate interaction counts, often inside a time window or segment. It is extremely cheap, needs no user history, and is a strong fallback. Its main failure is that observed interaction counts mix preference with exposure, so already-visible items can become even more visible.
+A simple example makes this concrete. Imagine a user has just viewed hiking boots. Four sources return 5 candidates each:
 
-**Item-item/co-visitation.** Build item relationships from shared sessions, baskets, clicks, watches, or sequential transitions. A simple score is a co-occurrence count $c_{ij}$; a normalized version may be
+- Co-visitation: hiking socks, waterproof spray, trail shoes, insoles, gaiters.
+- Content similarity: other hiking boots, trail shoes, mountaineering boots, work boots, waterproof boots.
+- Personalized MF: a backpack, trail shoes, trekking poles, wool socks, running shoes.
+- Trending: popular sneakers, a jacket, a backpack, hiking socks, sandals.
 
-$$
-s(i,j)=\frac{c_{ij}}{\sqrt{c_i c_j}},
-$$
+The union has fewer than 20 unique items because some overlap. That overlap is useful evidence, but it also means a source's standalone recall can exaggerate its actual incremental value. If co-visitation and MF both retrieve trail shoes, the second source did not add a new candidate there. If the content source is the only one retrieving new waterproof boots, it may have high marginal value for new-item coverage even if its overall click rate is lower.
 
-which reduces domination by globally frequent items. It is often an excellent baseline for “because you viewed X” and short-term session intent.
+Important distinctions:
 
-**Matrix factorization.** Learn user vectors $p_u\in\mathbb{R}^d$ and item vectors $q_i\in\mathbb{R}^d$ with score
-
-$$
-s(u,i)=p_u^\top q_i.
-$$
-
-The vectors summarize global interaction structure. The model can relate items that rarely co-occur directly because their interaction patterns align in latent space. A new item, however, has little collaborative evidence to determine $q_i$.
-
-**Content similarity.** Represent an item through category, text, image, audio, brand, creator, metadata, or learned content features and retrieve nearby items. It is especially valuable for new items because the representation can exist before behavior arrives. But content similarity may find substitutes while missing behaviorally related complements—for example, shoes and socks may co-occur strongly without being semantically similar.
-
-**Graph propagation.** View users, items, creators, categories, brands, or other entities as nodes connected by edges. Multi-hop paths such as
-
-$$
-u\rightarrow i_1\rightarrow u'\rightarrow i_2
-$$
-
-can expose higher-order relevance. Graph methods become attractive when structure beyond pairwise item similarity carries useful signal. They can also become expensive, biased toward high-degree hubs, or stale if the graph changes quickly.
-
-**Learned embedding retrieval.** A two-tower-style system computes
-
-$$
-z_u=f_\theta(u,\text{context}),\qquad z_i=g_\phi(i)
-$$
-
-and scores with a fast similarity such as
-
-$$
-s(u,i)=z_u^\top z_i.
-$$
-
-Item embeddings can be precomputed and indexed with approximate nearest-neighbor search. The key benefit is learning the retrieval representation for the product task. The key constraint is factorization: the item vector must be usable independently of the request, so arbitrary deep user-item cross-interactions are usually deferred to later ranking.
-
-#### Worked example
-
-Suppose an e-commerce system has a 500-candidate budget after a user views a newly released trail-running shoe. A first allocation might be:
-
-- 100 popularity/trending candidates;
-- 120 co-visitation candidates;
-- 100 collaborative/MF candidates;
-- 100 content-similar candidates;
-- 80 learned-embedding candidates.
-
-Those 500 raw outputs may contain 140 duplicates, leaving 360 unique items after deduplication. The duplicate should appear once, but the system should retain all of its source provenance.
-
-Now suppose MF and co-visitation each have high standalone recall but retrieve nearly the same relevant items. Content retrieval has lower standalone recall but uniquely finds many new products. Content can be more valuable to the hybrid because it contributes **new relevant coverage**.
-
-That is the central idea of R06: candidate-source quality is a portfolio problem, not a leaderboard of individual models.
+1. **Candidate quality is not final-ranking quality.** Retrieval favors recall under cost; ranking favors accurate ordering among retrieved items.
+2. **Similarity is not always preference.** Two items can be semantically similar but not equally desirable to a user.
+3. **Co-occurrence is not causality.** Items co-visited together may reflect exposure patterns, page layout, promotions, or popularity.
+4. **Popularity is not personalization.** It is still valuable as a robust prior or fallback.
+5. **Hybrid retrieval is not merely taking more candidates.** The goal is complementary coverage under a fixed candidate and latency budget.
 
 ### Core Interview Reasoning
 
-A compact answer structure is:
+A strong answer can be reconstructed with the sequence:
 
-1. State candidate generation's objective: high recall under resource limits.
-2. Compare each source by the signal it uses.
-3. Give each source's strongest regime and main failure mode.
-4. Explain why complementary sources should be combined.
-5. Describe fan-out, quotas, deduplication, and attribution.
-6. Measure marginal recall and overlap.
-7. Close with latency, freshness, fallback, and segment-aware behavior.
+**source signal → inductive bias → strengths → blind spots → serving cost/freshness → portfolio role → marginal contribution**
 
-A useful comparison is:
+For each retrieval family, first identify what signal it consumes and therefore what kinds of relevance it can discover. Then reason about when that signal is missing, biased, stale, or expensive. Finally decide what role the source should play in a multi-channel retrieval portfolio.
 
-| Source | Main signal | Strong regime | Characteristic weakness |
-|---|---|---|---|
-| Popularity/trending | Aggregate behavior | Cold start, fallback | Exposure/popularity loop |
-| Co-visitation | Local behavioral proximity | Session/item transitions | Sparse/new-item history |
-| Matrix factorization | Global collaborative structure | Warm users/items | Cold start |
-| Content similarity | Metadata/content semantics | New items, semantic similarity | Misses non-semantic collaborative relations |
-| Graph propagation | Higher-order connectivity | Relational/heterogeneous data | Cost, hubs, freshness |
-| Learned embeddings | Learned retrieval representation | Large-scale personalized retrieval | Sampling/index/freshness complexity |
+**Matrix factorization (MF).** Start with a user-item interaction matrix. MF approximates it using low-dimensional user and item factors, so a user score for item $i$ is often $u^\top v_i$. The learned geometry compresses collaborative patterns: users with similar interaction histories end up near similar items even without explicit item metadata. Strengths are cheap scoring after training, strong collaborative personalization, and a clean latent-factor baseline. Weaknesses are cold start, exposure bias, and limited ability to use rich request context unless extended. In retrieval, the item vectors can be indexed and the user vector used as the query.
 
-#### Marginal recall
+**Item-item / co-visitation.** Count or weight pairs such as items viewed, clicked, watched, or purchased within a session/window. At serving time, current-session items seed a lookup into their neighbors. This is often extremely effective because it captures local intent directly and can refresh quickly. It is also easy to explain. But raw counts favor head items, sparse items have weak neighborhoods, and observed co-visitation reflects the current exposure policy. Normalization, time decay, event weighting, and directional transitions can improve it.
 
-Let $R(S)$ be Recall@K using a set of sources $S$. The incremental value of adding source $j$ is
+**Content similarity.** Represent items using text, image, taxonomy, structured attributes, or hand-engineered features and retrieve nearby items. This directly addresses new-item cold start because a new item can be represented before it has interactions. Content retrieval is especially useful when semantics matter or collaborative data is sparse. Its main limitation is that “looks similar” is not the same as “this user will want it,” and overly literal content matching can reduce discovery and diversity.
 
-$$
-\Delta_j=R(S\cup\{j\})-R(S).
-$$
+**Graph propagation.** Construct a graph containing users/items or richer heterogeneous nodes. One-hop neighbors recover direct co-visitation; multi-hop propagation can uncover transitive structure and combine several relation types. Graph methods can capture richer collaborative structure but require careful control of degree bias, hop count, update cost, and leakage across time. More hops are not automatically better: they can move the signal away from current intent and toward globally popular regions.
 
-This is more informative than standalone recall when sources overlap.
+**Popularity/trending.** Rank by global, segmented, contextual, or time-decayed interaction volume. It is cheap, robust, and has excellent availability, making it a default fallback and a useful source for anonymous/new users. The sophistication lies in the conditioning: trending-in-region-for-this-category-over-the-last-hour is very different from all-time global popularity. Its weakness is concentration and self-reinforcement because exposure creates interactions that create more exposure.
 
-Example:
+**Learned embeddings.** A model learns item and user/query representations so that positives are close and negatives are separated. Two-tower models are a canonical form: an item tower precomputes item embeddings; a user/query tower computes the request embedding online; ANN retrieves nearest items. This can integrate content, collaborative behavior, and context and can generalize beyond literal co-occurrence. It costs more operationally: embedding generation, ANN indexing, negative-sampling correctness, model/index versioning, and freshness all matter.
 
-- Source A Recall@100 = 0.70.
-- Source B Recall@100 = 0.65.
-- Union A+B Recall@100 = 0.72.
+The multi-channel system should not choose one winner. It should answer:
 
-B adds only 0.02 recall.
+1. Which segments or intent regimes does each source cover uniquely?
+2. How much overlap exists?
+3. What is each source's marginal relevant-item contribution per unit latency/memory/compute?
+4. What happens when one source is empty, stale, or unavailable?
+5. What candidate count should each source receive before union and deduplication?
 
-If source C has standalone Recall@100 = 0.35 but A+C gives 0.80, then C adds 0.10 and may deserve more budget despite being weaker alone.
-
-#### Quotas
-
-If every source returns hundreds of candidates without control, the union can overflow downstream feature-hydration and ranking budgets. Assign source quotas $k_j$ subject to constraints such as
+A useful quantitative diagnostic for source $s$ is marginal recall:
 
 $$
-\sum_j k_j\le K_{\text{ranker}}
+\Delta R_s = R(C_{\text{all}}) - R(C_{\text{all}\setminus s}),
 $$
 
-and a latency/compute budget.
-
-Quotas may be fixed initially, then made segment-aware or adaptive. The first 20 candidates from a source may add far more relevant coverage than candidates 481–500, so equal quotas are rarely theoretically optimal.
-
-#### Deduplication and attribution
-
-If item $i$ appears from three sources, store it once in the final candidate set but preserve something like
-
-$$
-\text{sources}(i)=\{\text{covisit},\text{MF},\text{embedding}\}.
-$$
-
-Keep source rank/score/version where useful. Attribution supports ranking features, overlap analysis, incident diagnosis, and source-level monitoring.
-
-#### Retrieval creates a downstream ceiling
-
-If Recall@1000 drops while the ranker's conditional quality on retrieved positives is stable, suspect retrieval. If Recall@1000 is stable but final relevance falls, investigate ranking, features, constraints, calibration, or serving. Stage-localized metrics prevent treating the recommender as one opaque model.
+where $C_{\text{all}}$ is the union of all candidate sources. This measures how much recall is lost when source $s$ is removed from the portfolio. It is more useful than standalone recall when sources overlap heavily.
 
 ### Deeper Reasoning and Derivations
 
-#### Popularity mixes preference with exposure
-
-Observed interaction probability can be decomposed conceptually as
+Candidate generation is an optimization problem under a constrained budget. Let source $s$ return $k_s$ candidates at cost $c_s(k_s)$. If the downstream system allows at most $K$ unique candidates and a latency/resource budget $B$, then conceptually we want to choose source budgets so that
 
 $$
-P(\text{interaction with }i)
-=
-P(\text{exposed to }i)
-P(\text{interaction}\mid\text{exposed},i).
+\left|\bigcup_s C_s(k_s)\right| \le K,
 $$
 
-Ranking by raw interaction count can therefore reward exposure as though it were preference. This creates a feedback loop:
+while resource usage stays under $B$ and expected relevant-item coverage is maximized. Because sources overlap, the gain from increasing $k_s$ is not its raw source recall but its **marginal** contribution after accounting for the current union.
+
+This yields a diminishing-returns view. The first 50 co-visitation candidates may add many relevant items; candidates 451–500 may mostly duplicate what the embedding source already found. A source budget should therefore be tuned from curves such as marginal Recall@K versus source count and latency, not set once and forgotten.
+
+**MF geometry.** For a simple factor model,
 
 $$
-\text{more exposure}\rightarrow\text{more interactions}\rightarrow\text{higher score}\rightarrow\text{more exposure}.
+\hat r_{ui} = u_u^\top v_i.
 $$
 
-Popularity is still useful, but it needs coverage/segment monitoring, freshness windows, and often exploration elsewhere in the system.
+Retrieval becomes maximum inner-product search over item factors $v_i$. MF can discover relationships not encoded in item metadata because the vectors are fitted from interaction patterns. But a new item has no reliably learned $v_i$ unless side information or a mapping into the latent space is provided. That is why cold start is structural, not merely “less data overall.”
 
-#### Co-visitation versus matrix factorization
-
-Co-visitation is primarily local: it records which items occur together or sequentially. Matrix factorization compresses global interaction structure:
+**Co-visitation weighting.** Raw pair count $n(i,j)$ is biased toward popular items. Common corrections include conditional probability-like scores, Jaccard/cosine normalization, pointwise mutual information variants, event-type weights, time decay, and directional windows. Each changes the meaning. For example,
 
 $$
-R\approx P Q^\top.
+P(j\mid i) \approx \frac{n(i,j)}{n(i)}
 $$
 
-This lets MF infer relationships even when an exact item pair does not co-occur often. It trades interpretability for collaborative generalization.
+asks “given exposure/interaction with $i$, how often does $j$ follow?” whereas a symmetric cosine-normalized co-occurrence score reduces some popularity effect. Directional transitions can distinguish substitutes from next-step complements.
 
-#### Why pure MF has cold-start limits
-
-For a brand-new item, the system may have enormous data overall but almost no observations involving that item's factor $q_i$. The issue is therefore not merely “insufficient global data”; the new item's latent location is not identified by collaborative evidence. Content encoders can supply an initial representation before behavior accumulates.
-
-#### Graph propagation and higher-order structure
-
-If $A$ is a graph adjacency matrix, one-hop relationships use $A$, while two-hop connectivity relates to $A^2$. Repeated propagation captures increasingly distant structure, but high-degree nodes can dominate and deep propagation can make representations too similar. Serving also becomes harder unless neighborhoods or embeddings are precomputed.
-
-#### Learned retrieval and ANN
-
-Two-tower factorization is what makes ANN feasible: item vectors are built offline and a request-time vector searches the index. But that creates a version contract. If the request tower uses embedding space $v_2$ while the ANN index contains item embeddings from $v_1$, exact code can still produce bad retrieval because the spaces are incompatible.
-
-The deployable unit may need to version together:
+**Graph propagation.** If $A$ is a normalized adjacency-like operator and $x$ is a seed vector over current nodes, repeated propagation resembles
 
 $$
-(\text{query/user tower},\text{item tower},\text{item embeddings},\text{ANN index},\text{feature schema}).
+x^{(t+1)} = A x^{(t)}.
 $$
 
-#### Failure diagnosis
+One step emphasizes direct neighbors; more steps mix information over increasingly distant neighborhoods. Degree normalization is critical because otherwise high-degree/popular nodes dominate. Excessive propagation causes oversmoothing or popularity collapse: local distinctions disappear as representations or scores become too similar.
 
-**Candidate count looks normal but recall drops:** check stale embeddings, model/index mismatch, ANN parameters, filtering, deduplication bugs, or source distribution shift.
+**Popularity with decay.** Trending can be modeled as a decayed count,
 
-**Aggregate recall is stable but new-item recall collapses:** check content/item encoders, item-feature ingestion, ANN insertion lag, and whether aggregate reporting hides cold-start segments.
+$$
+\text{trend}_i(t) = \sum_{e \in E_i} \exp(-\lambda (t-t_e)),
+$$
 
-**Latency rises after adding a source:** check raw candidate explosion before deduplication, feature hydration on low-value candidates, slow source fan-in, or increased ranker batch size.
+so recent events matter more than old ones. Large $\lambda$ gives fast reaction but high variance; small $\lambda$ is stable but slow. Segmenting by locale, category, device, or surface often produces a better prior than one global list.
 
-**A high-recall source produces no online gain:** check overlap, marginal recall, source depth/truncation, ranker ability to use unique candidates, and objective mismatch.
+**Learned embedding objectives.** With a positive pair $(q,i^+)$ and negatives $i^-$, a contrastive softmax objective may use
+
+$$
+P(i^+\mid q)=\frac{\exp(s(q,i^+)/\tau)}{\sum_j \exp(s(q,i_j)/\tau)},
+$$
+
+where $s$ is typically dot product or cosine similarity and $\tau$ is temperature. The embedding source therefore inherits the biases of the positive/negative sampling process. If unexposed items are treated as negatives, the model can learn the logging policy rather than pure preference. If hard negatives contain false negatives, training can actively repel good items.
+
+**Attribution after deduplication.** If item $i$ is retrieved by sources $A$, $B$, and $C$, retain the set $S_i=\{A,B,C\}$. Do not assign the item only to the first or highest-scoring source. This supports overlap analysis, marginal-value estimation, and debugging. The downstream ranker can optionally use source indicators as features, but that introduces feedback: the source itself may become a learned prior and should be evaluated carefully.
+
+**Offline replay caveat.** Logged interactions expose only a biased subset of the catalog. Candidate recall computed only on historical positives can reward sources that reproduce the old policy. Strong evaluation therefore includes temporal replay, cold/tail slices, candidate-source ablations, and ultimately online experiments. If possible, randomized or exploratory traffic improves the ability to estimate value outside the old exposure policy.
 
 ### Advanced Staff-Depth Considerations
 
-The reusable Staff-level backbone for this item is:
+Staff-level reasoning for R06 follows:
 
-`Baseline → Change → Mechanism → Measure → Act → Trade-off → Validate`
+**Baseline → Change → Mechanism → Measure → Act → Trade-off → Validate**
 
-Equivalently:
+or, compressed:
 
-`Assumption → Mechanism → Evidence → Decision → Trade-off → Validation`
+**Assumption → Mechanism → Evidence → Decision → Trade-off → Validation**
 
-For this question, the baseline is: The baseline is a multi-channel retrieval portfolio. Popularity, co-visitation, MF, content, graph, and learned embeddings contribute different signals; sources fan out under quotas/deadlines, results are deduplicated with provenance preserved, and the union is judged by marginal relevant coverage per unit cost rather than standalone source prestige.
-
-The eight subsections below apply that same loop from different angles. Each explanation teaches the mechanism first; the filled template then compresses it into a reusable interview scaffold.
+For this item, the baseline is a portfolio of candidate generators with known per-source budgets, latency, freshness, and segment coverage. The key mechanisms are how each source produces candidates, where its bias comes from, and how sources overlap. The critical observables are union/marginal recall, overlap, segment coverage, latency, freshness, failures, and downstream outcomes. Decisions change source algorithms or quotas; validation requires replay/ablation plus online testing where policy effects matter.
 
 #### 1. Changed Constraints and Transfer Logic
 
-Constraint changes should reallocate the retrieval portfolio rather than automatically replacing every source. Anonymous traffic favors session/context/content/popularity; stronger short-term intent favors co-visitation/session embeddings; a 50 ms budget removes slow low-marginal-recall sources from the synchronous path; rapid inventory change raises the value of fresh content channels.
+The baseline portfolio assumes a certain catalog size, interaction density, freshness need, user-identification rate, and serving budget. Some invariants should remain: the ranker needs enough relevant candidates, candidate provenance must be preserved, and failures must degrade predictably. Fragile assumptions include dense collaborative history, slowly changing catalogs, and enough latency for several fan-out calls.
 
-A useful reasoning chain is:
+If anonymous traffic suddenly rises, user-factor or personalized embedding channels lose signal, but co-visitation from the active session, contextual popularity, and content channels remain usable. The redesign should move budget toward signals that exist at request time rather than simply returning fewer personalized candidates.
 
-`changed assumption → affected mechanism/stage → invariant → broken assumption → consequence → redesign → metric impact → trade-off → validation`
-
-**Filled template for this item**
-
-- **Original assumption:** Multiple sources can run synchronously within the current retrieval budget.
-- **Changed constraint:** Retrieval must meet roughly 50 ms p99.
-- **Invariant:** Preserve high union recall and segment coverage within ranker capacity.
-- **Broken assumption:** Every candidate source can remain on the synchronous path regardless of tail cost.
-- **Consequence:** Slow or redundant sources dominate p99 without adding enough unique relevant items.
-- **Design change:** Parallelize fan-out, set strict per-source deadlines, precompute neighbors, tune ANN effort, reduce low-marginal quotas, and route sources by segment.
-- **Metric impact:** Track union/marginal Recall@K, overlap, source p99/timeouts, candidate count, and final online impact.
-- **Trade-off:** Removing/shortening sources improves tail latency but can reduce unique coverage for specific cohorts.
-- **Validation:** Source ablations and quota/latency frontiers by segment under production-like load.
+* Original assumption: Most requests have reliable user-history embeddings.
+* Changed constraint: 60% of traffic becomes anonymous or identity is unavailable.
+* Invariant: Preserve high candidate recall within the same total candidate/latency budget.
+* Broken assumption: Long-term user history is available to MF/two-tower user representations.
+* Consequence: Personalized channels become empty or generic, reducing useful recall.
+* Design change: Reallocate quota toward session co-visitation, context-conditioned trending, and content/seed-item retrieval; keep a generic learned context tower if supported.
+* Metric impact: Expect lower long-history personalization metrics but protect session-level Recall@K and conversion.
+* Trade-off: Less individualized taste modeling in exchange for robust anonymous coverage.
+* Validation: Compare anonymous/session slices, per-source marginal recall, and online outcomes before/after quota reallocation.
 
 #### 2. Failure Modes and Diagnosis
 
-Hybrid retrieval incidents should be diagnosed at source and merge boundaries. A normal total candidate count can hide a dead source, stale index, excessive overlap, or dedup/filter bug. Preserve provenance so operators can distinguish source quality, merge logic, and downstream ranking failure.
+The main failures are source outage, stale state, representation/index skew, candidate collapse, popularity domination, over-deduplication/underfill, malformed quotas, and silent loss of a segment-specific source. Diagnose by locating the first stage where the distribution differs from baseline.
 
-**Filled template for this item**
+The relevant chain is:
 
-- **Symptom:** Aggregate candidate count is normal but Recall@K or a segment-specific recall drops.
-- **Stage decomposition:** source generation → per-source topK/version → fan-in → dedup/provenance → filtering/truncation → ranker handoff.
-- **Slices:** Source, user-history, item age, popularity, session intent, geography, timeout/fallback path.
-- **Competing hypotheses:** Source timeout/staleness; quota shift; overlap increase; dedup/filter error; new-item ingestion lag; ranker issue.
-- **Discriminating evidence:** Source-level recall/counts, union/marginal recall, overlap matrix, version/freshness, and survival after merge/filter.
-- **Offline/online comparison:** Reproduce the same active catalog and source versions in evaluation.
-- **Replay/isolation:** Disable or pin one source at a time on identical requests and compare union candidates.
-- **First divergence:** Source output or merge step where relevant unique coverage disappears.
-- **Immediate mitigation:** Increase healthy fallback/source quota or remove the broken source from required fan-in.
-- **Permanent prevention:** Per-source SLOs, provenance, marginal-recall monitoring, versioned indexes, and merge-contract tests.
+**request context → source calls → per-source candidates → union/dedup → feature hydration → ranker → exposure → outcome**
 
-Memory aid: `Symptom → Slice → Stage → Hypotheses → Evidence → First divergence → Fix`.
+A useful signature is: if per-source candidate counts and union recall are stable but online outcomes fall, the problem is likely downstream. If one source's unique contribution disappears while its raw count stays constant, the source may have become redundant or stale.
+
+* Symptom: Aggregate CTR drops and tail-item exposure collapses after a retrieval deployment.
+* Stage decomposition: Request eligibility → each source output → overlap/dedup → final candidate set → ranker → exposure.
+* Slices: Head/tail items, new items, new users, session depth, locale, device.
+* Competing hypotheses: Embedding index skew; popularity quota increased; co-visitation table stale; dedup underfilled the set.
+* Discriminating evidence: Version IDs, per-source unique counts, overlap matrix, tail Recall@K, candidate-set size after dedup.
+* Offline/online comparison: Replay old and new retrieval stacks on identical requests; compare candidate diff before ranking.
+* Replay/isolation: Disable one changed source at a time or replay with fixed downstream ranker.
+* First divergence: Candidate union loses unique tail items before ranking.
+* Immediate mitigation: Roll back source/config or raise fallback quota from a healthy channel.
+* Permanent prevention: Version contracts, source-level SLOs, overlap/marginal-recall monitoring, and canary candidate-diff checks.
 
 #### 3. Latency and Resource Trade-offs
 
-Retrieval latency is a portfolio problem. Parallel fan-out only helps if the merge does not wait on slow required dependencies, and raw candidate volume can increase downstream ranking cost. Source inclusion should be justified by marginal recall per unit of p99/compute, with deterministic degradation when a source misses its deadline.
+Candidate retrieval spends quality budget to buy recall. The main costs are source fan-out latency, ANN probes, graph/co-visitation lookups, network calls, candidate transfer, deduplication, and downstream feature hydration proportional to unique candidate count. Parallelizing sources makes total retrieval latency closer to the slowest source than the sum, but tail latency and timeout probability become important.
 
-**Filled template for this item**
+A useful decomposition is
 
-- **Budget:** About 50 ms for retrieval before downstream stages.
-- **Cost decomposition:** Query/context prep + parallel source lookups + ANN/co-visitation/cache/network + merge/dedup/filter/truncation.
-- **Dominant cost:** Slow tail source or broad ANN/fan-out, plus excessive raw candidate volume before dedup.
-- **Quality driver:** More source depth and complementary channels raise union recall.
-- **Cost driver:** More fan-out/search effort/candidates increase p99, memory, network, and downstream workload.
-- **Optimization knobs:** Per-source K, deadlines, ANN breadth, precomputed neighbors, caches, adaptive routing, early merge/truncation.
-- **Fallback/degradation:** Continue with healthy sources and safe popularity/content/session candidates if minimum coverage remains.
-- **Trade-off curve:** Union/marginal recall and segment coverage versus source/overall p99 and candidate cost.
-- **Decision:** Keep synchronous only sources whose incremental coverage justifies tail cost for the request segment.
+$$
+L_{\text{total}} \approx \max_s L_s + L_{\text{merge/dedup}} + L_{\text{downstream}},
+$$
 
-Memory aid: `Budget → Breakdown → Bottleneck → Knobs → Quality loss → Fallback`.
+when sources execute in parallel. Increasing a source's quota can also increase downstream ranking cost even if retrieval itself is cheap.
+
+* Budget: 25 ms p99 for candidate generation, 1,000 unique candidates total.
+* Cost decomposition: Parallel source calls + ANN/co-visitation lookup + merge/dedup + serialization.
+* Dominant cost: Slow ANN/graph tail plus downstream cost from excess unique candidates.
+* Quality driver: Union relevant-item recall and unique segment coverage.
+* Cost driver: ANN probes, graph expansion, remote calls, and total unique candidates.
+* Optimization knobs: Reduce low-marginal quotas, cache hot neighbors, precompute item neighbors, tune ANN search breadth, parallelize independent sources, early-stop after sufficient unique candidates.
+* Fallback/degradation: Drop the slow optional source and replace with cached segmented popularity or co-visitation.
+* Trade-off curve: Marginal Recall@K versus p99 latency and candidate count.
+* Decision: Spend latency on sources with high unique contribution, not high redundant standalone recall.
 
 #### 4. Scale and Capacity
 
-As the catalog grows, retrieval families stress different resources. Exact/content scans become infeasible; learned embeddings need larger ANN indexes; co-visitation neighbor tables and graph neighborhoods expand; MF/item factors grow in memory. The ranker budget can remain fixed if retrieval infrastructure absorbs catalog growth.
+As item count grows, exact vector search and large item-item tables stop fitting comfortably; as event volume grows, co-visitation updates and graph maintenance become expensive; as QPS grows, fan-out multiplies backend load. The first broken assumption depends on the source. MF/item embeddings mainly stress index memory and ANN throughput, while co-visitation stresses pair storage/update volume and graph propagation stresses neighborhood expansion.
 
-**Filled template for this item**
+Partitioning must preserve semantics. Sharding an ANN index by arbitrary item ID may require fan-out to every shard; semantic/category partitions can reduce fan-out but risk recall if routing is wrong. Co-visitation tables often need top-neighbor truncation rather than storing all pairs.
 
-- **Scaling dimension:** Catalog grows about 100× while downstream ranker capacity stays roughly fixed.
-- **Baseline scale assumption:** Source indexes/tables fit comfortably and can be rebuilt/refreshed in current windows.
-- **First bottleneck:** Index/table memory, ANN/search work, graph/neighbor storage, and rebuild/update lifecycle.
-- **Second-order effects:** More shards, routing/fan-out, cache pressure, replication cost, and stale partial updates.
-- **Architectural response:** ANN/compression, partitioning/sharding, precomputed neighbors, bounded graph retrieval, adaptive source quotas, and incremental index lifecycle.
-- **Partitioning/replication/caching/batching:** Partition by semantics/region when valid; replicate hot serving state; cache head/session neighbors; batch updates.
-- **Consistency/freshness consequence:** Each source may run a different generation; merge provenance must expose source version/freshness.
-- **Operational failure mode:** One stale/partial source silently loses a segment while aggregate union looks stable.
-- **Validation:** Source/union recall, p99, memory, build/update time, and cold/head/tail slices at projected scale.
-
-Memory aid: `What grows? → What stops fitting? → What bottlenecks? → How do we partition? → What new failure appears?`.
+* Scaling dimension: Catalog grows from 1M to 100M items while QPS grows 20x.
+* Baseline scale assumption: One in-memory ANN cluster and large hot co-visitation tables fit comfortably.
+* First bottleneck: ANN memory/replication and fan-out throughput.
+* Second-order effects: Rebuild duration, cache pressure, tail latency, index replication cost.
+* Architectural response: Sharded/partitioned ANN, compressed vectors, tiered storage, top-N co-visitation truncation, query-aware routing.
+* Partitioning/replication/caching/batching: Replicate hot partitions, cache head-item neighbors, batch ANN queries where possible.
+* Consistency/freshness consequence: More shards and replicas increase mixed-version risk during updates.
+* Operational failure mode: Partial shard outage silently reduces recall for certain item segments.
+* Validation: Load test p99/QPS plus per-shard and per-segment recall under failure injection.
 
 #### 5. Freshness, State, and Versioning
 
-Hybrid systems intentionally mix signals with different time scales. Trending is fresh/noisy, MF is stable/slower, co-visitation may need temporal decay, content changes with catalog metadata, and learned embeddings depend on vector/index refresh. Freshness should be measured per source, not hidden behind one pipeline timestamp.
+Different sources decay at different rates. Trending may need minute-scale freshness; session co-visitation may need near-real-time updates; MF factors may refresh daily; learned embeddings and ANN indexes may refresh on model or catalog cadence. New items require a path into content or learned indexes before enough collaborative history exists.
 
-**Filled template for this item**
+Version coupling matters most for learned retrieval: a query embedding from model version $v_2$ should not normally search an item index built with incompatible $v_1$ embeddings. Co-visitation tables also need event-window and schema versions so offline replay can reproduce what served.
 
-- **State that becomes stale:** Trending counts, co-visitation neighbors, MF factors, item/content embeddings, ANN indexes, graph edges, inventory/eligibility.
-- **Why freshness matters:** Source relevance and item eligibility decay at different rates; stale sources can dominate quotas.
-- **Required freshness:** Near-real-time for inventory/trending/session signals; product-dependent for collaborative/graph representations.
-- **Refresh cost:** Recompute factors/embeddings/neighbors, index insertion/deletes, graph updates, cache invalidation.
-- **Update architecture:** Mix streaming counters/session paths with incremental item/index updates and slower periodic collaborative retraining.
-- **Version consistency:** Per-source scores/provenance must include source/model/index generation.
-- **Failure from version skew:** Merge compares candidates from stale/new representations without visibility into the mismatch.
-- **Fallback:** Route toward fresh content/popularity/session sources when slower collaborative/index sources are stale.
-- **Measurement:** Source age/version, index insertion lag, freshness-sliced recall, timeout/fallback rate.
-- **Decision:** Allocate quota partly by signal freshness when staleness materially affects unique coverage.
-
-Memory aid: `What goes stale? → How fast does it matter? → What does refresh cost? → How do versions stay consistent?`.
+* State that becomes stale: User/item embeddings, ANN index, co-visitation neighbors, trending counts, catalog availability.
+* Why freshness matters: Stale candidates miss new inventory/intent and may surface unavailable items.
+* Required freshness: Seconds/minutes for session/trending; hours/days for slower collaborative factors depending on product.
+* Refresh cost: Event aggregation, embedding inference, index inserts/rebuilds, cache churn.
+* Update architecture: Hybrid streaming for session/trending and incremental/batch refresh for embeddings/factors.
+* Version consistency: Stamp model, embedding, index, neighbor-table, and catalog versions in serving/logs.
+* Failure from version skew: Query vectors search an incompatible item space or stale neighbors point to invalid inventory.
+* Fallback: Route to content/co-visitation/popularity sources with known-compatible state.
+* Measurement: Candidate freshness age, stale-ID rate, source recall by item age, version-mismatch counters.
+* Decision: Allocate freshness budget by how quickly each signal's value decays.
 
 #### 6. Implementation, Serving, and Observability
 
-A production hybrid needs an explicit merge contract, not blind concatenation. Candidate identity, per-source quota/deadline, source rank/score/version, deduplication, filters, truncation, fallback, and attribution must be defined and logged. This provenance is also useful as downstream ranker features and for ablations.
+A production hybrid retriever needs more than algorithms. Training jobs build factors/embeddings; streaming or batch aggregation builds co-visitation/trending state; content pipelines create searchable item representations; serving fans out to these stores/services, merges and deduplicates candidates, annotates provenance, and sends the final set downstream.
 
-**Filled template for this item**
+Each candidate should carry at least item ID, source membership, source-specific score(s), retrieval timestamp/version, and optional reason/context. The system should log both requested and returned counts because underfill is itself a failure. Replay requires reconstructing request context and source versions.
 
-- **Conceptual object:** A union of complementary source candidates optimized for marginal relevant coverage under cost.
-- **Training/data implementation:** Evaluate each source and source combinations on stage-faithful labels; estimate overlap/marginal recall by segment.
-- **Stored artifact/state:** Per-source indexes/tables/models, routing/quota config, fallback lists, source compatibility/version metadata.
-- **Serving path:** Request → parallel routed sources → per-source deadline/K → merge/dedup/provenance → filters/truncation → ranker.
-- **Component contract:** Stable item identity, source attribution, quota/deadline semantics, eligibility, and score metadata.
-- **Logging:** Source returned? rank/score/version/latency, duplicate set, filter/drop reason, final source contributions, fallback path.
-- **Versioning:** Each source artifact and merge/routing config.
-- **Failure mode:** High standalone recall source adds no marginal value but consumes p99/ranker budget, or a source disappears silently.
-- **Observability:** Source/union/marginal recall, overlap, counts, p99, timeouts, coverage, cold slices, final survival.
-- **Rollback:** Revert routing/quota/source version independently while preserving a safe candidate floor.
-- **Testing/replay:** Fixed requests should reproduce per-source and merged candidate identities/provenance.
-
-Memory aid: `Train → Store → Serve → Version → Log → Monitor → Roll back`.
+* Conceptual object: Multi-source candidate set with provenance.
+* Training/data implementation: Interaction logs for MF/embeddings/co-visitation; item content pipeline; time-decayed aggregates.
+* Stored artifact/state: Factor tables, vector indexes, neighbor lists, graph/index state, trending lists, catalog filters.
+* Serving path: Parallel source fan-out → timeout handling → merge/dedup → quota/fill policy → downstream ranking.
+* Component contract: Each source returns candidate IDs, scores, version, freshness metadata, and status within deadline.
+* Logging: Per-source latency/count/status, candidate provenance, overlap, post-dedup count, request slice.
+* Versioning: Model/index/table/config versions carried end-to-end.
+* Failure mode: Source times out or returns stale/invalid candidates without obvious service failure.
+* Observability: Source SLOs, marginal recall dashboards, underfill, overlap, stale-ID rates, segment coverage.
+* Rollback: Versioned source/config deployment and deterministic fallback quotas.
+* Testing/replay: Fixed-request candidate diffs, temporal replay, failure injection, dedup/quota invariants.
 
 #### 7. Vertical Transfer
 
-The mechanism should transfer; the assumptions must be re-derived. Use the checklist:
+The invariant across verticals is the same: combine candidate mechanisms whose biases and coverage are complementary. What changes is the data-generating process, intent horizon, objective, and freshness requirement.
 
-`labels → candidate sources → objectives → features → constraints → evaluation → experiments → serving/freshness → ecosystem effects`
+- **E-commerce/items:** Co-visitation captures complements/substitutes, content handles new SKUs, availability/inventory filters are hard constraints, and purchase conversion is delayed/sparse.
+- **Video/feed:** Session intent changes rapidly, so recent-sequence/co-visitation and learned embeddings often need more budget; freshness and creator diversity matter more.
+- **Ads:** Candidate eligibility, budget, pacing, and auction constraints dominate; a candidate source with good relevance but invalid campaign eligibility has zero practical value.
+- **Marketplace:** Retrieval must consider both consumer relevance and provider/supply health; popularity-only channels can concentrate exposure dangerously.
+- **Notifications:** Candidate volume is smaller and interruption cost is high, so precision and eligibility may dominate broad recall.
 
-Representative verticals:
+Representative transfer to video/feed:
 
-- **Video/feed:** **Invariant:** Multi-source complementarity transfers. **Different assumption:** Session intent, recency, creator/content diversity, and sequential consumption matter more. **Technical consequence:** Give more quota to fresh/session/co-visitation/content sources and monitor creator/topic coverage.
-- **E-commerce:** **Invariant:** Portfolio retrieval transfers. **Different assumption:** Availability, inventory, substitutes/complements, new-item content, and seller constraints matter. **Technical consequence:** Use content/co-visitation/collaborative channels with fresh eligibility filtering.
-- **Ads:** **Invariant:** Fan-out/merge transfers. **Different assumption:** Targeting/eligibility, pacing, auction semantics, and strict latency constrain candidates. **Technical consequence:** Route only eligible campaign/creative sources and treat budget/pacing state as first-class.
-- **Marketplace:** **Invariant:** Complementary retrieval transfers. **Different assumption:** Provider geography/supply and two-sided exposure health matter. **Technical consequence:** Measure provider-side coverage/concentration alongside consumer recall.
-- **Notifications:** **Invariant:** Source portfolio transfers. **Different assumption:** The candidate universe and exploration budget are smaller because sends are intrusive. **Technical consequence:** Use conservative sources and stronger suppression/frequency constraints.
-
-**Filled transfer template — Video/feed**
-
-- **Invariant:** Multi-source complementarity transfers.
-- **Different data-generating process:** Session intent, recency, creator/content diversity, and sequential consumption matter more.
-- **Different objective:** Re-derive the primary product utility for this vertical rather than copying the base objective.
-- **Different candidates/features:** Candidate sources and features should reflect the vertical-specific context and available signals.
-- **Different constraints:** Session intent, recency, creator/content diversity, and sequential consumption matter more.
-- **Metric change:** Retain transferable stage metrics, then add vertical-specific outcomes and guardrails.
-- **Serving change:** Give more quota to fresh/session/co-visitation/content sources and monitor creator/topic coverage.
-- **Ecosystem effect:** Check creator/provider/seller/advertiser or user-side concentration where relevant.
-- **Validation:** Evaluate both transferable retrieval/ranking quality and the vertical-specific product outcome.
-
-Memory aid: `Keep the mechanism; re-derive the assumptions.`
+* Invariant: Preserve complementary high-recall candidate coverage before ranking.
+* Different data-generating process: Watch, skip, completion, and short-session sequence dominate over sparse purchases.
+* Different objective: Immediate satisfaction plus longer-session/retention proxies.
+* Different candidates/features: Fresh creators/content, sequence neighbors, embeddings, social graph.
+* Different constraints: Freshness, diversity, creator caps, safety.
+* Metric change: Watch/completion/session metrics plus candidate recall on fast-changing interests.
+* Serving change: More real-time session-state retrieval and faster index refresh.
+* Ecosystem effect: Over-concentration can suppress creator discovery and narrow content diversity.
+* Validation: Session-intent slices, fresh-item coverage, creator distribution, online experiments.
 
 #### 8. Objective and Metric Mismatch
 
-A source or union can improve Recall@K without improving the product if the new candidates are redundant, poorly scored downstream, filtered away, or irrelevant to the actual objective. Distinguish retrieval execution from objective alignment: first prove the candidates survive and are correctly processed; then ask whether recall labels represent product value.
+Two failures must be separated. **Execution failure** means the retrieval portfolio did not correctly serve its intended candidates: stale index, wrong quota, timeout, version mismatch. **Objective mismatch** means it correctly optimized the chosen retrieval metric, but that metric did not represent product value.
 
-**Filled template for this item**
+For example, union Recall@1000 may improve by adding many popular items that are historically clicked, yet downstream conversion or satisfaction can fall because the new candidates crowd out fresh, diverse, high-value, or segment-specific items. High offline recall can also merely reproduce the historical exposure policy.
 
-- **Offline/model metric:** Source/union Recall@K improves.
-- **Online/product outcome:** Final engagement/conversion is flat or worse.
-- **Execution verification:** Confirm new candidates survive merge/dedup/filter/pre-rank/rank/rerank and are actually exposed.
-- **Metric semantics:** Recall@K rewards recovering labeled relevant items somewhere in the candidate set.
-- **Blind spots:** Candidate rank/depth, source redundancy, downstream feature quality, business constraints, value, and exposure.
-- **Missing product factor:** Unique candidates may not add top-slate utility or may target the wrong behavioral label.
-- **Repair:** Optimize marginal recall by segment, retrain downstream ranker on new distribution, revise labels/source routing, or reduce redundant sources.
-- **Trade-off:** More retrieval diversity/recall consumes latency and ranker capacity and may add noisy candidates.
-- **Online validation:** Source/quota ablations with union recall, downstream survival, final slate metrics, p99, and product outcomes.
-
-Memory aid: `Did we execute the objective incorrectly, or correctly optimize the wrong objective?`
+* Offline/model metric: Historical-positive Recall@1000 and per-source recall.
+* Online/product outcome: Conversion, watch quality, satisfaction, retention, revenue, or other surface goal.
+* Execution verification: Confirm source versions, quotas, candidate counts, latency, and exact candidate diffs.
+* Metric semantics: Offline recall asks whether logged positives are present, not whether the new candidate mix improves decisions under a changed exposure policy.
+* Blind spots: Exposure bias, diversity, novelty, value, delayed outcomes, cold/tail users/items.
+* Missing product factor: Unique value of candidates to the downstream objective, not just historical positive recovery.
+* Repair: Add slice metrics, marginal recall, downstream rerank replay, constraint/coverage metrics, and online experimentation.
+* Trade-off: Broader or more diverse retrieval may slightly reduce historical-positive recall while improving true product outcomes.
+* Online validation: A/B test portfolio/quota changes with source-level logging and guardrails.
 
 ## Material Follow-ups / Scenario Variants
 
-### Why not just use the source with the best standalone Recall@K?
+### A source has the best standalone Recall@500. Should it get the largest quota?
 
-Because hybrid retrieval optimizes the union. A high standalone source may overlap almost completely with an existing source. Compare marginal recall, overlap, latency/cost, segment coverage, and downstream impact. A weaker standalone source can be more valuable if it contributes unique relevant items.
+Not necessarily. Standalone recall ignores overlap. If that source mostly retrieves items already found elsewhere, increasing its quota may add few unique relevant items while increasing latency and downstream ranking cost. Compare marginal recall curves as quota changes, segmented by user/item regime, and normalize by cost. Preserve sources that uniquely cover important slices even when their aggregate standalone recall is smaller.
 
-### How should candidate quotas be chosen?
+### Collaborative sources collapse for new items. How should hybrid retrieval respond?
 
-Start with per-source recall-versus-candidate-count curves, overlap, and serving cost. Allocate budget toward marginal relevant coverage per unit cost, subject to ranker capacity and latency. Then make quotas segment-aware where signal availability differs, such as cold versus warm users. Re-estimate after model or traffic changes.
+Route new items through content or metadata embeddings immediately, use segmented popularity/trending where appropriate, and reserve exploration capacity so the system can collect behavioral evidence. The downstream ranker should know item age/history sparsity so it does not systematically suppress these candidates. Evaluate new-item recall/exposure separately rather than letting head inventory dominate aggregate metrics.
 
-### A source times out. Should the request fail?
+### Why not train one learned embedding model and delete the hand-built channels?
 
-Normally no. Use source deadlines and deterministic degradation. Continue with healthy sources and fallback candidates while recording the degraded path. The response must still satisfy minimum candidate count and hard constraints.
+A single learned model can simplify serving and may absorb several signals, but it creates correlated failure modes and may not match the strengths of specialized channels. Co-visitation can react faster to session intent, popularity is a robust fallback, content may cover brand-new items, and hand-built eligibility/graph relations can encode semantics the learned objective underweights. Remove a channel only after ablation shows low marginal value across important slices and after failure/freshness behavior is acceptable.
 
-### How does a 50 ms retrieval budget change the design?
+### Candidate count is fixed, but adding sources keeps underfilling after deduplication. What do you do?
 
-Favor precomputed neighbors, efficient ANN, parallel fan-out, strict source deadlines, and early pruning. Tune candidate count and ANN search effort against Recall@K and p99. A source with tiny incremental recall but bad tail latency may need to leave the synchronous path.
-
-### How is hybrid retrieval different from concatenating outputs?
-
-A production hybrid has an explicit merge contract: quotas, deadlines, score/rank semantics, deduplication, provenance, filters, truncation, fallback, and incremental-value measurement. Blind concatenation can increase candidate volume and latency without increasing useful coverage.
+Separate **requested count** from **unique post-dedup count**. Over-request from overlapping sources based on historical duplication rates, then run a fill policy from prioritized fallback channels until the unique target is reached or a deadline is hit. Monitor underfill by slice. Do not blindly increase all quotas because that can increase latency and preserve the same overlap pattern.

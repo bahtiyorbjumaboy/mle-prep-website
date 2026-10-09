@@ -1,15 +1,15 @@
 ---
 type: interview-answer
 item: "2027:R03"
-title: "Training-set construction and point-in-time correctness"
-created: "2026-09-27"
-updated: "2026-10-05"
+title: "Training-Set Construction and Point-in-Time Correctness"
+created: "2026-10-09"
+updated: "2026-10-09"
 tags:
-  - recommendation
+  - recommendation-systems
   - training-data
   - point-in-time-correctness
-  - leakage
-  - attribution
+  - temporal-leakage
+  - data-quality
 ---
 
 ## Canonical Staff-Depth Question
@@ -18,541 +18,412 @@ Starting from impression, click, watch, cart, purchase, hide, dwell, and catalog
 
 ## Mastery Answer
 
-I would start by defining the training row grain and the prediction decision time. For a recommendation ranker, a common grain is one `(request or impression, user, item)` candidate row at time $t_0$, with only information that was available by $t_0$ eligible as features. The label is then defined from future behavior inside an explicit attribution window, for example click within 30 minutes, purchase within 7 days, or watch time accrued after the impression. That separates feature time from outcome time and makes point-in-time correctness testable.
+I would start by defining the **prediction decision** and the **row grain**, because every other choice depends on what one row means. For a ranking model, a common grain is one `(request or impression, user, item, decision_time)` row: the item was eligible and exposed at a specific decision time, and all features must represent information available no later than that time. I would persist stable identifiers for the request, impression, user/session, item, surface, position, policy/model version, and event timestamps so the table can be rebuilt exactly.
 
-Next I would build the table from immutable raw event logs with stable event IDs and event time plus ingestion time. I would normalize identities, deduplicate retries, define how repeated impressions are treated, and join catalog/user/context features using as-of semantics: for each row, take the latest feature value whose effective timestamp is no later than the decision time. I would never use a current snapshot to reconstruct historical rows unless the source is versioned and time-travelable.
+Next I define labels as **attribution rules**, not as raw joins. A click may be attributed within minutes, a cart within hours, and a purchase within days. Those windows determine which downstream events belong to which impression. I would explicitly handle repeated impressions, multi-touch behavior, and precedence rules so one purchase is not accidentally credited to several training rows unless that is intentionally the target definition. I would distinguish event time from ingestion time and define whether labels are based on event occurrence or observation by a cutoff.
 
-Attribution is a modeling choice, not just a join. I would specify which exposure can receive credit, the attribution window, whether credit is first-touch, last-touch, or multi-touch, and how to handle click, cart, purchase, hide, dwell, and repeated exposures. For delayed outcomes, rows near the dataset cutoff may be censored: a missing purchase is not yet evidence of a negative until its observation window has closed. I would either exclude immature rows from supervised labeling or mark them explicitly and use only mature rows for objectives that require complete outcomes.
+Then I make the table **point-in-time correct**. For a row at time $t$, every feature join is an as-of join using only records with an availability timestamp at or before $t$. Catalog state, inventory, price, user history, aggregates, embeddings, and model-derived features must all use versions that existed at that decision time. A feature with an event timestamp before $t$ can still leak if it was not actually available to the online system until after $t$, so I track both event time and availability/processing time where necessary.
 
-Temporal splitting must respect deployment chronology. Training should precede validation, which should precede test, with any label horizon accounted for so outcomes used to label an earlier split cannot leak information from the evaluation period. Stateful features and candidate statistics must be recomputed independently at each historical cutoff rather than precomputed once on the full dataset.
+I handle **deduplication and identity** before labeling. Logs often contain retries, duplicate events, client/server copies, repeated clicks, or idempotency failures. I deduplicate with stable event IDs when possible, otherwise with a documented composite key and time tolerance. The rule must be deterministic and tested, because silent duplication changes both feature statistics and label prevalence.
 
-Late-arriving events require deterministic backfill semantics. I would distinguish event time from processing/ingestion time, define a lateness policy or watermark, version the dataset build, and make reruns idempotent. A backfill should update only rows whose historical truth changed and should produce the same table given the same source snapshot and configuration.
+I handle **censoring** explicitly. If a purchase label requires a 7-day observation window, rows from the last 7 days cannot yet be treated as negatives. I either exclude them from supervised training, mark the label unresolved, or use a method designed for delayed outcomes. This prevents “not observed yet” from becoming “negative.”
 
-Finally, I would prove correctness with tests rather than trust conventions: assert every feature timestamp is $\le t_0$; every attributed outcome occurs after the exposure and within its label window; deduplication is idempotent; repeated-exposure rules behave on boundary cases; censored rows are not silently treated as negatives; temporal partitions do not overlap; and deliberately injected future features or post-cutoff catalog state cause the build or validation tests to fail. I would also track row counts, label rates, duplicate rates, join coverage, and slice distributions across rebuilds so a logically valid but semantically broken dataset does not pass unnoticed.
+For splitting, I use **temporal splits** based on decision time, with any required gap or embargo to prevent label-window overlap. I never randomly split rows when user behavior, catalog state, or exposure policy evolves over time, because that allows future regimes to inform the past and inflates offline performance.
+
+Late-arriving events are handled through immutable raw logs plus versioned rebuilds or bounded backfills. A run records its input snapshot/watermark, code/config version, attribution policy, feature definitions, and output version. Re-running the same logical snapshot must produce the same table.
+
+Finally, I prove correctness with **leakage and invariant tests**: no feature availability time exceeds decision time; no label event falls outside its attribution window; censored rows are not negative; dedup keys are unique; temporal partitions do not overlap illegally; and synthetic fixtures deliberately containing future events must fail. At D3 depth, the key principle is that every row, feature, and label is a modeling decision with a temporal contract, and reproducibility means that contract is encoded, versioned, and testable.
 
 ## Learn the Concepts
 
 ### Foundation
 
-The central mental model is: **every training row represents a historical prediction that the system could actually have made at that moment**.
+The central mental model is:
 
-A recommender training dataset is not just a table of users, items, and outcomes. It is a reconstruction of many past decision points. For each decision point, the table must answer two different questions:
+**A training row is a historical simulation of one prediction-time decision.**
 
-1. **What was known when the prediction was made?** These values become features.
-2. **What happened afterward?** These future events become labels.
+If the production recommender had to rank an item for a user at 10:00 AM on Tuesday, then the training row representing that decision must contain only what the production system could have known by 10:00 AM Tuesday. The row's target can describe what happened later, but its inputs cannot.
 
-Those two time directions must never be mixed.
+That gives us two different time directions:
 
-Important terminology:
+- **Features look backward** from the decision time.
+- **Labels look forward** from the decision time, but only inside a defined observation/attribution window.
 
-- **Event:** a logged action or state change, such as an impression, click, watch, cart, purchase, hide, or catalog update.
-- **Event time:** when the event actually happened in the product.
-- **Ingestion/processing time:** when the data platform received or processed the event.
-- **Decision time / prediction time ($t_0$):** the instant whose historical prediction is being reconstructed.
-- **Grain:** what exactly one row represents. Examples include one impression, one `(request, item)` candidate, or one `(user, item, day)` pair.
-- **Feature:** information available at or before $t_0$ and supplied to the model.
-- **Label:** the target outcome defined from events after $t_0$, usually within a fixed future window.
-- **Attribution window:** the interval after an exposure during which an outcome can be credited to that exposure.
-- **Point-in-time correctness:** for every row, features reflect only state available by the decision time.
-- **Leakage:** information unavailable at prediction time enters training features or data selection.
-- **Deduplication:** removing duplicate logical events caused by retries, repeated ingestion, or source defects according to an explicit identity rule.
-- **Censoring:** the outcome window has not fully elapsed, so an apparent non-event is not yet a trustworthy negative.
-- **Temporal split:** train/validation/test partitions are ordered by time instead of randomly mixing past and future.
-- **Late event:** an event whose event time belongs to an earlier period but arrives in the data system later.
-- **As-of join:** for a row at time $t_0$, join the latest feature/state record with timestamp $\le t_0$.
+This is the essence of point-in-time correctness.
 
-#### Worked example
+A useful row grain for recommendation ranking is:
 
-Suppose a shopping recommender shows user `U1` item `A` at **10:00 on Monday**.
+`one eligible/exposed item for one user/session at one ranking decision time`
 
-At that instant:
+Depending on the system, the grain may instead be one candidate, one impression, one user-item-day, or one session-item opportunity. The important point is that the grain is explicit. If the grain is unclear, duplication, attribution, and leakage become almost impossible to reason about.
 
-- item price is `$20`;
-- item category is `shoes`;
-- user has clicked 3 shoe products in the previous 7 days;
-- the item has 120 historical purchases.
+Key terms:
 
-Then:
+- **Impression:** evidence that an item was actually rendered or exposed to the user.
+- **Interaction:** an event such as click, watch, dwell, cart, purchase, or hide.
+- **Decision time:** when the recommender had to make the prediction.
+- **Event time:** when an event actually happened.
+- **Ingestion time:** when the data system received the event.
+- **Availability time:** when a value could actually have been used by the online/offline feature pipeline.
+- **Attribution window:** the time interval in which a downstream event is credited to an earlier exposure.
+- **Censoring:** a label is unresolved because not enough future time has elapsed to observe the outcome.
+- **Temporal leakage:** future information is present in a feature or data-selection rule for an earlier prediction.
+- **Deduplication:** converting repeated records for the same logical event into one deterministic event.
+- **Late event:** an event whose ingestion/processing happens substantially after its event time.
 
-- `10:02`: the user clicks item `A`;
-- `11:30`: the price changes to `$18`;
-- Tuesday `09:00`: the user purchases item `A`;
-- Wednesday: the catalog pipeline backfills a corrected brand field.
+A beginner often conflates **event time** with **feature availability**. Suppose a warehouse correction says an item's inventory was 0 at 9:55 AM, but the correction was not written into the feature store until 10:10 AM. For a ranking decision at 10:00 AM, using the corrected value leaks future operational knowledge even though its business event time is 9:55 AM.
 
-If one row represents the Monday 10:00 impression, then its features must use the `$20` price, the user history as of 10:00, and the catalog state known by 10:00. The `$18` price and Wednesday correction are future state relative to the decision and cannot be used as features for that row.
+Another common conflation is **non-interaction equals negative**. If an item was never shown, its lack of click is not evidence that the user rejected it. Even among impressions, a non-click may reflect position, examination, or insufficient observation time. R03 is primarily about building the temporal table correctly; the exposure-bias interpretation is handled more deeply elsewhere, but the table must preserve enough exposure metadata to support that reasoning.
 
-If the click label is "click within 30 minutes," the label is positive because the click occurred at 10:02. If the purchase label is "purchase within 7 days," the label is also positive because the Tuesday purchase falls inside the attribution window.
+**Worked example**
 
-If the dataset is generated Monday at 10:05, the purchase window has not matured. Treating "no purchase yet" as a negative would be wrong; the row is censored for the 7-day purchase objective until the observation window closes.
+Assume a recommendation carousel shows item `A` to user `U` at 12:00.
 
-This example captures the essential rule:
+- Impression: 12:00
+- Click: 12:03
+- Cart: 12:20
+- Purchase: 18:00
+- Price changed from $20 to $25 at 14:00
+- A user-history batch was computed at 11:50 and published at 11:57
+- Another history aggregate was computed at 11:59 but published at 12:05
 
-$$
-\text{feature time} \le t_0 < \text{label event time} \le t_0 + \text{label horizon}.
-$$
+If the training row's decision time is 12:00:
+
+- the $20 price is valid; the $25 price is future information;
+- the 11:57-published history is valid;
+- the 12:05-published aggregate is invalid even if it summarizes only events before noon;
+- click/cart/purchase can become labels if their attribution windows include those times;
+- if the purchase label uses a 24-hour window, the row must not be finalized as a negative until 12:00 the next day.
+
+That one example contains the major temporal rules for the entire question.
 
 ### Core Interview Reasoning
 
-A compact reasoning structure for this problem is:
+A strong answer can be reconstructed with this sequence:
 
-**decision point → row grain → labels/attribution → point-in-time features → event hygiene → censoring → temporal splits → late-data/rebuild policy → leakage tests**
+**decision + grain → event contract → attribution/labels → point-in-time features → deduplication → censoring → temporal split → late-event/rebuild policy → leakage/invariant tests**
 
-Each part exists because a training table is a causal-temporal reconstruction, not a static join.
+1. **Decision + grain**
 
-#### 1. Define the decision point and grain
+   First say what the model predicts and what one row means. For example, “one exposed candidate at one request time.” This anchors uniqueness, features, labels, and split semantics.
 
-The grain determines what the model is learning to score.
+2. **Event contract**
 
-Examples:
+   Identify the source logs and the identifiers/timestamps required to connect them: request ID, impression ID, user/session ID, item ID, event ID, event time, ingestion time, position, surface, policy/model version, and catalog version. Without a logging contract, downstream SQL cannot recover truth reliably.
 
-- one row per impression;
-- one row per candidate shown in a request;
-- one row per `(user, item)` exposure;
-- one row per `(session, item)` exposure.
+3. **Attribution and labels**
 
-A candidate-ranking model usually needs rows tied to the actual ranking opportunity. If a request generated 100 candidates but only 10 were shown, the table must distinguish **candidate**, **exposed**, and **unexposed** items rather than silently equating missing interaction with a negative.
+   Turn raw outcomes into explicit modeling targets. A click, watch, dwell threshold, cart, purchase, and hide each needs its own attribution semantics. Define windows, repeated-exposure policy, precedence, and multi-touch handling.
 
-The grain also determines the primary key. A robust logical key may be `(request_id, item_id)` or `(impression_id, item_id)`, with an immutable source event ID where possible.
+4. **Point-in-time features**
 
-#### 2. Define labels and attribution
+   For every feature, ask: “What exact value was available at the decision time?” Use as-of semantics and versioned snapshots. A historical value is not automatically valid; it must also have been available to the system at that time.
 
-Behavioral events have different semantics and delay distributions.
+5. **Deduplication**
 
-- **Click:** usually fast; often attributed to the triggering impression.
-- **Watch/dwell:** continuous or thresholded; may need truncation and bot/background-play handling.
-- **Cart:** stronger intent than click, usually slower.
-- **Purchase:** high value but delayed, sparse, cancellable, and potentially attributable to several prior exposures.
-- **Hide/report:** explicit negative signal but with different product meaning from mere non-click.
-- **Non-interaction:** not automatically a negative because the user may not have examined the item.
+   Define one logical event and a deterministic uniqueness rule. Deduplication must happen before aggregates and labels when duplicates could inflate counts or produce multiple positives.
 
-Attribution requires an explicit contract:
+6. **Censoring**
 
-- eligible source exposure;
-- outcome type;
-- attribution horizon;
-- first-touch, last-touch, closest-touch, or multi-touch policy;
-- cross-device/user identity rules;
-- repeated-impression behavior;
-- whether one outcome may label multiple exposures.
+   Do not convert “outcome not observed yet” into a negative. Delay finalization, exclude unresolved rows, or explicitly model delayed feedback.
 
-A join like `user_id + item_id` without time and exposure semantics can duplicate labels across many rows and create severe target inflation.
+7. **Temporal splitting**
 
-#### 3. Enforce point-in-time feature correctness
+   Train on earlier decisions and validate/test on later decisions. Account for label windows and any overlap that could transmit information across the boundary.
 
-The governing invariant is:
+8. **Late events and reproducibility**
 
-$$
-t_{\text{feature}} \le t_{\text{decision}}.
-$$
+   Choose a watermark/backfill policy. Preserve immutable raw events, table-building code/config, source snapshot IDs, and output dataset versions so a historical build can be recreated.
 
-For mutable data, this requires historical versions or event-sourced reconstruction.
+9. **Leakage and invariant tests**
 
-Examples:
+   Convert correctness claims into executable assertions. The strongest answer ends with proof obligations rather than “we are careful with timestamps.”
 
-- user 7-day click count must include only clicks before $t_0$;
-- item popularity must be computed from events before $t_0$;
-- item price must be the price effective at $t_0$, not today's price;
-- inventory must reflect the historical availability state;
-- embeddings or model-derived features must use the version available at that time if the production system depended on versioned artifacts.
-
-The typical implementation is an as-of join or point-in-time feature materialization keyed by entity and effective timestamp.
-
-#### 4. Handle duplicates and repeated exposures deliberately
-
-Two distinct problems are often confused:
-
-- **Duplicate records:** the same logical event appears multiple times because of retries or ingestion defects.
-- **Repeated real events:** the user genuinely sees the same item multiple times.
-
-Duplicate records should normally collapse by stable event ID or a defensible composite key. Real repeated impressions should not be blindly deduplicated; they affect exposure, examination, fatigue, and attribution.
-
-If event IDs are unavailable, heuristic deduplication using user/item/timestamp windows is risky because it can erase legitimate repeats.
-
-#### 5. Handle censoring
-
-Suppose the purchase label window is 7 days and the raw data ends at September 30.
-
-An impression on September 29 has only one day of observable future. If no purchase is visible, the row is not a fully observed negative.
-
-A simple mature-row rule is:
-
-$$
-t_0 + H \le T_{\text{data cutoff}},
-$$
-
-where $H$ is the label horizon.
-
-Rows failing this condition are censored for that label. They can be excluded, delayed until mature, or modeled with methods that explicitly account for censoring, depending on the objective.
-
-#### 6. Split by deployment chronology
-
-Random row splits often leak future behavior patterns into training and make evaluation unrealistically easy.
-
-A temporal scheme should resemble:
-
-$$
-\text{train period} < \text{validation period} < \text{test period}.
-$$
-
-But timestamps on rows are not enough. All derived features, aggregates, negatives, candidate pools, and labels must also obey the corresponding cutoff.
-
-If a 7-day label horizon is used, split boundaries may need a gap or careful maturity rules so labels are complete without using future evaluation information in feature construction.
-
-#### 7. Make late-data handling reproducible
-
-Because event time and ingestion time differ, a training table must define which source snapshot it represents.
-
-A reproducible build records at least:
-
-- input dataset versions or partitions;
-- maximum accepted ingestion time;
-- event-time window;
-- lateness/watermark policy;
-- transformation code/config version;
-- feature/label definitions;
-- output version.
-
-Rerunning the same versioned inputs and configuration should produce the same logical rows.
-
-#### 8. Prove temporal correctness with tests
-
-Useful invariants include:
-
-$$
-t_{\text{feature}} \le t_0
-$$
-
-and, for an attributed label,
-
-$$
-t_0 < t_{\text{outcome}} \le t_0 + H.
-$$
-
-Other high-value tests:
-
-- duplicate input replay does not duplicate output rows;
-- future catalog updates cannot change historical features unless a source correction is intentionally backfilled;
-- a click before exposure cannot become the exposure's positive label;
-- an outcome outside the attribution window is not credited;
-- rows whose label horizon has not matured are not silently negative;
-- train/validation/test primary keys and time intervals obey the split contract;
-- feature aggregations are recomputed from cutoff-safe inputs;
-- deliberately injected future information causes a test failure.
+The ordering matters. If attribution is defined before grain, it is unclear which exposure owns an event. If features are built before decision time is defined, point-in-time correctness is undefined. If splitting occurs before censoring is handled, the newest validation rows may be systematically mislabeled.
 
 ### Deeper Reasoning and Derivations
 
-#### Why grain errors change the learning problem
+**1. Why point-in-time joins require an availability timestamp**
 
-Suppose one request shows 10 items and receives one click. If the intended task is ranking the 10 displayed items, a natural grain is one displayed item per request. The clicked item gets a positive click label and the other displayed items are potential non-click outcomes, subject to examination assumptions.
-
-If instead the dataset collapses to one row per user-item-day, several exposures may be merged. A click after the third exposure may make all earlier exposures appear positive, destroying the temporal relationship between exposure and response.
-
-Thus row grain is part of the statistical target.
-
-#### Why point-in-time leakage can survive ordinary train/test splitting
-
-Assume the test rows are chronologically separated correctly, but the feature `item_purchase_rate_30d` is computed once using the full event table and then joined to all rows.
-
-For a row at time $t_0$, the aggregate may include purchases after $t_0$:
+For a feature row to be valid for a decision at time $t_d$, the core condition is not merely
 
 $$
-\hat p_i(t_0)
-=
-\frac{
-\#\{\text{purchases of item }i \text{ in a window that extends beyond } t_0\}
-}{
-\#\{\text{eligible exposures}\}
-}.
+t_{\text{event}} \le t_d.
 $$
 
-Even though the row itself belongs to the training period, the feature contains future outcome information. The split is temporal; the feature is not.
+The stronger operational condition is
 
-This is why temporal splitting and point-in-time feature generation are separate correctness requirements.
+$$
+t_{\text{available}} \le t_d.
+$$
 
-#### Attribution can create label duplication
+A value can describe the past and still leak if it was computed, corrected, or published only in the future. This is why mature pipelines often track event time, processing time, and feature/materialization time separately.
 
-Consider three impressions of the same item at 09:00, 12:00, and 17:00, followed by a purchase at 18:00.
+**2. Attribution is part of the statistical target**
 
-A naive user-item join may mark all three impressions positive. Last-touch attribution marks only the 17:00 impression positive. A multi-touch policy may give fractional or repeated credit. These choices imply different targets and different learned behavior.
+Suppose a purchase occurs after three impressions of the same item. Crediting all three impressions as positive creates three training positives from one business outcome. Crediting only the last impression imposes a last-touch assumption. Crediting the first imposes another assumption. There is no attribution-free label here: the training target is partly defined by the attribution policy.
 
-There is no universal attribution rule; the rule must match the intended decision and product semantics.
+A defensible pipeline therefore versions attribution logic just like model code.
 
-#### Negative labels are observation-policy dependent
+**3. Censoring changes apparent class balance**
 
-For implicit feedback, the fact that an item was not clicked can mean:
+Assume a purchase label has a 7-day conversion window. A row generated yesterday has had only one day to convert. If it is marked negative today, the recent part of the data is biased toward negatives. This can create a false temporal trend in label rate and make newer validation slices appear harder than older ones.
 
-- it was shown and examined but rejected;
-- it was shown but not examined;
-- it was below the fold;
-- it was retrieved but never shown;
-- it was never considered by the serving system.
+A simple maturity condition is:
 
-These are not equivalent negatives. Training-set construction therefore interacts with exposure bias and negative sampling. R03's data contract should retain enough exposure metadata to allow later modeling choices rather than destroying these distinctions.
+$$
+t_{\text{dataset cutoff}} - t_{\text{decision}} \ge W,
+$$
 
-#### Event time versus ingestion time
+where $W$ is the maximum observation window required to finalize the label. Rows that do not satisfy it are unresolved unless the modeling method explicitly handles censoring.
 
-A purchase may happen at 12:00 but arrive at 12:10 because a mobile client was offline.
+**4. Temporal splitting must respect the target window**
 
-For semantic attribution, event time usually determines whether the purchase falls inside the label window. For reproducible rebuilds, ingestion time determines whether that event was available to a particular pipeline run.
+Suppose training decisions end on June 30 and validation begins July 1, while purchase labels use a 7-day window. A June 30 training row can depend on a July 5 purchase. That may be acceptable if the split is defined by decision time and the objective is future generalization, but it means the training dataset cannot be finalized on June 30. It also means any features or aggregates derived from outcomes must not feed those July events back into earlier feature values.
 
-Both timestamps may be required:
+For some evaluation protocols, an embargo or gap is useful when derived statistics, shared entities, or policy changes create cross-boundary dependence. The gap should be justified by the actual leakage mechanism, not applied ritualistically.
 
-- event time answers "when did reality happen?";
-- ingestion time answers "when did the data system know?".
+**5. Deduplication is a causal data issue, not cleanup trivia**
 
-#### Backfills and corrected history
+If a client retries a click event three times, an undeduplicated table may:
 
-A late event can be a newly observed fact about the past; a source correction can revise a previously stored fact. A reproducible system must decide whether a historical dataset version is immutable or whether a new version supersedes it.
+- turn one click into three labels;
+- inflate user/item popularity;
+- distort dwell or frequency features;
+- alter negative sampling and class weights.
 
-A strong design treats output tables as versioned products. "Yesterday's training table" should mean a specific version or source cutoff, not whatever the warehouse happens to return today.
+Deduplication therefore belongs before downstream aggregation. Stable event IDs are best; heuristic deduplication by `(user, item, event_type, time_bucket)` is weaker and should be documented because it can collapse legitimate repeated interactions.
 
-#### Failure modes
+**6. Late events create a reproducibility-versus-completeness choice**
 
-Common failures include:
+A table built on Monday may differ from the same logical query rerun on Friday because late purchases have arrived. There are two legitimate products:
 
-- current catalog snapshot joined onto historical rows;
-- aggregate features computed over the full dataset;
-- random splits on temporally dependent data;
-- purchase outcomes duplicated across repeated impressions;
-- retry events counted as multiple clicks or purchases;
-- label windows that cross the available-data cutoff but are treated as negative;
-- user/item identity merges that use information learned later;
-- deleting unavailable items from historical candidate sets using today's availability;
-- selecting "active users" using activity that occurred after the row time;
-- negative sampling from an item universe that did not exist at $t_0$;
-- using a future-trained embedding or model score as a historical feature;
-- backfills that append instead of replace/idempotently upsert and therefore duplicate rows.
+- an **as-known-at-the-time snapshot**, useful for audit/replay of what the pipeline knew then;
+- a **latest-corrected historical snapshot**, useful for training with the most complete labels.
+
+They are not interchangeable. Reproducibility requires naming which one is being built and versioning the input watermark/snapshot.
+
+**7. Leakage can arise from row selection, not only feature columns**
+
+Examples include:
+
+- selecting only items that are known later to remain in the catalog;
+- generating negatives from a future catalog snapshot;
+- using a future popularity table to decide which examples enter training;
+- filtering out users based on activity measured after the decision date.
+
+A table can have individually “past-looking” features and still leak through its inclusion/exclusion logic.
+
+**8. Leakage tests should be adversarial**
+
+Static schema checks are insufficient. Useful tests intentionally construct:
+
+- a future price update;
+- a late-arriving purchase;
+- duplicate retries;
+- two repeated impressions before one conversion;
+- a row whose label window is incomplete;
+- a catalog item introduced after the decision time.
+
+The test should fail if the pipeline admits any of these future facts into an earlier row.
 
 ### Advanced Staff-Depth Considerations
 
-The reusable Staff-level backbone for this item is:
+The universal Staff reasoning loop for R03 is:
 
-`Baseline → Change → Mechanism → Measure → Act → Trade-off → Validate`
+**Baseline → Change → Mechanism → Measure → Act → Trade-off → Validate**
 
-Equivalently:
+The baseline is a versioned training-table contract: one explicit row grain, timestamp semantics, attribution rules, point-in-time feature joins, maturity/censoring rules, and deterministic split/rebuild semantics. A change might be a longer conversion delay, a streaming feature source, a new surface, increased event volume, or a revised catalog policy. The mechanism is the way that change alters which facts are legally observable for a row, how outcomes can be attributed, or when labels become final. Evidence comes from timestamp distributions, duplication rates, label-maturity curves, row-count reconciliation, replay diffs, and deliberately adversarial leakage tests. The decision is usually a change to the data contract, watermark/backfill policy, join semantics, or label definition. The trade-off is among freshness, completeness, reproducibility, compute cost, and bias. Validation means rebuilding known fixtures and historical slices and proving temporal invariants.
 
-`Assumption → Mechanism → Evidence → Decision → Trade-off → Validation`
+The compressed form is:
 
-For this question, the baseline is: The baseline is a historical prediction reconstruction: each row represents a decision at time $t_0$, features may use only information available by $t_0$, and labels come from explicitly defined future outcomes. Reproducibility means the same versioned inputs/configuration rebuild the same logical table.
+**Assumption → Mechanism → Evidence → Decision → Trade-off → Validation**
 
-The eight subsections below apply that same loop from different angles. Each explanation teaches the mechanism first; the filled template then compresses it into a reusable interview scaffold.
+For R03, the key invariant is: **every feature and row-selection fact must have been available at the historical decision time, while every label must obey an explicit future observation contract.**
 
 #### 1. Changed Constraints and Transfer Logic
 
-Constraint changes should preserve the temporal contract. A longer label horizon changes censoring, attribution ambiguity, split gaps, retention, and backfill scope; cheaper snapshots or coarser joins are acceptable only if they do not introduce information unavailable at serving time.
+The baseline assumes that event delays, label windows, and feature publication delays are sufficiently stable to encode in deterministic temporal rules. What should remain invariant is the historical-decision simulation: changing infrastructure or product behavior must not allow a training row to see information its production counterpart could not have seen.
 
-A useful reasoning chain is:
+Fragile assumptions include short conversion delays, one exposure per item/session, batch-complete logs, stable catalog identifiers, and a single recommendation surface. If conversions move from same-session to 30-day delayed outcomes, the label-maturity rule must change; if events become streaming and out of order, watermarks and event-time semantics become central; if multiple surfaces can expose the same item, attribution needs surface/request identity.
 
-`changed assumption → affected mechanism/stage → invariant → broken assumption → consequence → redesign → metric impact → trade-off → validation`
+The propagation is:
 
-**Filled template for this item**
+**changed assumption → temporal/identity mechanism affected → original invariant retained → old rule becomes invalid → bias or irreproducibility appears → data contract changes → label/coverage/freshness metrics move → cost/freshness trade-off → replay and leakage tests validate**
 
-- **Original assumption:** Purchase labels mature within a 7-day horizon and the pipeline retrains daily.
-- **Changed constraint:** The purchase horizon becomes 30 days while daily retraining continues.
-- **Invariant:** Features remain point-in-time correct and negatives require a fully observed label window.
-- **Broken assumption:** Recent daily rows are no longer mature enough for direct 30-day purchase supervision.
-- **Consequence:** Freshness falls, repeated-exposure attribution becomes more ambiguous, and backfill/split windows lengthen.
-- **Design change:** Train purchase objectives on mature history; use faster proxy/auxiliary objectives or delayed-feedback modeling for recent behavior.
-- **Metric impact:** Track maturity fraction, attribution distance, data age, and performance by label age/horizon.
-- **Trade-off:** Better capture of delayed conversion yields older fully observed labels or more modeling assumptions.
-- **Validation:** Rebuild fixed historical cutoffs and compare correctness/utility across horizon and maturity policies.
+Representative template:
+
+- Original assumption: purchase labels mature within 7 days.
+- Changed constraint: a new replenishment product has a 30-day conversion cycle.
+- Invariant: an unresolved future purchase must never be encoded as a negative.
+- Broken assumption: 7 days is enough to finalize purchase labels.
+- Consequence: recent rows are mislabeled negative and newer temporal slices look artificially weak.
+- Design change: use a 30-day maturity rule for that target/segment or separate short- and long-horizon targets.
+- Metric impact: apparent positive rate drops initially; after correction, calibration and conversion recall should become more stable by cohort age.
+- Trade-off: slower availability of fully labeled training data versus lower label bias.
+- Validation: plot conversion accumulation by days-since-impression and run fixtures proving rows inside the 30-day window remain unresolved.
 
 #### 2. Failure Modes and Diagnosis
 
-Unexpected offline gains after dataset changes should be treated as correctness incidents until proven real. Data-pipeline bugs can improve every downstream model metric. Diagnose shape, keys, labels, timestamps, historical joins, split chronology, artifact lineage, and row-level replay before attributing lift to modeling.
+R03 failures localize along a data-construction chain:
 
-**Filled template for this item**
+**raw events → identity/dedup → exposure grain → attribution/labels → point-in-time features → row selection → temporal split → materialized dataset**
 
-- **Symptom:** Offline NDCG jumps from roughly 0.42 to 0.61 after a training-table refactor with unchanged model code.
-- **Stage decomposition:** raw events → dedup/grain → attribution/labels → point-in-time features → split → dataset artifact → training/evaluation.
-- **Slices:** Time, label maturity, feature source, user/item segment, row multiplicity, and mutable catalog fields.
-- **Competing hypotheses:** Join explosion; duplicated attribution; immature negatives; future-feature leakage; current-snapshot leakage; split contamination.
-- **Discriminating evidence:** Primary-key uniqueness, label prevalence, feature timestamp/dependency lineage, attribution distance, and suspicious feature importance.
-- **Offline/online comparison:** Compare historical features with what serving could actually know, including lag and artifact versions.
-- **Replay/isolation:** Reconstruct selected impression IDs from immutable logs through the new and old pipeline.
-- **First divergence:** Earliest transform where row count, label, or feature state differs semantically from the baseline.
-- **Immediate mitigation:** Freeze/rollback the refactor and stop promoting models trained on suspect data.
-- **Permanent prevention:** Point-in-time invariants, dependency lineage checks, golden fixtures, idempotence tests, and versioned dataset manifests.
+Common failures include duplicate events, mismatched IDs, future feature joins, wrong catalog snapshots, conversion double-credit, immature negatives, late events omitted from some partitions, and temporal splits that accidentally share future-derived aggregates.
 
-Memory aid: `Symptom → Slice → Stage → Hypotheses → Evidence → First divergence → Fix`.
+Diagnosis should look for the first stage where a reproducible count or timestamp invariant diverges. Start with cohort slices by decision date, surface, user segment, item age, and event-lag bucket. Compare raw event counts to deduplicated counts, exposed rows to labeled rows, and label rates as a function of cohort maturity. Replay a small historical interval using pinned snapshots.
+
+Representative template:
+
+- Symptom: offline validation AUC/NDCG jumps after a training-data rewrite.
+- Stage decomposition: raw logs → dedup → impression rows → label attribution → feature joins → split.
+- Slices: decision date, feature freshness lag, item age, and rows near split boundary.
+- Competing hypotheses: genuine feature improvement, future feature join, duplicated positives, or censored negatives removed asymmetrically.
+- Discriminating evidence: compare feature availability times to decision times, uniqueness counts, and label rates by cohort age.
+- Offline/online comparison: offline gain with no online change raises suspicion that dataset semantics changed rather than model capability.
+- Replay/isolation: rebuild a fixed week under old and new table code using the same immutable raw snapshot.
+- First divergence: new feature join includes values published after decision time.
+- Immediate mitigation: revert to the prior dataset version and block model promotion.
+- Permanent prevention: add availability-time join guards and a synthetic future-feature test to CI.
 
 #### 3. Latency and Resource Trade-offs
 
-R03 is mainly offline, so the relevant resource trade-off is temporal fidelity versus compute/storage/rebuild cost. Current snapshots, full-history aggregates, or coarse materializations are cheap shortcuts only when they preserve what would have been available at $t_0$. The right optimization changes execution, not the logical contract.
+R03 is primarily an offline data-correctness problem, so online inference latency is not the dominant resource term. The important resource trade-off is **training-data build latency and cost versus temporal fidelity and completeness**.
 
-**Filled template for this item**
+Exact point-in-time joins over large event histories can be expensive because they require sorting/indexing by entity and time, versioned snapshots, and potentially repeated backfills. Long attribution windows increase the amount of state that must remain open before labels mature. Rebuilding corrected history after late events can consume substantial warehouse/storage bandwidth.
 
-- **Budget:** Dataset-build SLA, storage budget, and affordable cost for point-in-time joins/backfills.
-- **Cost decomposition:** Event scans + deduplication + as-of joins + stateful aggregates + attribution + validation + write/backfill.
-- **Dominant cost:** Historical state joins and recomputation of large aggregates over long windows.
-- **Quality driver:** Finer temporal fidelity and complete historical versions reduce leakage and semantic error.
-- **Cost driver:** More snapshots/history and exact joins increase storage, shuffle, and compute.
-- **Optimization knobs:** Partitioning, sorted/as-of joins, incremental aggregates, replayable materialization, bucketed snapshots with bounded error, targeted backfills.
-- **Fallback/degradation:** Drop unavailable mutable features or restrict history rather than silently use current state.
-- **Trade-off curve:** Build cost/runtime versus temporal error/leakage tests and downstream quality.
-- **Decision:** Use the cheapest representation that preserves the information-availability invariant for each feature.
+Quality-improving work includes finer-grained snapshots, exact as-of joins, longer label windows, and more complete late-event backfills. Cost can be controlled with partition pruning, incremental materialization, precomputed valid-time intervals, compact change-data-capture tables, and bounded backfill horizons when business semantics permit.
 
-Memory aid: `Budget → Breakdown → Bottleneck → Knobs → Quality loss → Fallback`.
+Representative template:
+
+- Budget: finish the daily training-table build before the scheduled training job while preserving exact temporal semantics.
+- Cost decomposition: raw scan + dedup + temporal joins + label attribution + validation + write/materialization.
+- Dominant cost: repeated as-of joins over high-volume user/event history.
+- Quality driver: using the correct historical feature version and complete-enough labels.
+- Cost driver: event-history scan volume and backfill range.
+- Optimization knobs: date/entity partitioning, incremental state tables, valid-time intervals, materialized historical features, and bounded recomputation.
+- Fallback/degradation: train on the most recent fully validated prior dataset rather than silently relaxing point-in-time rules.
+- Trade-off curve: fresher training data versus more compute and greater late-event uncertainty.
+- Decision: prefer stale-but-correct data over fresh-but-temporally-invalid data.
 
 #### 4. Scale and Capacity
 
-At billions of events, correctness remains non-negotiable but execution must become incremental and partition-aware. Stable event IDs, deterministic transforms, historical feature state, bounded source snapshots, and targeted backfills are the mechanisms that let scale change without changing the target.
+The main scaling dimensions are event volume, number of users/items, feature count, history length, and number of surfaces. The first assumption that often breaks is that a full historical rebuild is cheap enough to run routinely.
 
-**Filled template for this item**
+At larger scale, temporal joins become shuffle-heavy, user histories become skewed, hot items generate enormous impression groups, and long attribution windows require more pending state. A single global table may also become operationally awkward when surfaces have different label semantics.
 
-- **Scaling dimension:** Event volume grows to billions with long attribution horizons and many mutable features.
-- **Baseline scale assumption:** Full scans and straightforward as-of joins are affordable.
-- **First bottleneck:** Shuffle-heavy temporal joins and repeated aggregate recomputation dominate cost.
-- **Second-order effects:** Larger retention windows, backfill blast radius, dedup state, and lineage metadata grow.
-- **Architectural response:** Partitioned immutable logs, historized dimensions, incremental/replayable aggregates, and targeted partition rebuilds.
-- **Partitioning/replication/caching/batching:** Partition by event time/entity, cluster join keys, materialize versioned state, batch backfills by affected windows.
-- **Consistency/freshness consequence:** Incremental state must remain reproducible from source snapshots and watermarks.
-- **Operational failure mode:** Partial backfill or non-idempotent upsert duplicates rows or leaves mixed label versions.
-- **Validation:** Projected-volume rebuild tests plus key uniqueness, lineage, watermark, idempotence, and temporal invariant checks.
+The response is usually partitioned incremental construction: immutable raw logs, compact deduplicated event layers, keyed historical feature snapshots, per-date/surface partitions, and deterministic backfill jobs. Scaling introduces new risks: partial partition rebuilds, inconsistent watermark cutoffs, schema/version skew, and hot-key stragglers.
 
-Memory aid: `What grows? → What stops fitting? → What bottlenecks? → How do we partition? → What new failure appears?`.
+Representative template:
+
+- Scaling dimension: daily impression volume grows from tens of millions to billions.
+- Baseline scale assumption: one daily warehouse rebuild can scan all relevant history.
+- First bottleneck: shuffle and sort cost for user/item temporal joins.
+- Second-order effects: hot-key skew, longer job tails, partial retries, and greater backfill cost.
+- Architectural response: incremental event normalization plus partitioned point-in-time feature materialization.
+- Partitioning/replication/caching/batching: partition by decision date and stable entity hash; cache/version slowly changing catalog state.
+- Consistency/freshness consequence: each output partition must record the exact upstream watermark and feature snapshot versions.
+- Operational failure mode: only some partitions are rebuilt after a late-event correction, creating mixed semantics.
+- Validation: reconcile partition-level row/label counts and replay sampled entities end to end.
 
 #### 5. Freshness, State, and Versioning
 
-Dataset freshness is bounded by both pipeline cadence and outcome maturity. Rebuilding hourly cannot produce a fully observed 14-day purchase label for yesterday. Separate fast-changing feature state, fresh behavioral monitoring, and slower mature supervised labels rather than conflating them.
+Freshness is central because R03 is about reconstructing what was known when. Relevant state includes user history, catalog/price/inventory state, derived aggregates, labels, attribution rules, schema versions, and experiment/policy assignments.
 
-**Filled template for this item**
+There are two distinct freshness questions:
 
-- **State that becomes stale:** Feature snapshots, mutable catalog/user state, dataset labels, attribution decisions, and source snapshots.
-- **Why freshness matters:** Old features reduce relevance; immature labels create false negatives; late events revise recent historical truth.
-- **Required freshness:** Match production feature lag while respecting each label horizon.
-- **Refresh cost:** More frequent builds, late-event reconciliation, historical snapshots, and repeated backfills.
-- **Update architecture:** Streaming/incremental feature state plus scheduled mature-label dataset builds and targeted late-event backfills.
-- **Version consistency:** Dataset manifest must bind source snapshots, feature definitions, model-derived artifacts, attribution rule, and code/config.
-- **Failure from version skew:** A row can have legal timestamps but depend on a future-trained encoder or current catalog snapshot.
-- **Fallback:** Train on mature windows and omit unreconstructable mutable features rather than fabricate history.
-- **Measurement:** Feature age, label maturity, late-event rate, rebuild version, lineage completeness, and freshness-sliced quality.
-- **Decision:** Optimize freshness subject to complete outcomes and point-in-time correctness, not wall-clock recency alone.
+1. Was the value fresh enough for the production decision at the time?
+2. Has the historical dataset incorporated late corrections that arrived later?
 
-Memory aid: `What goes stale? → How fast does it matter? → What does refresh cost? → How do versions stay consistent?`.
+Those lead to different artifacts. An audit snapshot may intentionally preserve “what we knew then,” while a retraining snapshot may incorporate corrected late labels. Both need explicit versions.
+
+Representative template:
+
+- State that becomes stale: user behavior aggregates and delayed purchase labels.
+- Why freshness matters: stale features misrepresent the production state; immature labels misrepresent outcomes.
+- Required freshness: feature freshness must match the serving contract; labels must satisfy their maturity window.
+- Refresh cost: incremental feature recomputation plus bounded historical backfill.
+- Update architecture: streaming or micro-batch feature updates with versioned daily training snapshots and late-event backfills.
+- Version consistency: dataset version pins raw-log watermark, feature-definition version, catalog snapshot, attribution policy, and code/config commit.
+- Failure from version skew: features built under one policy are paired with labels or catalog state built under another.
+- Fallback: use the latest fully validated consistent snapshot.
+- Measurement: feature-age distributions, late-event curves, snapshot-diff counts, and cohort label maturity.
+- Decision: expose freshness/completeness as explicit dataset metadata rather than implicit pipeline behavior.
 
 #### 6. Implementation, Serving, and Observability
 
-Treat the training table as a versioned product. Immutable raw events, stable IDs, event/ingestion times, historized entity state, deterministic attribution, idempotent deduplication, split configuration, manifests, and replay/backfill support are part of the model system—not incidental ETL.
+The conceptual answer becomes operable only if the system records enough identity and timing metadata at serving time. A training pipeline cannot reconstruct impression-level decisions if serving logs omit candidate/exposure identifiers, model/policy versions, positions, or timestamps.
 
-**Filled template for this item**
+A production implementation typically has immutable raw event storage, a deterministic normalization/dedup layer, point-in-time feature reconstruction, a label-attribution job, versioned dataset manifests, validation gates, and replay tooling. Training consumes only published dataset versions that passed invariants.
 
-- **Conceptual object:** A reproducible point-in-time training row at decision time $t_0$.
-- **Training/data implementation:** Normalize/dedup events, define grain/attribution, as-of join features, mature labels, temporal split, validate invariants.
-- **Stored artifact/state:** Immutable events, SCD/event-sourced entity history, feature snapshots/aggregates, dataset manifest, lineage, and output version.
-- **Serving path:** Historical generation must reproduce production availability lag and artifact semantics, even though training is offline.
-- **Component contract:** Feature definitions must specify value semantics and availability/effective time.
-- **Logging:** Event ID, event/ingestion time, request/impression identity, source versions, and mutable-state versions.
-- **Versioning:** Source snapshot, code/config, feature/label definitions, model-derived features, and output dataset version.
-- **Failure mode:** Current state or future-trained artifacts leak into historical rows.
-- **Observability:** Row/key counts, label rates, join coverage, temporal violations, duplicates, missingness, and drift across rebuilds.
-- **Rollback:** Restore prior dataset version and source/config manifest; rebuild affected partitions deterministically.
-- **Testing/replay:** Golden historical rows, adversarial future-feature injections, idempotence, and exact cutoff replay.
+Representative template:
 
-Memory aid: `Train → Store → Serve → Version → Log → Monitor → Roll back`.
+- Conceptual object: one historical ranking opportunity with temporally valid features and explicitly attributed outcome.
+- Training/data implementation: normalized impression/interactions joined by stable IDs, as-of feature joins, maturity-aware labels, temporal partitions.
+- Stored artifact/state: immutable raw logs plus a versioned training-table manifest and materialized partitions.
+- Serving path: recommender logs request/impression IDs, candidate/exposure metadata, feature/model versions, position, and decision time.
+- Component contract: every feature source exposes availability/version semantics; every event source exposes stable identity and event/ingestion time.
+- Logging: request, impression, item, user/session, position, policy/model version, event timestamps, and relevant catalog/version IDs.
+- Versioning: code/config + raw watermark + feature definitions + attribution policy + catalog snapshot + dataset output version.
+- Failure mode: training reconstructs rows from incomplete serving logs and silently invents exposure semantics.
+- Observability: row counts, dedup rates, attribution rates, unresolved-label fraction, feature-age distributions, leakage-test results, and build lineage.
+- Rollback: pin the previous validated dataset version and retrain/redeploy from it if a data release is invalid.
+- Testing/replay: synthetic temporal fixtures plus sampled end-to-end historical replays.
 
 #### 7. Vertical Transfer
 
-The mechanism should transfer; the assumptions must be re-derived. Use the checklist:
+The mechanism transfers across verticals: define the historical decision, preserve exposure identity, join only information available at that decision, define outcome windows, and separate unresolved from negative labels. What changes is the data-generating process.
 
-`labels → candidate sources → objectives → features → constraints → evaluation → experiments → serving/freshness → ecosystem effects`
+- **E-commerce/items:** purchases may be delayed by hours or days, inventory and price change quickly, and repeated product views complicate attribution. Point-in-time catalog state and long conversion windows matter.
+- **Video/feed:** watch time, completion, skip, and hide happen quickly, but session sequence creates strong dependence. Row grain may be an impression within a slate/session rather than an independent user-item example.
+- **Ads:** exposure identity, auction context, propensity/policy logging, and conversion attribution are critical. Multiple ads/campaign touches make attribution especially policy-sensitive.
+- **Notifications:** delivery, open, downstream session, and opt-out outcomes occur on different horizons; the system must distinguish sent, delivered, seen, and opened.
+- **Marketplace:** item/seller availability and provider-side state change over time; labels may include both consumer response and provider/ecosystem outcomes.
 
-Representative verticals:
+Representative transfer template for ads:
 
-- **Video/feed:** **Invariant:** Historical decision reconstruction transfers. **Different assumption:** Watch/skip/dwell labels mature quickly but autoplay complicates examination. **Technical consequence:** Preserve exposure/view state and time-bounded watch outcomes.
-- **E-commerce:** **Invariant:** Point-in-time features and delayed labels transfer. **Different assumption:** Price, inventory, promotion, and purchase delays make mutable catalog history essential. **Technical consequence:** Historize catalog state and use explicit conversion windows.
-- **Ads:** **Invariant:** Temporal correctness transfers. **Different assumption:** Auction/exposure context and delayed multi-touch conversion are central. **Technical consequence:** Bind labels to auction/impression identity and version attribution rules.
-- **Marketplace:** **Invariant:** Decision-time reconstruction transfers. **Different assumption:** Provider availability and two-sided outcomes change during attribution windows. **Technical consequence:** Historize supply state and avoid imputing demand from unavailable offers.
-- **Notifications:** **Invariant:** Temporal grain/attribution transfers. **Different assumption:** Send, delivery, display, open, and downstream action have distinct timestamps. **Technical consequence:** Use explicit opportunity stages and suppression/frequency state at decision time.
-
-**Filled transfer template — Video/feed**
-
-- **Invariant:** Historical decision reconstruction transfers.
-- **Different data-generating process:** Watch/skip/dwell labels mature quickly but autoplay complicates examination.
-- **Different objective:** Re-derive the primary product utility for this vertical rather than copying the base objective.
-- **Different candidates/features:** Candidate sources and features should reflect the vertical-specific context and available signals.
-- **Different constraints:** Watch/skip/dwell labels mature quickly but autoplay complicates examination.
-- **Metric change:** Retain transferable stage metrics, then add vertical-specific outcomes and guardrails.
-- **Serving change:** Preserve exposure/view state and time-bounded watch outcomes.
-- **Ecosystem effect:** Check creator/provider/seller/advertiser or user-side concentration where relevant.
-- **Validation:** Evaluate both transferable retrieval/ranking quality and the vertical-specific product outcome.
-
-Memory aid: `Keep the mechanism; re-derive the assumptions.`
+- Invariant: features must be available at auction time and labels must follow explicit observation rules.
+- Different data-generating process: exposure comes through an auction/pacing policy rather than a simple recommender carousel.
+- Different objective: click/conversion/value may be combined with advertiser and platform constraints.
+- Different candidates/features: bid, budget, campaign, auction, and pacing features become part of the row.
+- Different constraints: policy eligibility, budget exhaustion, frequency caps, and auction mechanics.
+- Metric change: calibration/value and policy-aware evaluation become more important.
+- Serving change: exact auction/policy version and propensity/exposure context must be logged.
+- Ecosystem effect: data is strongly policy-shaped; retraining on logged outcomes can reinforce allocation bias.
+- Validation: replay auction-time state and verify no post-auction budget/conversion facts appear in features.
 
 #### 8. Objective and Metric Mismatch
 
-A temporally correct table can still encode the wrong target, while a leaky table can make the “right” metric look spectacular. Distinguish execution/data correctness from objective validity. First prove that the table reconstructs the intended historical decision; then ask whether the chosen label/attribution window represents product value.
+For R03, an execution failure means the table violates the intended semantics: future features leak, duplicates inflate outcomes, or rows are mislabeled because the pipeline is wrong. Objective mismatch is different: the table is constructed exactly as specified, but the specified label/grain/attribution target is not the product behavior the model should optimize.
 
-**Filled template for this item**
+For example, a perfectly point-in-time-correct click label can still be the wrong objective if the business wants long-term purchase value and clickbait recommendations increase clicks while reducing purchases. Likewise, a last-touch purchase attribution policy can be implemented flawlessly and still assign credit in a way that biases the model toward late-stage exposures.
 
-- **Offline/model metric:** NDCG/AUC or another downstream metric improves sharply after data changes.
-- **Online/product outcome:** No comparable lift, or product metrics regress.
-- **Execution verification:** Prove grain, labels, joins, cutoffs, dependency lineage, split chronology, and serving lag match the intended contract.
-- **Metric semantics:** Offline metric evaluates the target encoded by the rebuilt table.
-- **Blind spots:** Wrong attribution horizon, repeated-exposure semantics, delayed value, exposure bias, or product factors omitted from the label.
-- **Missing product factor:** The table may be correct for click while the product cares about purchase/retention/value.
-- **Repair:** Correct temporal bugs first; then revise label/attribution/objective or add multi-task/guardrail evaluation.
-- **Trade-off:** Better product targets are often sparser, delayed, noisier, and costlier to reconstruct.
-- **Online validation:** Experiment only after dataset correctness is established, with primary product outcomes and data-quality guardrails.
+Representative template:
 
-Memory aid: `Did we execute the objective incorrectly, or correctly optimize the wrong objective?`
+- Offline/model metric: NDCG/AUC/log-loss on impression-level click or attributed purchase labels.
+- Online/product outcome: conversion, revenue, satisfaction, retention, or reduced hides/complaints.
+- Execution verification: prove row uniqueness, temporal feature validity, attribution-window validity, and split correctness.
+- Metric semantics: state exactly what a positive label means and which exposure receives credit.
+- Blind spots: unexposed items, delayed outcomes, position/examination bias, multi-touch effects, and long-term value.
+- Missing product factor: user satisfaction or long-horizon conversion value not represented by the immediate label.
+- Repair: redefine or multi-task the target, preserve richer outcome fields, and redesign attribution/evaluation if needed.
+- Trade-off: slower/sparser labels and more complex evaluation versus better alignment with product value.
+- Online validation: controlled experiment with primary business metrics and guardrails, segmented by cohort and exposure regime.
 
 ## Material Follow-ups / Scenario Variants
 
-### Staff Variant — Purchase horizon changes from 7 days to 30 days, but daily retraining must continue
+### A purchase can happen 30 days after exposure, but the team wants daily retraining. What do you do?
 
-The core invariants do not change: each row still represents a historical decision at $t_0$; features must be available by $t_0$; outcomes are defined after $t_0$; deduplication must distinguish transport duplicates from genuine repeated exposures; and the dataset build must remain reproducible. The changed assumption is the label horizon, from 7 to 30 days.
+Keep feature freshness and label maturity as separate concerns. Daily retraining does not require pretending yesterday's 30-day conversion label is complete. Train on the newest cohort whose labels are mature for the long-horizon target, or combine a fast-maturing short-horizon target with a delayed long-horizon target. Measure the conversion accumulation curve by days-since-exposure, choose the maturity cutoff from observed delay rather than convenience, and record the cutoff in the dataset manifest. If fresher behavior is essential, use recent rows for features or auxiliary objectives without falsely finalizing their long-horizon labels.
 
-That longer horizon has several consequences. First, more recent examples are censored for longer, so the newest fully mature purchase-labeled rows are roughly 30 days old. Second, attribution becomes more ambiguous because more repeated impressions may be eligible for credit. Third, backfills and late-arriving outcomes can revise a longer historical window. Fourth, temporal split boundaries must account for the longer maturity horizon.
+### One purchase follows five impressions of the same item across home, search, and email. Which row is positive?
 
-The key redesign is to separate **training cadence** from **label maturity**. The purchase training dataset can still rebuild and the model can still retrain every day, but fully supervised 30-day purchase labels should come only from mature rows. To incorporate genuinely recent behavior, use faster-maturing signals such as clicks, dwell, or carts as auxiliary objectives, separate models, or serving-time features. A more sophisticated alternative is explicit delayed-feedback or censoring-aware modeling, but that adds assumptions and complexity rather than making unknown outcomes observable.
+There is no universally correct row; this is an attribution-policy choice. First preserve all five exposures with stable surface/request identity. Then choose the target semantics: last touch, first touch, bounded multi-touch credit, or a model that treats conversion attribution separately. The critical requirement is not to let a join accidentally label all five rows as independent full positives. Version the policy, quantify how label counts change under alternatives, and validate online because each rule teaches the ranker a different notion of credit.
 
-The product trade-off is explicit:
+### Late events keep changing last week's table. How can the dataset be both reproducible and correct?
 
-$$
-\text{longer purchase horizon}
-\Rightarrow
-\text{better capture of delayed conversion}
-$$
+Version two notions explicitly. An **as-known snapshot** pins the raw-event watermark and reproduces exactly what the pipeline knew at build time. A **corrected historical snapshot** can incorporate later-arriving events and is assigned a new dataset version. Never let the same dataset identifier silently mutate. Store the watermark, backfill policy, source partitions, code/config version, attribution policy, and output checksum so both artifacts are reproducible for their stated semantics.
 
-but also
+### Offline performance jumps after a table rewrite, but serving code and model class are unchanged. What is your diagnostic?
 
-$$
-\text{longer purchase horizon}
-\Rightarrow
-\text{older fully observed supervised labels}.
-$$
-
-It is impossible to have a fully observed 30-day outcome for an impression from yesterday. The design must therefore accept staler mature purchase labels, use fresher proxy/auxiliary objectives, or adopt delayed-feedback modeling.
-
-### Staff Variant — Offline NDCG jumps from 0.42 to 0.61 after a training-table refactor
-
-Treat the unexplained jump as a data-correctness incident until proven otherwise. Diagnose in an order that localizes the first divergence:
-
-1. **Dataset shape:** compare total rows, unique primary keys, duplicate rate, rows per request/impression, join coverage, and missingness. A join explosion or deduplication regression can change the learning problem without any model-code change.
-2. **Label distributions:** compare positive rates overall and by date/segment, attribution-distance distributions, repeated-exposure multiplicity, and censored-row fractions. A sudden prevalence change may indicate duplicated attribution or immature labels becoming negatives.
-3. **Temporal invariants:** verify $t_{\text{feature}} \le t_0$ and $t_0 < t_{\text{outcome}} \le t_0 + H$. Audit the dependency graph as well: a feature can carry a legal timestamp but still leak if its aggregate, embedding, or encoder was built with future data.
-4. **Joins and historical state:** inspect whether historical catalog/user state was replaced by current snapshots, whether as-of join semantics changed, whether missingness unexpectedly fell, or whether one feature suddenly became implausibly predictive.
-5. **Temporal split correctness:** confirm train, validation, and test chronology, label maturity at boundaries, and cutoff-safe feature/aggregate generation. Merely splitting rows by date is not enough if features were computed on the full dataset.
-6. **Row-level replay:** select a small set of impression IDs and reconstruct them from raw logs: what the system knew, what was shown, which outcome occurred, which exposure received credit, and which feature/artifact version produced the row.
-7. **Adversarial leakage test:** deliberately inject future information, such as tomorrow's purchase count or a current catalog value into a historical row, and verify that dataset validation fails.
-
-Only after the data contract survives these checks should the NDCG gain be treated as a plausible real improvement.
-
-### Staff Variant — Historical rebuild is required, but the catalog stores only the latest price, category, and availability
-
-The immutable impression/click/purchase logs are sufficient to reconstruct behavioral events, but they are **not sufficient to reconstruct historical mutable catalog state**. If only the current catalog row is stored, the system cannot know with certainty what price, category, or availability was effective at an impression six months ago. That information has been destroyed unless another source, audit log, snapshot, CDC stream, or upstream system retains the history.
-
-For the immediate six-month backfill, first search for an authoritative historical source such as warehouse snapshots, change-data-capture logs, object-store exports, catalog audit tables, or source-system history. If none exists, do not silently join today's values and call the result point-in-time correct. Options are to exclude mutable catalog fields from the historical rebuild, restrict the rebuild to the time range for which trustworthy snapshots exist, or use an explicitly documented approximation only if the modeling risk is acceptable. The approximation must be labeled as such because exact reconstruction is impossible from the current state alone.
-
-For future correctness, change the data contract so mutable catalog state is historized. Common patterns are immutable change events, slowly changing dimension Type 2 records with effective intervals, versioned snapshots, or an event-sourced catalog. Each record should preserve an entity key, effective-from/effective-to semantics or change timestamp, ingestion/version metadata, and stable lineage. Then historical feature construction can use an as-of join:
-
-$$
-x(t_0)=\text{latest catalog state whose effective time}\le t_0.
-$$
-
-The broader system rule is that point-in-time correctness is a property of the full dependency graph. If a feature depends on mutable state, the platform must retain enough history to reconstruct what was actually knowable at the decision time.
-
-### Point-in-time joins are too expensive at scale
-
-Preserve the same logical contract while changing execution: pre-materialize versioned snapshots, bucket timestamps, use incremental aggregates with replayable state, partition by entity/time, or restrict backfills to affected windows. Any approximation should document the maximum temporal error and demonstrate that it cannot introduce information unavailable at serving time.
+Treat the data pipeline as the suspect until proven otherwise. Rebuild a fixed historical interval under old and new code from the same immutable raw snapshot. Compare row counts, uniqueness, positive rate, unresolved-label rate, feature availability-time violations, and split-boundary cohorts. Then diff features and labels for the same stable row IDs. The goal is to find the first semantic divergence. If the gain disappears after enforcing availability-time joins or censoring rules, it was leakage or label-definition drift, not a model improvement.
