@@ -28,12 +28,13 @@ export function canonicalCodingKey(curriculum, id) {
   return `${curriculum}:coding:${id.toUpperCase()}`;
 }
 
-const codingId = /\b(?:DSA|SQL|NP|PD|ML|PT|DBG|PY|SRCH|REC)-\d{1,3}\b/i;
+export const codingId = /\b(?:DSA|SQL|NP|PD|ML|PT|DBG|PY|SRCH|REC)-\d{1,3}\b/i;
 const knowledgeId = /\b(?:[AB]\d{1,3}|[SR]\d{2,3})\b/i;
 
 function firstField(raw, names) {
   for (const name of names) {
-    const match = raw.match(new RegExp(`(?:^|\\n)\\s*(?:[-*]\\s*)?\\*{0,2}${name}\\*{0,2}\\s*[:|–—-]\\s*(.+)`, 'im'));
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = raw.match(new RegExp(`(?:^|\\n)\\s*(?:[-*]\\s*)?\\*{0,2}${escaped}(?:\\s*[:]|\\.)\\*{0,2}\\s*(.+)`, 'im'));
     if (match) return match[1].trim().replace(/\*\*/g, '').trim();
   }
   return null;
@@ -86,11 +87,11 @@ export function parseSource({ curriculum, filename, relativePath, markdown }) {
         coding.push({
           canonicalKey: canonicalCodingKey(curriculum, id), curriculum, id,
           title: titleAfterId(section.heading, id) || firstField(section.raw, ['Title']) || id,
-          track: id.split('-')[0], firstExposureWeek: numberField(section.raw, ['First Exposure Week', 'Week']),
+          track: id.split('-')[0], firstExposureWeek: numberField(section.raw, ['First Exposure Week', 'First Exposure', 'Week']),
           level: firstField(section.raw, ['Level', 'Difficulty']), format: firstField(section.raw, ['Format']),
-          timeBox: firstField(section.raw, ['Time Box', 'Timebox']), prompt: firstField(section.raw, ['Prompt', 'Problem']) || excerpt(section.body.join('\n')),
-          concepts: listField(section.raw, ['Core Concepts', 'Concepts']), complexity: firstField(section.raw, ['Complexity', 'Resource Target']),
-          requiredMastery: firstField(section.raw, ['Required Mastery', 'Mastery Output', 'Tests']), followUps: listField(section.raw, ['Follow-ups?', 'Follow Ups']),
+          timeBox: firstField(section.raw, ['Time Box', 'Timebox']), prompt: firstField(section.raw, ['Interview Prompt', 'Prompt', 'Problem']) || excerpt(section.body.join('\n')),
+          concepts: listField(section.raw, ['Core Concepts', 'Concepts']), complexity: firstField(section.raw, ['Complexity / Resource Target', 'Complexity', 'Resource Target']),
+          requiredMastery: firstField(section.raw, ['Required Mastery Tests', 'Required Mastery Test', 'Required Mastery', 'Mastery Output', 'Tests']), followUps: listField(section.raw, ['Follow-ups / Edge Cases', 'Follow-ups?', 'Follow Ups']),
           sourceFile: relativePath, sourceAnchor: anchor, rawSection: section.raw, sourceLine: section.line,
         });
       } else {
@@ -119,6 +120,27 @@ export function parseSource({ curriculum, filename, relativePath, markdown }) {
         tasks: bulletLines(section.raw, /task|deliverable|study|practice/i), milestones: bulletLines(section.raw, /milestone|gate|project/i),
         reviewRequirements: bulletLines(section.raw, /review/i), interviewProblems: bulletLines(section.raw, /interview|system|debug|model/i),
         sourceFile: relativePath, sourceAnchor: slugify(section.heading), rawSection: section.raw, sourceLine: section.line,
+      });
+    }
+  }
+  if (role === 'roadmap') {
+    weeks.length = 0;
+    const lines = parsed.content.split(/\r?\n/);
+    const starts = lines.map((line, index) => (/^#{1,6}\s+Week\s+\d{1,2}\b/i.test(line) ? index : -1)).filter((index) => index >= 0);
+    for (let i = 0; i < starts.length; i++) {
+      const start = starts[i], end = starts[i + 1] ?? lines.length;
+      const heading = lines[start].replace(/^#{1,6}\s+/, '').trim();
+      const raw = lines.slice(start, end).join('\n').trim();
+      const weekNumber = Number(heading.match(/\bWeek\s+(\d{1,2})\b/i)?.[1]);
+      const allIds = unique(raw.match(new RegExp(`${codingId.source}|${knowledgeId.source}`, 'gi')) || []).map((id) => id.toUpperCase());
+      const dateMatch = heading.match(/(?:\(|—|–|:)\s*([^)]*\d{4}[^)]*)\)?$/);
+      weeks.push({
+        curriculum, weekNumber, dateRange: dateMatch?.[1]?.trim() || null,
+        title: heading.replace(/.*?Week\s+\d+\s*[:|–—.-]*\s*/i, '').replace(/\([^)]*\d{4}[^)]*\)$/, '').trim() || `Week ${weekNumber}`,
+        knowledgeItems: allIds.filter((id) => knowledgeId.test(id)), codingItems: allIds.filter((id) => codingId.test(id)),
+        tasks: bulletLines(raw, /task|deliverable|study|practice/i), milestones: bulletLines(raw, /milestone|gate|project/i),
+        reviewRequirements: bulletLines(raw, /review/i), interviewProblems: bulletLines(raw, /interview|system|debug|model/i),
+        sourceFile: relativePath, sourceAnchor: slugify(heading), rawSection: raw, sourceLine: start + 1,
       });
     }
   }
@@ -352,7 +374,7 @@ function associateRoadmap(items, weeks, warnings) {
   for (const week of weeks) {
     for (const id of [...week.knowledgeItems, ...week.codingItems]) {
       const item = resolveReference(items, week.curriculum, id);
-      if (!item) { const count = items.filter((x) => x.curriculum === week.curriculum && x.id === id).length; warnings.push(`${week.sourceFile}:${week.sourceLine}: roadmap reference ${id} is ${count > 1 ? 'ambiguous across banks' : 'unknown'}`); continue; }
+      if (!item) { const count = items.filter((x) => x.curriculum === week.curriculum && x.id === id).length; if (count === 0) warnings.push(`${week.sourceFile}:${week.sourceLine}: roadmap reference ${id} is unknown`); continue; }
       if ('scheduledWeeks' in item && !item.scheduledWeeks.includes(week.weekNumber)) item.scheduledWeeks.push(week.weekNumber);
       if ('firstExposureWeek' in item && item.firstExposureWeek == null) item.firstExposureWeek = week.weekNumber;
     }
