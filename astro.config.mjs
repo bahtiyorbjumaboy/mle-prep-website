@@ -25,7 +25,7 @@ export default defineConfig({
       remarkPlugins: [remarkMath],
       rehypePlugins: [rehypeMermaid, [rehypeKatex, { throwOnError: false, strict: false }]],
     }),
-    shikiConfig: { theme: 'github-dark', wrap: true },
+    shikiConfig: { theme: 'material-theme-palenight', wrap: true },
   },
   vite: { build: { chunkSizeWarningLimit: 800 }, define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) } },
 });

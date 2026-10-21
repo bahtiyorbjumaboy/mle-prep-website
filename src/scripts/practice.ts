@@ -1,8 +1,11 @@
 import { basicSetup } from 'codemirror';
 import { EditorState } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { EditorView, keymap } from '@codemirror/view';
+import { indentWithTab } from '@codemirror/commands';
+import { indentUnit } from '@codemirror/language';
 import { python } from '@codemirror/lang-python';
 import { sql } from '@codemirror/lang-sql';
+import { palenight } from './palenight';
 import { emptyPracticeStore, practiceDraftKey, PRACTICE_STORAGE_KEY, resetPracticeDraft, validatePracticeStore } from '@/lib/practice-storage';
 import { readProgress, writeProgress } from './client';
 
@@ -20,7 +23,7 @@ function writeStore(store: ReturnType<typeof emptyPracticeStore>) { localStorage
 export function initPracticePage() {
   const root=document.querySelector<HTMLElement>('[data-practice-root]'); const host=root?.querySelector<HTMLElement>('[data-editor]'); if(!root||!host)return;
   const payload=JSON.parse(root.dataset.payload||'{}') as Payload; const key=practiceDraftKey(payload.canonicalKey,payload.language); const saved=readStore().drafts[key];
-  const state=EditorState.create({doc:saved?.code??payload.starterCode,extensions:[basicSetup,payload.language==='sql'?sql():python(),EditorView.lineWrapping,EditorView.theme({'&':{height:'100%',fontSize:'13px',backgroundColor:'var(--editor-bg)'},'.cm-scroller':{fontFamily:'ui-monospace, SFMono-Regular, Menlo, monospace',lineHeight:'1.6'},'.cm-gutters':{backgroundColor:'var(--editor-gutter)',color:'var(--muted)',border:'none'}},{dark:document.documentElement.dataset.theme==='dark'}),EditorView.updateListener.of(update=>{if(update.docChanged)scheduleSave();})]});
+  const state=EditorState.create({doc:saved?.code??payload.starterCode,extensions:[basicSetup,keymap.of([indentWithTab]),indentUnit.of('    '),EditorState.tabSize.of(4),payload.language==='sql'?sql():python(),EditorView.lineWrapping,palenight(payload.language),EditorView.theme({'&':{height:'100%',fontSize:'13px'},'.cm-scroller':{fontFamily:'ui-monospace, SFMono-Regular, Menlo, monospace',lineHeight:'1.6'}}),EditorView.updateListener.of(update=>{if(update.docChanged)scheduleSave();})]});
   const view=new EditorView({state,parent:host}); let timer:number|undefined; const saveState=root.querySelector<HTMLElement>('[data-save-state]');
   const save=()=>{if(timer)window.clearTimeout(timer); if(saveState)saveState.textContent='Saving…'; const store=readStore(); store.drafts[key]={...(store.drafts[key]||{}),code:view.state.doc.toString(),language:payload.language,savedAt:new Date().toISOString()}; try{writeStore(store); if(saveState)saveState.textContent='Saved';}catch{if(saveState)saveState.textContent='Unsaved — storage error';}};
   const scheduleSave=()=>{if(saveState)saveState.textContent='Unsaved'; if(timer)window.clearTimeout(timer); timer=window.setTimeout(save,600);};

@@ -12,7 +12,7 @@ const processor = unified({
     rehypePlugins: [rehypeMermaid, [rehypeKatex, { throwOnError: false, strict: false }]],
   }).createRenderer({
   syntaxHighlight: 'shiki',
-  shikiConfig: { theme: 'github-dark', wrap: true },
+  shikiConfig: { theme: 'material-theme-palenight', wrap: true },
 });
 
 export async function renderMarkdown(markdown: string): Promise<string> {

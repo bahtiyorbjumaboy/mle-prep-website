@@ -6,7 +6,7 @@ describe('coding solution highlighting', () => {
     const code = 'def compare(left, right):\n    return left < right\n';
     const html = await renderCode(code, 'python');
 
-    expect(html).toContain('class="shiki github-dark"');
+    expect(html).toContain('class="shiki material-theme-palenight"');
     expect(html).toContain('<span style="color:');
     expect(html).toContain('def');
     expect(html).toContain('left ');
