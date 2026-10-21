@@ -2,20 +2,20 @@
 
 **Status:** ACTIVE 2026 GENERALIST CODING SET  
 **Roadmap window:** Sunday, September 6, 2026 through Thursday, December 31, 2026  
-**Count:** 69 core coding IDs  
-**Scope:** Generalist MLE interview readiness only. Search/IR + Recommendation/Ranking specialization coding is deferred to the separate 2027 specialization curriculum.
+**Count:** 100 coding IDs = 69 roadmap-core + 31 generalist-depth extension IDs  
+**Scope:** Deep Generalist MLE interview readiness across SWE/DSA, SQL/data work, Python/NumPy/pandas, classical ML implementation, PyTorch/framework coding, debugging/testing, and production-shaped implementation. Search/IR + Recommendation/Ranking specialization coding remains deferred to the separate specialization curriculum.
 
 ## Track counts
 
-| Track | Count |
-|---|---:|
-| DSA / SWE Algorithms | 26 |
-| SQL | 9 |
-| Python / NumPy / pandas | 11 |
-| General ML Implementation | 9 |
-| PyTorch / Framework | 7 |
-| Debugging / Testing / Existing Code | 7 |
-| **Total** | **69** |
+| Track | Roadmap core | Depth extension | Total |
+|---|---:|---:|---:|
+| DSA / SWE Algorithms | 26 | 6 | 32 |
+| SQL | 9 | 4 | 13 |
+| Python / NumPy / pandas | 11 | 7 | 18 |
+| General ML Implementation | 9 | 8 | 17 |
+| PyTorch / Framework | 7 | 4 | 11 |
+| Debugging / Testing / Existing Code | 7 | 2 | 9 |
+| **Total** | **69** | **31** | **100** |
 
 ## Mastery contract
 
@@ -37,6 +37,131 @@ For every ★ problem, where applicable, include:
 3. one invariant/property test;
 4. one adversarial bug-revealing case;
 5. deterministic-seed/reproducibility checks when randomness exists.
+
+
+## Practice workflow — VS Code + pytest
+
+Use this workflow whenever a coding ID is turned into a local practice workspace. The purpose is to preserve learner ownership while making every problem executable, testable, reviewable, and easy to revisit cold.
+
+### Default workspace
+
+Create one directory per coding ID:
+
+```text
+problems/<problem_id>/
+  README.md
+  solution.py
+  test_solution.py
+  notes.md
+```
+
+Adapt filenames only when the problem genuinely requires SQL, multiple modules, data fixtures, or framework-specific structure. Keep one canonical problem directory per ID rather than creating a new directory for every attempt.
+
+### File contract
+
+**`README.md`**
+- copy the exact canonical interview prompt from this bank;
+- state required function/class signatures, inputs, outputs, constraints, and allowed libraries;
+- include clarification questions or assumptions that an interviewer could reasonably expect;
+- do **not** include the target solution, giveaway pseudocode, or the name of a hidden algorithmic primitive when the interview prompt itself would not reveal it.
+
+**`solution.py`**
+- provide imports, public signatures/interfaces, docstrings where useful, and `TODO` markers only;
+- do not prefill the intended algorithm in **INTERVIEW** mode;
+- the learner owns the implementation.
+
+**`test_solution.py`**
+- use deterministic `pytest` tests;
+- include ordinary correctness cases plus specification-derived edge cases;
+- for ★ problems, include applicable hand-computed fixtures, boundary cases, invariants/properties, adversarial bug-revealing cases, and deterministic-seed checks;
+- tests may encode the specification, but should not reveal the intended implementation strategy;
+- use tolerances deliberately for floating-point code (`pytest.approx`, `numpy.testing`, or equivalent);
+- test shapes, dtypes, ordering, determinism, mutation/state behavior, and failure contracts when they are part of the problem;
+- for randomized algorithms, test statistical or deterministic-seed properties rather than brittle exact samples unless exact samples are part of the contract.
+
+**`notes.md`**
+- before coding, record clarification, baseline, invariant/objective, intended complexity, and important edge cases;
+- after the attempt, record mistakes, failed assumptions, debugging evidence, and the final reasoning;
+- keep concise notes that help a later cold re-attempt; do not turn the notes into a copied solution transcript.
+
+### Session modes
+
+Use one explicit mode per practice session:
+
+- **INTERVIEW — default.** Create scaffold + tests, but reveal no solution or giveaway pseudocode. The learner first explains the approach and implements independently under the intended time box.
+- **HINT.** Provide the smallest next hint needed: first a diagnostic question, then an invariant/shape/data-grain clue, then a more concrete direction only if needed. Do not jump directly to the solution.
+- **REVIEW/SOLUTION.** Enter only after an independent attempt is complete or the learner explicitly requests it. At this point compare implementations, explain the canonical mechanism, repair bugs, improve tests, and discuss alternatives/trade-offs.
+
+### Standard practice loop
+
+For each problem:
+
+1. **Generate the workspace.** Create `README.md`, learner-owned implementation file(s), `test_solution.py`, and `notes.md` from the canonical ID.
+2. **Clarify before coding.** State input/output contracts, assumptions, shapes or row grain, edge cases, and allowed libraries.
+3. **Reason aloud.** Give a simple baseline, identify the key invariant/objective/equation, and state expected time/memory cost before implementation.
+4. **Implement independently.** Stay inside the intended interview time box when doing a timed attempt. Do not consult the solution during INTERVIEW mode.
+5. **Run focused tests.** Start with a small relevant subset, then run the full suite, for example:
+
+   ```bash
+   pytest -q
+   ```
+
+   or, while localizing one failure:
+
+   ```bash
+   pytest -q test_solution.py::test_name
+   ```
+
+6. **Debug from evidence.** Read the traceback/assertion, localize the failing contract, form a root-cause hypothesis, make the smallest justified fix, rerun the focused test, then rerun the full suite. Do not patch randomly until tests turn green.
+7. **Defend the solution.** Explain correctness, complexity/resources, numerical or data issues, tests, and at least one changed-constraint follow-up.
+8. **Review only after ownership.** If needed, switch to REVIEW/SOLUTION and compare against a stronger implementation or alternative approach.
+9. **Record the lesson.** Update `notes.md` with the specific mistake or transferable insight rather than copying the full answer.
+10. **Cold re-attempt later.** Re-solve after spacing, ideally with changed surface wording, inputs, constraints, or one hidden failure mode. Passing the original tests immediately after review is not mastery.
+
+### Workspace setup checklist
+
+A reusable setup checklist is:
+
+```text
+Start from the 2026 Generalist MLE coding-set Markdown file.
+Set up problem <ID> in INTERVIEW mode for VS Code.
+Create the problem workspace with README.md, solution.py (or the appropriate implementation file), test_solution.py, and notes.md.
+Preserve the exact canonical prompt and interfaces.
+Create a strong deterministic pytest suite, including applicable edge, adversarial, invariant, and numerical cases.
+Do not reveal the solution, giveaway pseudocode, or hidden implementation strategy.
+```
+
+For SQL problems, use an appropriate SQL file plus deterministic fixture/expected-result tests. For PyTorch, data, or multi-file problems, adapt the workspace while preserving the same ownership and testing contract.
+
+### Pytest acceptance rule
+
+`pytest` passing is necessary but not sufficient. A problem reaches **Interview-ready** only when the learner can also explain why the implementation is correct, derive or state the relevant ML/math mechanism when applicable, reason about complexity/resources, handle material edge cases, and answer the problem's follow-ups without solution dependence.
+
+
+## Transfer / surprise-resistance contract
+
+The bank is intentionally finite; no problem list can guarantee that an interview will never contain an unfamiliar task. The target is therefore **transfer**, not memorization. Interview-ready performance requires being able to convert an unfamiliar prompt into a correct implementation by identifying its underlying primitive.
+
+For every coding family, practice the following loop:
+
+1. restate input/output contracts and shape/grain semantics;
+2. give a simple correct baseline before optimizing;
+3. identify the invariant, objective, or mathematical definition being implemented;
+4. implement without relying on a convenience library that hides the tested concept unless the interviewer allows it;
+5. test a hand-computed example plus adversarial edge cases;
+6. state time, memory, numerical-stability, and data-size limits;
+7. handle one changed-constraint follow-up;
+8. on later review, solve a variant whose surface wording differs from the original problem.
+
+For **ML-concept → code** prompts specifically, be able to move in both directions:
+
+`definition / equation → scalar reference implementation → vectorized implementation → tests → numerical edge cases → complexity`.
+
+For **dataframe / SQL** prompts, explicitly establish row grain, key uniqueness, join cardinality, timestamp semantics, missing-value policy, and deterministic tie handling before implementation.
+
+For **PyTorch** prompts, explicitly track tensor shapes, devices/dtypes, training/eval state, autograd graph lifetime, masking semantics, and reduction denominators.
+
+For **SWE-leaning MLE** prompts, code production-quality interfaces: deterministic behavior where expected, explicit error handling, sensible state ownership, tests, and resource reasoning.
 
 # First-exposure schedule
 
@@ -142,6 +267,59 @@ For every ★ problem, where applicable, include:
 - **PT-06 — Custom Dataset / Collate / Variable Lengths**
 - **PT-07 — Reproducibility / Checkpoint Resume ★**
 - **DBG-07 — Extend Existing Evaluator**
+
+
+# Generalist-depth extension schedule
+
+The original 69 IDs remain the **roadmap-core first-exposure schedule**. The 31 IDs below are an extension for the longer deep-generalist plan; they do not need to be forced into the original 17-week calendar. Add them only after prerequisites are comfortable, and prioritize cold re-attempts over new exposure. A practical default is 2–3 extension IDs per week while maintaining the core review queue.
+
+## Extension Block A — ML primitives that commonly become coding questions
+- **ML-10 — Entropy, Gini, and Information Gain ★**
+- **ML-11 — Decision Stump / Best Tree Split ★**
+- **NP-06 — Pairwise Distances + Vectorized kNN Primitives ★**
+- **ML-13 — kNN Classifier / Regressor From Scratch**
+- **ML-12 — Linear + Ridge Regression From Scratch ★**
+
+## Extension Block B — numerical ML + representation mechanics
+- **NP-07 — Covariance, Correlation, Standardization, Whitening**
+- **ML-14 — PCA From Scratch with SVD / Eigendecomposition ★**
+- **ML-15 — Naive Bayes From Scratch**
+- **ML-16 — SGD, Momentum, RMSProp, Adam, AdamW Updates ★**
+- **ML-17 — Gradient Checking + Tiny Neural Net Backprop ★**
+
+## Extension Block C — dataframe and Python assessment fluency
+- **PD-05 — Mixed pandas Assessment ★**
+- **PD-06 — Reshape, Explode, Multi-Key Merge, and Reconciliation**
+- **NP-08 — Sampling, Randomness, and Vectorized Monte Carlo ★**
+- **PY-03 — Lazy Iterators, Batching, and Streaming Aggregation**
+- **PY-04 — Concurrency-Safe Worker / Queue Exercise**
+
+## Extension Block D — PyTorch implementation depth
+- **PT-08 — Scaled Dot-Product Attention + Masks ★**
+- **PT-09 — CNN Module + Shape / Parameter Accounting**
+- **PT-10 — Mixed Precision, Inference Mode, and Batched Inference ★**
+- **PT-11 — Freeze / Unfreeze Transfer Learning + Optimizer Groups**
+
+## Extension Block E — SWE / systems coding for MLE roles
+- **DSA-27 — LRU Cache ★**
+- **DSA-28 — Trie / Prefix Index**
+- **DSA-29 — Union-Find / Dynamic Connectivity**
+- **DSA-30 — Dijkstra / Weighted Shortest Path ★**
+- **DSA-31 — Heap Scheduler / Meeting Rooms + Resource Assignment**
+- **DSA-32 — Token-Bucket Rate Limiter + Testable Clock ★**
+
+## Extension Block F — SQL + production debugging
+- **SQL-10 — Cohort Retention**
+- **SQL-11 — Experiment Metrics + Sample-Ratio Checks ★**
+- **SQL-12 — Point-in-Time Features in SQL ★**
+- **SQL-13 — Data Reconciliation / Quality Invariants**
+- **DBG-08 — Performance Regression / Profiling + Vectorization ★**
+- **DBG-09 — Training / Serving Parity and Version-Skew Bug ★**
+
+## Extension acceptance rule
+
+Do not mark an extension item complete after seeing one canonical solution. For each ★ extension item, later solve at least one transfer variant with changed shapes/data types/objective/constraints. The objective is to make unfamiliar assessment wording feel like recombination of known primitives.
+
 
 ---
 
@@ -1157,11 +1335,541 @@ For every ★ problem, where applicable, include:
 
 **Required mastery test.** Preserve the existing evaluator regression suite unchanged and passing; add specification-derived tests for the new segment metrics, arbitrary `recall@k`, and streaming behavior that fail before the extension is implemented and pass afterward.
 
+
 ---
 
-# 2026 coding acceptance
+# Generalist-depth extension problem bank
 
-- All 69 core IDs receive first exposure by December 31, 2026.
-- Week 1 contains 5 new coding IDs; Weeks 2–17 contain exactly 4 each.
-- Interview readiness requires independent and cold re-attempts; first exposure alone is insufficient.
-- The separate 2027 specialization coding set is authoritative for Search/IR + Recommendation/Ranking specialization work.
+These IDs strengthen the original 69 without replacing them. They target surfaces that can appear in ML-flavored coding screens, SWE-leaning MLE interviews, data-manipulation assessments, framework rounds, and production-debugging exercises.
+
+# Track A extension — DSA / SWE Algorithms
+
+## DSA-27 — LRU Cache ★
+**First exposure:** Depth extension  
+**Level:** L2/L3  
+**Time box:** 35 min  
+**Format:** LIVE  
+
+**Interview prompt.** Implement an `LRUCache(capacity)` supporting `get(key)` and `put(key, value)` in O(1) average time. Do not use an ordered-map convenience type for the core version. Define update semantics when an existing key is overwritten.
+
+**Core concepts.** hash map + doubly linked list; recency invariant; stateful class design.
+
+**Complexity / resource target.** O(1) average `get`/`put`; O(capacity) memory.
+
+**Follow-ups / edge cases.** capacity 0/1; thread safety; TTL interaction; serialization.
+
+**Required mastery tests.** deterministic eviction order; overwrite updates recency; repeated gets move entries; capacity boundary.
+
+## DSA-28 — Trie / Prefix Index
+**First exposure:** Depth extension  
+**Level:** L2  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** Implement a trie with `insert`, exact `contains`, prefix `starts_with`, and enumeration of up to `k` completions. Preserve deterministic completion order.
+
+**Core concepts.** prefix trees; node ownership; DFS/BFS enumeration; memory/branching trade-offs.
+
+**Complexity / resource target.** O(length) insert/lookup; output-sensitive completion enumeration.
+
+**Follow-ups / edge cases.** deletion; Unicode; frequency-ranked completions; compressed trie.
+
+## DSA-29 — Union-Find / Dynamic Connectivity
+**First exposure:** Depth extension  
+**Level:** L2  
+**Time box:** 25 min  
+**Format:** LIVE  
+
+**Interview prompt.** Implement disjoint-set union with path compression and union by rank/size, then use it to count connected components and process incremental connectivity queries.
+
+**Core concepts.** representative invariant; path compression; union by rank/size; amortized analysis.
+
+**Complexity / resource target.** near-constant amortized operations, O(alpha(n)).
+
+**Follow-ups / edge cases.** dynamic additions; cycle detection; why deletions are harder.
+
+## DSA-30 — Dijkstra / Weighted Shortest Path ★
+**First exposure:** Depth extension  
+**Level:** L2/L3  
+**Time box:** 35 min  
+**Format:** LIVE  
+
+**Interview prompt.** Given a directed graph with nonnegative edge weights, return shortest distances from a source and reconstruct one shortest path to a target.
+
+**Core concepts.** priority queue; stale-entry handling; relaxation invariant; predecessor reconstruction.
+
+**Complexity / resource target.** O((V+E) log V) with adjacency lists and binary heap.
+
+**Follow-ups / edge cases.** unreachable nodes; zero-weight edges; negative edges; A* heuristic.
+
+**Required mastery tests.** stale heap entries; multiple equal paths; disconnected graph; explicit negative-edge rejection.
+
+## DSA-31 — Heap Scheduler / Meeting Rooms + Resource Assignment
+**First exposure:** Depth extension  
+**Level:** L2  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** Given jobs with start/end times, compute the minimum number of workers required and return a deterministic worker assignment for every job.
+
+**Core concepts.** sort + min-heap; resource reuse; stable tie handling.
+
+**Complexity / resource target.** O(n log n).
+
+**Follow-ups / edge cases.** inclusive/exclusive endpoints; worker-specific eligibility; online arrivals.
+
+## DSA-32 — Token-Bucket Rate Limiter + Testable Clock ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 40 min  
+**Format:** EXTENDED_DRILL  
+
+**Interview prompt.** Implement a token-bucket limiter supporting configurable capacity/refill rate and `allow(cost=1)` without sleeping. Inject a clock so behavior can be tested deterministically.
+
+**Core concepts.** stateful systems code; monotonic time; lazy refill; floating-point boundaries; API contracts.
+
+**Complexity / resource target.** O(1) per request and O(1) state per limiter.
+
+**Follow-ups / edge cases.** per-user map; concurrency; distributed limiter trade-offs; clock rollback.
+
+**Required mastery tests.** burst capacity, partial refill, exact boundary, fake-clock determinism, invalid cost.
+
+# Track B extension — SQL
+
+## SQL-10 — Cohort Retention
+**First exposure:** Depth extension  
+**Level:** L2/L3  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** From `users(user_id, signup_ts)` and `events(user_id, event_ts)`, build weekly signup cohorts and return week-0 through week-8 retained-user counts and retention rates. Each user counts once per cohort-week.
+
+**Core concepts.** cohort anchoring; date arithmetic; distinct grain; pivot/conditional aggregation.
+
+**Complexity / resource target.** one event join plus grouped aggregation; reason about deduplication before aggregation.
+
+**Follow-ups / edge cases.** calendar vs elapsed weeks; missing cohort-weeks; rolling retention.
+
+## SQL-11 — Experiment Metrics + Sample-Ratio Checks ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 35 min  
+**Format:** LIVE  
+
+**Interview prompt.** Given assignment, exposure, conversion, and revenue tables, produce one row per variant with assigned users, exposed users, converters, conversion rate, revenue/user, and assignment share. Flag duplicate assignment, post-conversion exposure, and obvious sample-ratio mismatch inputs for downstream statistical testing.
+
+**Core concepts.** experiment grain; exposure semantics; deduplication; conditional aggregation; data-quality checks.
+
+**Complexity / resource target.** pre-aggregate to user/variant before final metrics; avoid event-level fan-out.
+
+**Follow-ups / edge cases.** multiple exposures; triggered analysis; identity changes; CUPED-input extraction.
+
+**Required mastery tests.** a fixture where naive event joins double revenue; duplicate assignment; unexposed assigned users.
+
+## SQL-12 — Point-in-Time Features in SQL ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 40 min  
+**Format:** EXTENDED_DRILL  
+
+**Interview prompt.** For label rows `(entity_id, label_ts)`, compute strictly-prior 1/7/30-day event counts, 30-day amount, and latest known profile value without future leakage. Preserve one output row per label row.
+
+**Core concepts.** temporal joins; correlated ranges/window alternatives; grain preservation; strict boundary semantics.
+
+**Complexity / resource target.** reason about indexes/partition pruning and why a naive label×events join can explode.
+
+**Follow-ups / edge cases.** late events; identical timestamps; slowly changing dimensions; database-specific `AS OF` support.
+
+**Required mastery tests.** every contributing event satisfies `event_ts < label_ts`; no label-row duplication.
+
+## SQL-13 — Data Reconciliation / Quality Invariants
+**First exposure:** Depth extension  
+**Level:** L2  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** Given raw events, a transformed feature table, and a prediction table, write queries that reconcile row counts and amounts, find missing/duplicate keys, identify orphaned foreign keys, detect impossible timestamp orderings, and summarize failures by day/source.
+
+**Core concepts.** anti-joins; set differences; uniqueness; reconciliation; invariant-based debugging.
+
+**Complexity / resource target.** scalable grouped checks rather than exporting data for row-by-row comparison.
+
+**Follow-ups / edge cases.** tolerance for floating amounts; slowly arriving partitions; null-key semantics.
+
+# Track C extension — Python / NumPy / pandas
+
+## NP-06 — Pairwise Distances + Vectorized kNN Primitives ★
+**First exposure:** Depth extension  
+**Level:** L2/L3  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** Given query matrix `Q(m,d)` and reference matrix `X(n,d)`, compute pairwise squared Euclidean distances without a Python loop over pairs, return exact top-k nearest indices, and support chunked queries when `m*n` scores do not fit memory.
+
+**Core concepts.** norm expansion; broadcasting vs matmul; `argpartition`; memory-aware vectorization.
+
+**Complexity / resource target.** O(mnd) arithmetic; explain O(mn) score-memory and chunking.
+
+**Follow-ups / edge cases.** cosine equivalence after normalization; ties; float error yielding tiny negative squared distances.
+
+**Required mastery tests.** compare against a double-loop reference; clamp only numerical negatives; k>n handling.
+
+## NP-07 — Covariance, Correlation, Standardization, Whitening
+**First exposure:** Depth extension  
+**Level:** L2/L3  
+**Time box:** 35 min  
+**Format:** LIVE  
+
+**Interview prompt.** Implement column standardization, sample covariance, correlation, and a whitening transform from NumPy primitives. Clearly define ddof and behavior for zero-variance columns.
+
+**Core concepts.** centering; covariance normalization; eigendecomposition/SVD; numerical epsilon; matrix shapes.
+
+**Complexity / resource target.** O(nd^2 + d^3) for dense covariance + decomposition.
+
+**Follow-ups / edge cases.** d>>n; rank deficiency; ZCA vs PCA whitening.
+
+## NP-08 — Sampling, Randomness, and Vectorized Monte Carlo ★
+**First exposure:** Depth extension  
+**Level:** L2  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** Using an explicit RNG object/seed, implement categorical sampling from probability rows, weighted sampling without accidental normalization bugs, Monte Carlo estimation of an expectation, and a vectorized bootstrap resample primitive.
+
+**Core concepts.** RNG ownership; probability normalization; cumulative distribution/search; vectorized simulation; reproducibility.
+
+**Complexity / resource target.** O(samples * categories) or better where library primitives permit; make memory trade-offs explicit.
+
+**Follow-ups / edge cases.** all-zero weights; very small probabilities; independent streams.
+
+**Required mastery tests.** deterministic seeded fixture plus distributional sanity check with tolerance, not exact random counts.
+
+## PD-05 — Mixed pandas Assessment ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 45 min  
+**Format:** EXTENDED_DRILL  
+
+**Interview prompt.** Given messy `users`, `events`, `orders`, and `items` DataFrames, produce a user-level modeling table requiring filtering, missing-value handling, deduplication, validated merges, grouped aggregations, within-group ranking, timestamp features, one reshape/pivot, and deterministic tie handling. One supplied column intentionally leaks future information; exclude it and explain why.
+
+**Core concepts.** integrated pandas fluency; grain; merge validation; `groupby/agg/transform`; ranking; datetime operations; reshaping; leakage.
+
+**Complexity / resource target.** vectorized/columnar operations; identify the most expensive sort/join and avoid row-wise `apply` unless justified.
+
+**Follow-ups / edge cases.** categorical dtype; nullable dtypes; chained assignment; memory reduction.
+
+**Required mastery tests.** row-grain assertion; unique-key assertion; hand-computed user fixture; no future timestamp contribution.
+
+## PD-06 — Reshape, Explode, Multi-Key Merge, and Reconciliation
+**First exposure:** Depth extension  
+**Level:** L2  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** Normalize a DataFrame containing list-valued fields, explode it, join against a multi-key dimension table, compute per-entity aggregates, pivot a categorical measure into columns, and reconcile totals before/after reshape.
+
+**Core concepts.** `explode`; multi-key merge; pivot/pivot_table; duplicate semantics; conservation checks.
+
+**Complexity / resource target.** understand row multiplication and peak memory after explode.
+
+**Follow-ups / edge cases.** empty lists; duplicate dimension keys; sparse wide output.
+
+## PY-03 — Lazy Iterators, Batching, and Streaming Aggregation
+**First exposure:** Depth extension  
+**Level:** L2  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** Implement reusable iterator utilities that lazily read records, validate/transform them, batch them by count, and maintain streaming aggregates without loading the full dataset. Preserve exceptions with useful context.
+
+**Core concepts.** iterators/generators; lazy evaluation; state; batching; defensive parsing.
+
+**Complexity / resource target.** O(batch_size + aggregate_state) memory.
+
+**Follow-ups / edge cases.** partial final batch; backpressure; retryable record source.
+
+## PY-04 — Concurrency-Safe Worker / Queue Exercise
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 40 min  
+**Format:** EXTENDED_DRILL  
+
+**Interview prompt.** Implement a small worker pool around a bounded queue that consumes tasks, captures successes/failures, supports clean shutdown, and never loses a task silently. Tests must not depend on arbitrary sleeps.
+
+**Core concepts.** threads/queues; synchronization; sentinel/shutdown protocols; exception propagation; deterministic testing.
+
+**Complexity / resource target.** bounded in-flight work; discuss CPU-bound vs I/O-bound behavior and the GIL.
+
+**Follow-ups / edge cases.** worker exception; duplicate/retry semantics; process-pool alternative.
+
+# Track D extension — General ML Implementation
+
+## ML-10 — Entropy, Gini, and Information Gain ★
+**First exposure:** Depth extension  
+**Level:** L2  
+**Time box:** 25 min  
+**Format:** LIVE  
+
+**Interview prompt.** Implement entropy and Gini impurity from either class labels or class probabilities. Then compute weighted child impurity and information gain for a proposed binary split.
+
+**Core concepts.** empirical class probabilities; `0 log 0 = 0`; weighted impurity; pure-node behavior.
+
+**Complexity / resource target.** O(n+C) for labels depending on counting method.
+
+**Follow-ups / edge cases.** multiclass labels; sample weights; base-2 vs natural log; empty child rejection.
+
+**Required mastery tests.** pure set => zero entropy/Gini; balanced binary entropy; split whose children are pure; invariant to label renaming.
+
+## ML-11 — Decision Stump / Best Tree Split ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 40 min  
+**Format:** EXTENDED_DRILL  
+
+**Interview prompt.** Given dense numeric `X(n,d)` and classification labels, find the best `(feature, threshold)` split for a depth-1 tree using information gain or Gini decrease. Return child predictions. Then adapt the scorer for regression MSE reduction.
+
+**Core concepts.** candidate thresholds; greedy split search; impurity reduction; sorting; leaf predictions.
+
+**Complexity / resource target.** start with a clear baseline; then explain how sorting each feature enables O(d*n log n) rather than recomputing every partition naively.
+
+**Follow-ups / edge cases.** repeated feature values; min leaf size; sample weights; missing values.
+
+**Required mastery tests.** no threshold between equal adjacent values; deterministic tie break; classification and regression fixtures.
+
+## ML-12 — Linear + Ridge Regression From Scratch ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 40 min  
+**Format:** EXTENDED_DRILL  
+
+**Interview prompt.** Implement linear regression with intercept using gradient descent, then add ridge regularization. Separately compute a closed-form reference with a numerically appropriate solver rather than explicit matrix inversion. Compare predictions/coefficients on a small well-conditioned fixture.
+
+**Core concepts.** MSE gradient; intercept handling; regularization; conditioning; solve vs inverse.
+
+**Complexity / resource target.** O(nd) per gradient step; dense solve cost depends on d.
+
+**Follow-ups / edge cases.** standardized features; rank deficiency; intercept should normally not be regularized; SGD variant.
+
+**Required mastery tests.** finite-difference gradient check on tiny data; ridge shrinks coefficients on a correlated fixture.
+
+## ML-13 — kNN Classifier / Regressor From Scratch
+**First exposure:** Depth extension  
+**Level:** L2  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** Build `fit/predict` kNN for classification and regression using exact distances. Support uniform and inverse-distance weighting with deterministic tie handling.
+
+**Core concepts.** lazy learning; distance scaling; nearest-neighbor selection; vote/reduction semantics.
+
+**Complexity / resource target.** O(q*n*d) prediction; O(nd) storage.
+
+**Follow-ups / edge cases.** zero-distance neighbors; feature scaling; large-n index alternatives.
+
+## ML-14 — PCA From Scratch with SVD / Eigendecomposition ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 35 min  
+**Format:** LIVE  
+
+**Interview prompt.** Implement PCA `fit`, `transform`, and `inverse_transform`: center data, learn components using SVD (and explain the covariance-eigendecomposition equivalent), return explained-variance ratios, and reconstruct data from `k` components.
+
+**Core concepts.** centering; right singular vectors; variance; sign ambiguity; low-rank reconstruction.
+
+**Complexity / resource target.** state dense SVD cost and memory; discuss randomized/truncated alternatives conceptually.
+
+**Follow-ups / edge cases.** k>rank; scaling vs centering; component sign differences.
+
+**Required mastery tests.** reconstruction improves monotonically with k; transformed covariance is diagonal within tolerance for full-rank fixture.
+
+## ML-15 — Naive Bayes From Scratch
+**First exposure:** Depth extension  
+**Level:** L2  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** Implement multinomial Naive Bayes for count features with Laplace smoothing and log-space prediction. Return class log-priors, feature log-probabilities, predicted classes, and optional normalized probabilities.
+
+**Core concepts.** conditional independence; smoothing; log probabilities; sparse-count semantics.
+
+**Complexity / resource target.** O(nnz) training/prediction for sparse representation, O(nd) dense.
+
+**Follow-ups / edge cases.** unseen vocabulary; Bernoulli NB; why normalization is unnecessary for argmax.
+
+## ML-16 — SGD, Momentum, RMSProp, Adam, AdamW Updates ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 35 min  
+**Format:** LIVE  
+
+**Interview prompt.** Given parameter arrays and gradients, implement one optimizer step for vanilla SGD, momentum, RMSProp, Adam with bias correction, and AdamW-style decoupled weight decay. Keep optimizer state explicit.
+
+**Core concepts.** optimizer state; exponential moving averages; bias correction; coupled L2 vs decoupled decay.
+
+**Complexity / resource target.** O(number of parameters) time; optimizer-state memory accounting.
+
+**Follow-ups / edge cases.** first-step bias correction; zero gradients; mixed precision state dtype.
+
+**Required mastery tests.** hand-computed scalar first/second step; AdamW differs from adding L2 to Adam gradient.
+
+## ML-17 — Gradient Checking + Tiny Neural Net Backprop ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 45 min  
+**Format:** EXTENDED_DRILL  
+
+**Interview prompt.** Implement forward and backward passes for a tiny two-layer NumPy network and verify selected analytic gradients with centered finite differences. Include a stable loss.
+
+**Core concepts.** chain rule; cached intermediates; matrix shapes; finite-difference approximation; relative error.
+
+**Complexity / resource target.** analytic backprop O(forward cost); numerical check is intentionally expensive per checked parameter.
+
+**Follow-ups / edge cases.** nondifferentiable activation points; epsilon selection; batch gradients.
+
+**Required mastery tests.** analytic/numeric relative error below tolerance on deterministic small fixture.
+
+# Track E extension — PyTorch / Framework
+
+## PT-08 — Scaled Dot-Product Attention + Masks ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 35 min  
+**Format:** LIVE  
+
+**Interview prompt.** Given `Q, K, V` tensors, implement scaled dot-product attention with padding and causal masks. Support batched multi-head shapes, apply masks before softmax, and return both outputs and attention weights.
+
+**Core concepts.** `QK^T / sqrt(d_k)`; tensor transposes; masking; stable softmax; head/batch dimensions.
+
+**Complexity / resource target.** O(B*H*Tq*Tk*d) compute and O(B*H*Tq*Tk) attention-score memory.
+
+**Follow-ups / edge cases.** all-masked row policy; different query/key lengths; flash-attention conceptual follow-up.
+
+**Required mastery tests.** causal future weights are zero; padding weights are zero; rows sum to one when at least one key is valid.
+
+## PT-09 — CNN Module + Shape / Parameter Accounting
+**First exposure:** Depth extension  
+**Level:** L2  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** Implement a compact image classifier using convolution, activation, pooling, adaptive pooling, and a linear head. Annotate output shapes and parameter counts after every learned layer.
+
+**Core concepts.** NCHW; convolution output formula; channels; pooling; flatten/adaptive pooling.
+
+**Complexity / resource target.** reason about convolution FLOPs and activation memory qualitatively/quantitatively.
+
+**Follow-ups / edge cases.** arbitrary image size; BatchNorm train/eval behavior; replace pooling with stride.
+
+## PT-10 — Mixed Precision, Inference Mode, and Batched Inference ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 35 min  
+**Format:** EXTENDED_DRILL  
+
+**Interview prompt.** Starting from a correct FP32 training/inference loop, add device-aware autocast and gradient scaling where appropriate, then implement memory-bounded batched inference with `eval()` and inference/no-grad semantics. Collect outputs without retaining graphs.
+
+**Core concepts.** AMP; scaler lifecycle; dtype/device; inference graph suppression; batching; host/device transfer.
+
+**Complexity / resource target.** quantify how batch size changes activation memory/throughput; no accidental O(dataset) GPU retention.
+
+**Follow-ups / edge cases.** CPU fallback; unsupported ops; overflow/underflow; why `eval()` and `no_grad/inference_mode` solve different problems.
+
+**Required mastery tests.** evaluation deterministic with dropout; output equivalence to small FP32 fixture within tolerance; GPU-memory state not accumulated across batches conceptually/test where available.
+
+## PT-11 — Freeze / Unfreeze Transfer Learning + Optimizer Groups
+**First exposure:** Depth extension  
+**Level:** L2/L3  
+**Time box:** 30 min  
+**Format:** LIVE  
+
+**Interview prompt.** Given a pretrained backbone and new head, freeze the backbone, train only the head, then unfreeze selected layers with a lower learning rate via optimizer parameter groups. Verify which parameters receive gradients and optimizer updates.
+
+**Core concepts.** `requires_grad`; optimizer parameter ownership; train/eval state; differential learning rates.
+
+**Complexity / resource target.** explain compute/memory savings that freezing does and does not provide.
+
+**Follow-ups / edge cases.** BatchNorm behavior while frozen; rebuilding optimizer after unfreeze; discriminative LR.
+
+# Track F extension — Debugging / Testing / Existing Code
+
+## DBG-08 — Performance Regression / Profiling + Vectorization ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 40 min  
+**Format:** EXTENDED_DRILL  
+
+**Interview prompt.** A correct NumPy/pandas feature function became 20x slower after a data-size increase. Profile enough to localize Python loops, repeated merges/sorts, unnecessary copies, and an accidental quadratic membership check. Improve it without changing outputs.
+
+**Core concepts.** measurement before optimization; asymptotics; vectorization; allocation/copy behavior; regression tests.
+
+**Complexity / resource target.** state before/after dominant terms plus peak-memory trade-off.
+
+**Follow-ups / edge cases.** vectorization that increases memory too much; chunking; benchmark noise.
+
+**Required mastery test.** correctness against reference + benchmark fixture demonstrating material speedup without hardcoding a machine-specific absolute time.
+
+## DBG-09 — Training / Serving Parity and Version-Skew Bug ★
+**First exposure:** Depth extension  
+**Level:** L3  
+**Time box:** 40 min  
+**Format:** EXTENDED_DRILL  
+
+**Interview prompt.** Offline predictions match expected metrics, but a serving path produces shifted scores. Given training preprocessing, serialized transformer state, model weights, and online feature code, localize one preprocessing mismatch, one stale-version mismatch, and one dtype/device/numerical discrepancy. Add parity tests that catch the first divergence.
+
+**Core concepts.** training/serving skew; artifact/version coupling; deterministic replay; intermediate-value comparison; numerical tolerance.
+
+**Complexity / resource target.** diagnostic; design tests that are cheap enough for CI and richer replay tests for periodic validation.
+
+**Follow-ups / edge cases.** unknown categories; model/index coupling; feature freshness; rollback.
+
+**Required mastery test.** a golden request produces matching intermediate features and final prediction within defined tolerance under both paths.
+
+---
+
+# Mixed assessment rotation — required for surprise resistance
+
+Canonical problems build primitives; interviews often combine them. After reaching Interview-ready on most core IDs, rotate through mixed assessments that do **not** reveal which primitive is being tested.
+
+## Mixed A — SWE-heavy MLE screen
+- one unseen LeetCode-medium-style problem in 30–35 minutes;
+- production-quality function/class interface;
+- tests and complexity;
+- one changed-constraint follow-up such as streaming, concurrency, or memory cap.
+
+## Mixed B — SQL + pandas data screen
+- 20–25 minutes SQL from raw tables;
+- 20–25 minutes pandas from analogous DataFrames;
+- explicitly reconcile results and explain grain/join differences.
+
+## Mixed C — ML concept → NumPy
+Randomly draw one concept from the 2026 knowledge banks and implement the computable core without sklearn/scipy hiding it. Examples include impurity, loss, distance, calibration, resampling, PCA, gradients, probability updates, or a metric. If the exact concept has no canonical coding ID, use the transfer contract rather than adding a new memorized solution immediately.
+
+## Mixed D — PyTorch repair
+Receive a short unfamiliar model/training script containing 3–5 issues across shapes, device/dtype, masking, train/eval, autograd lifetime, optimizer order, or metric aggregation. Diagnose before editing; write a focused regression test for each substantive bug.
+
+## Mixed E — Existing-code extension
+Given a tested unfamiliar repository component, add one feature without breaking public interfaces or tests. Require code reading, change localization, backward compatibility, and new specification-derived tests.
+
+## Mixed F — Production-shaped implementation
+Implement a bounded component such as a batched predictor, feature transformer, cache, rate limiter, replay evaluator, or checkpointable worker. Include API contracts, deterministic tests, failure behavior, and resource reasoning.
+
+A learner who only recognizes canonical IDs but fails these mixed rotations is **not** yet robust to interview surprise.
+
+# Coding acceptance
+
+## Roadmap-core acceptance
+- All original **69 roadmap-core IDs** receive serious first exposure.
+- Core IDs preserve their existing identifiers and canonical intent so the 2026 roadmap/master can continue to reference them.
+- First exposure alone is insufficient; Interview-ready requires independent timed solves and later cold transfer.
+
+## Deep-generalist acceptance
+- Complete the **31 depth-extension IDs** or demonstrate equivalent independent mastery through harder transfer variants.
+- At least 80% of ★ items across core + extension must have a later cold variant, not a memorized replay.
+- Pass at least two Mixed A, two Mixed B, three Mixed C, two Mixed D, one Mixed E, and one Mixed F assessment without solution disclosure.
+- No single lane may remain a persistent red zone: SWE/DSA, SQL, NumPy/pandas, ML implementation, PyTorch, and debugging must each support independent interview performance.
+
+## Boundary of sufficiency
+This set is designed to make a broad Generalist MLE candidate difficult to surprise across common coding formats. It cannot guarantee coverage of every company-specific puzzle, obscure library API, competitive-programming trick, distributed-systems implementation, or specialization-specific Search/Recs/LLM problem. The defense against those unknowns is the transfer/surprise-resistance contract and mixed assessments, not infinite syllabus growth.
+
+Search/IR + Recommendation/Ranking specialization coding remains owned by the separate specialization set. Future GenAI/LLM specialization should add its own framework/inference/application coding without bloating this generalist bank.
+
