@@ -136,7 +136,15 @@ Browser runtimes are loaded only on Practice pages and only when needed:
 | `local-python` | Editable and persistent in the browser; tests run locally |
 | `local-pytorch` | Editable and persistent in the browser; real PyTorch/pytest runs locally |
 
-PyTorch is intentionally not advertised as browser-runnable. Infinite or over-time Python code terminates its worker; the next run starts a clean worker. Runtime assets use bundled worker URLs or upstream versioned WASM URLs, so no repository base path is hard-coded.
+PyTorch is intentionally not advertised as browser-runnable. Infinite or over-time Python code terminates its worker; the next run starts a clean worker. Runtime assets use bundled worker URLs or upstream versioned WASM URLs, so no repository base path is hard-coded. Pyodide (pinned in `src/scripts/workers/python.worker.ts`) and the DuckDB-WASM bundles (version locked by `package-lock.json`) load from jsDelivr on first run, so a Run needs network access.
+
+The 2026 bank has 100 practice artifacts, one per canonical coding ID: 84 run in the browser (Python, NumPy, pandas, SQL) and 16 are local-only (PyTorch exercises and the concurrency/production-shaped Python exercises). Every artifact has a same-ID reference solution in `coding-solutions/`. Local environments per track:
+
+| Tracks | Local Python packages |
+| --- | --- |
+| DSA, PY, NP, ML, PD, non-PyTorch DBG | `pytest`, `numpy`, `pandas` |
+| PT and PyTorch DBG (`runtime: local-pytorch`) | `pytest`, `numpy`, `torch` (CPU is enough; CUDA-only checks skip) |
+| SQL | none — the browser runner and `npm run test` execute every check in DuckDB-WASM |
 
 ### Practice artifact layout
 
