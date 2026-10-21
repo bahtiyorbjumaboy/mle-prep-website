@@ -1,0 +1,14 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+import Badge from '@/components/Badge.astro';
+import EmptyState from '@/components/EmptyState.astro';
+import { index, itemByKey, curriculumLabel } from '@/lib/data';
+const base=import.meta.env.BASE_URL.replace(/\/$/,'');
+const artifacts=index.practiceArtifacts;
+const rows=artifacts.map(artifact=>({artifact,item:itemByKey.get(artifact.item||'')})).filter(row=>row.item && !('bank' in row.item));
+const tracks=[...new Set(rows.map(row=>(row.item as any).track))];
+const runtimes=[...new Set(artifacts.map(x=>x.runtime))];
+---
+<AppLayout title="Practice"><header class="page-head"><div><p class="eyebrow">Executable coding lab</p><h1>Practice the coding bank.</h1><p>Canonical prompts, persistent drafts, browser judging where practical, and honest local workflows where it is not.</p></div></header>
+{rows.length===0?<EmptyState message="No validated practice artifacts are available yet."/>:<><div class="filter-bar"><input type="search" aria-label="Search practice problems" placeholder="Search ID, title, track…" data-filter="text"/><select aria-label="Track" data-filter="track"><option value="">All tracks</option>{tracks.map(x=><option>{x}</option>)}</select><select aria-label="Runtime" data-filter="runtime"><option value="">All runtimes</option>{runtimes.map(x=><option>{x}</option>)}</select><select aria-label="Execution" data-filter="execution"><option value="">All execution</option><option value="browser">Browser runnable</option><option value="local">Local only</option></select></div><p class="item-meta" data-filter-summary>{rows.length} of {rows.length} items</p><div class="item-list">{rows.map(({artifact,item}:any)=><article class="item-row" data-filter-item data-practice-row data-progress-key={item.canonicalKey} data-practice-key={`${item.canonicalKey}::${artifact.language}`} data-search={`${item.id} ${item.title} ${item.track} ${artifact.runtime}`.toLowerCase()} data-track={item.track} data-runtime={artifact.runtime} data-execution={artifact.browserRunnable?'browser':'local'}><a class="item-id" href={`${base}/practice/${encodeURIComponent(item.canonicalKey)}/`}>{item.id}</a><a href={`${base}/practice/${encodeURIComponent(item.canonicalKey)}/`}><div class="item-title">{item.title}</div><div class="item-meta">{curriculumLabel(item.curriculum)} · {item.track} · {item.level||'—'}</div></a><div class="item-actions"><Badge tone={artifact.browserRunnable?'green':'amber'}>{artifact.browserRunnable?'Browser':'Run locally'}</Badge><Badge tone="blue">{artifact.runtime}</Badge><Badge><span data-status>Not started</span></Badge><Badge><span data-draft-state>No draft</span></Badge></div></article>)}</div><script>import { initPracticeIndex } from '@/scripts/practice-index'; initPracticeIndex();</script></>}
+</AppLayout>
