@@ -1,0 +1,18 @@
+{
+  "item": "2026:DSA-11",
+  "runtime": "python",
+  "entrypoint": "is_valid_parentheses",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "property"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "item": "2026:DSA-17",
+  "runtime": "python",
+  "entrypoint": "tree_depth_and_balanced",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "property",
+    "invariant"
+  ]
+}

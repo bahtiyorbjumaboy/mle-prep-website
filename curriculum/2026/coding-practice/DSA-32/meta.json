@@ -1,0 +1,19 @@
+{
+  "item": "2026:DSA-32",
+  "runtime": "python",
+  "entrypoint": "TokenBucket",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "invariant",
+    "deterministic"
+  ]
+}

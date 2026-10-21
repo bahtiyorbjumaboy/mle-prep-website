@@ -1,0 +1,19 @@
+{
+  "item": "2026:DSA-07",
+  "runtime": "python",
+  "entrypoint": "longest_unique_substring",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "property",
+    "invariant"
+  ]
+}
