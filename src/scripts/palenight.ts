@@ -1,9 +1,12 @@
-import type { Extension } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { Compartment, RangeSetBuilder, StateEffect, StateField, type Extension } from '@codemirror/state';
+import { Decoration, EditorView, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
+import type { HighlighterCore } from 'shiki/core';
 
-// Material Theme Palenight colors, matching the Shiki theme used for static code blocks.
+// Material Theme Palenight. Token colors come from Shiki, the same highlighter and theme as static code blocks;
+// the Lezer style below only covers the moment before Shiki has loaded (or if it fails to load).
+export const SHIKI_THEME = 'material-theme-palenight';
 const c = { bg: '#292D3E', fg: '#BABED8', comment: '#676E95', gutter: '#3A3F58', cyan: '#89DDFF', purple: '#C792EA', blue: '#82AAFF', yellow: '#FFCB6B', green: '#C3E88D', orange: '#F78C6C', red: '#F07178', cursor: '#FFCC00', selection: '#717CB450', activeLine: '#00000050', widgetBorder: '#FFFFFF10' };
 
 const editorTheme = EditorView.theme({
@@ -50,6 +53,67 @@ const sqlStyle = HighlightStyle.define([
   { tag: [t.paren, t.brace, t.squareBracket], color: c.fg },
 ]);
 
+// A non-fallback style with no visible effect, so basicSetup's default style stays off once Shiki takes over.
+const shikiActive = HighlightStyle.define([{ tag: t.invalid, color: c.fg }]);
+
+let highlighterPromise: Promise<HighlighterCore> | null = null;
+function loadHighlighter() {
+  highlighterPromise ??= (async () => {
+    const [{ createHighlighterCore }, { createJavaScriptRegexEngine }] = await Promise.all([import('shiki/core'), import('shiki/engine/javascript')]);
+    return createHighlighterCore({ themes: [import('@shikijs/themes/material-theme-palenight')], langs: [import('@shikijs/langs/python'), import('@shikijs/langs/sql')], engine: createJavaScriptRegexEngine() });
+  })().catch((error) => { highlighterPromise = null; throw error; });
+  return highlighterPromise;
+}
+
+export interface ShikiRange { from: number; to: number; color: string; italic: boolean; bold: boolean }
+export function shikiRanges(highlighter: HighlighterCore, code: string, language: 'python' | 'sql'): ShikiRange[] {
+  const ranges: ShikiRange[] = [];
+  for (const token of highlighter.codeToTokens(code, { lang: language, theme: SHIKI_THEME }).tokens.flat()) {
+    const color = token.color?.toUpperCase() || c.fg, style = token.fontStyle || 0;
+    if (!token.content.length || (color === c.fg && !style)) continue;
+    ranges.push({ from: token.offset, to: token.offset + token.content.length, color, italic: (style & 1) !== 0, bold: (style & 2) !== 0 });
+  }
+  return ranges;
+}
+
+const marks = new Map<string, Decoration>();
+function mark({ color, italic, bold }: ShikiRange) {
+  const style = `color:${color}${italic ? ';font-style:italic' : ''}${bold ? ';font-weight:bold' : ''}`;
+  let decoration = marks.get(style);
+  if (!decoration) marks.set(style, decoration = Decoration.mark({ attributes: { style } }));
+  return decoration;
+}
+
+const setShikiDecorations = StateEffect.define<DecorationSet>();
+const shikiDecorations = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(decorations, tr) { for (const effect of tr.effects) if (effect.is(setShikiDecorations)) return effect.value; return decorations.map(tr.changes); },
+  provide: (field) => EditorView.decorations.from(field),
+});
+
+function shikiHighlighter(language: 'python' | 'sql', fallback: Compartment) {
+  return ViewPlugin.fromClass(class {
+    timer: number | undefined; version = 0; active = false;
+    constructor(readonly view: EditorView) { this.schedule(0); }
+    update(update: ViewUpdate) { if (update.docChanged) this.schedule(120); }
+    destroy() { window.clearTimeout(this.timer); this.version++; }
+    schedule(delay: number) {
+      window.clearTimeout(this.timer); const version = ++this.version;
+      this.timer = window.setTimeout(async () => {
+        let highlighter: HighlighterCore;
+        try { highlighter = await loadHighlighter(); } catch (error) { console.warn('Shiki failed to load; keeping fallback highlighting.', error); return; }
+        if (version !== this.version) return;
+        const builder = new RangeSetBuilder<Decoration>();
+        for (const range of shikiRanges(highlighter, this.view.state.doc.toString(), language)) builder.add(range.from, range.to, mark(range));
+        const effects: StateEffect<unknown>[] = [setShikiDecorations.of(builder.finish())];
+        if (!this.active) { effects.push(fallback.reconfigure(syntaxHighlighting(shikiActive))); this.active = true; }
+        this.view.dispatch({ effects });
+      }, delay);
+    }
+  });
+}
+
 export function palenight(language: 'python' | 'sql'): Extension[] {
-  return [editorTheme, syntaxHighlighting(language === 'sql' ? sqlStyle : pythonStyle)];
+  const fallback = new Compartment();
+  return [editorTheme, fallback.of(syntaxHighlighting(language === 'sql' ? sqlStyle : pythonStyle)), shikiDecorations, shikiHighlighter(language, fallback)];
 }
