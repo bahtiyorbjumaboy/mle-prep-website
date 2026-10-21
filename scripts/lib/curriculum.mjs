@@ -206,8 +206,93 @@ export function parseCodingSolution({ curriculum, relativePath, code }) {
   };
 }
 
+export const PRACTICE_RUNTIMES = ['python', 'python-numpy', 'python-pandas', 'sql', 'local-python', 'local-pytorch'];
+const PRACTICE_TEST_KINDS = new Set(['contract', 'example', 'edge-case', 'adversarial', 'invariant', 'boundary', 'property', 'deterministic']);
+
+function validateSqlVerification(spec, prefix, errors) {
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec) || !Array.isArray(spec.tests) || !spec.tests.length) {
+    errors.push(`${prefix} SQL verification must define a non-empty tests array`);
+    return;
+  }
+  const names = new Set();
+  for (const [index, test] of spec.tests.entries()) {
+    const testPrefix = `${prefix} SQL verification test ${index + 1}`;
+    if (!test || typeof test !== 'object' || Array.isArray(test)) {
+      errors.push(`${testPrefix} must be an object`);
+      continue;
+    }
+    if (typeof test.name !== 'string' || !test.name.trim()) errors.push(`${testPrefix} name must be a non-empty string`);
+    else if (names.has(test.name)) errors.push(`${testPrefix} duplicates test name "${test.name}"`);
+    else names.add(test.name);
+    if (typeof test.query !== 'string' || !test.query.trim()) errors.push(`${testPrefix} query must be a non-empty string`);
+    if (test.kind !== undefined && (typeof test.kind !== 'string' || !PRACTICE_TEST_KINDS.has(test.kind))) errors.push(`${testPrefix} kind is invalid`);
+    if (test.expect === undefined) continue;
+    if (!test.expect || typeof test.expect !== 'object' || Array.isArray(test.expect)) {
+      errors.push(`${testPrefix} expect must be an object`);
+      continue;
+    }
+    const expectationKeys = Object.keys(test.expect);
+    if (!expectationKeys.length || expectationKeys.some((key) => !['minRows', 'minColumns', 'scalar'].includes(key))) errors.push(`${testPrefix} expect must use scalar, minRows, and/or minColumns`);
+    for (const field of ['minRows', 'minColumns']) if (test.expect[field] !== undefined && (!Number.isInteger(test.expect[field]) || test.expect[field] < 0)) errors.push(`${testPrefix} ${field} must be a non-negative integer`);
+  }
+}
+
+export function parsePracticeArtifact({ curriculum, relativePath, rawMeta, files }) {
+  const errors = [];
+  const prefix = `${relativePath}:`;
+  let meta;
+  try { meta = JSON.parse(rawMeta); } catch (error) {
+    return { errors: [`${prefix} malformed JSON: ${error.message}`] };
+  }
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return { errors: [`${prefix} metadata must be a JSON object`] };
+  const directoryId = path.posix.basename(path.posix.dirname(relativePath)).toUpperCase();
+  const declared = typeof meta.item === 'string' ? meta.item : '';
+  const id = declared.split(':').at(-1)?.toUpperCase() || '';
+  if (!declared) errors.push(`${prefix} item is required`);
+  if (declared && !declared.startsWith(`${curriculum}:`)) errors.push(`${prefix} item must belong to curriculum ${curriculum}`);
+  if (!new RegExp(`^${codingId.source}$`, 'i').test(id)) errors.push(`${prefix} item must end in a canonical coding ID`);
+  if (directoryId !== id) errors.push(`${prefix} directory ${directoryId} does not match declared item ${id || '(missing)'}`);
+  if (!PRACTICE_RUNTIMES.includes(meta.runtime)) errors.push(`${prefix} unsupported runtime "${String(meta.runtime)}"`);
+  if (typeof meta.entrypoint !== 'string' || !meta.entrypoint.trim()) errors.push(`${prefix} entrypoint is required`);
+  const language = meta.runtime === 'sql' ? 'sql' : 'python';
+  const starterName = typeof meta.starter === 'string' ? meta.starter : `starter.${language === 'sql' ? 'sql' : 'py'}`;
+  const testsName = typeof meta.tests === 'string' ? meta.tests : language === 'sql' ? 'verify.sql' : 'tests.py';
+  const starterCode = files[starterName];
+  const testCode = files[testsName];
+  if (typeof starterCode !== 'string' || !starterCode.trim()) errors.push(`${prefix} missing starter file ${starterName}`);
+  if (typeof testCode !== 'string' || !testCode.trim()) errors.push(`${prefix} missing test/verification file ${testsName}`);
+  const setupName = meta.runtime === 'sql' ? (typeof meta.setup === 'string' ? meta.setup : 'setup.sql') : null;
+  const setupCode = setupName ? files[setupName] : null;
+  if (meta.runtime === 'sql' && (typeof setupCode !== 'string' || !setupCode.trim())) errors.push(`${prefix} missing SQL setup file ${setupName}`);
+  if (meta.packages !== undefined && (!Array.isArray(meta.packages) || meta.packages.some((x) => typeof x !== 'string'))) errors.push(`${prefix} packages must be a string array`);
+  if (typeof meta.browserRunnable !== 'boolean') errors.push(`${prefix} browserRunnable must be an explicit boolean`);
+  if (meta.timeoutMs !== undefined && (!Number.isInteger(meta.timeoutMs) || meta.timeoutMs < 500 || meta.timeoutMs > 60000)) errors.push(`${prefix} timeoutMs must be an integer from 500 to 60000`);
+  const browserRunnable = !String(meta.runtime).startsWith('local-');
+  if (meta.browserRunnable !== undefined && meta.browserRunnable !== browserRunnable) errors.push(`${prefix} browserRunnable contradicts runtime ${meta.runtime}`);
+  if (!browserRunnable && (typeof meta.localCommand !== 'string' || !meta.localCommand.trim())) errors.push(`${prefix} local-only artifacts require localCommand`);
+  if (typeof testCode === 'string' && testCode.trim()) {
+    if (meta.runtime === 'sql') {
+      try {
+        const spec = JSON.parse(testCode);
+        validateSqlVerification(spec, prefix, errors);
+      } catch (error) { errors.push(`${prefix} malformed SQL verification JSON in ${testsName}: ${error.message}`); }
+    } else if (!/^def\s+test_[A-Za-z0-9_]+\s*\(/m.test(testCode)) errors.push(`${prefix} Python tests must define at least one test_ function`);
+  }
+  if (meta.testKinds !== undefined && (!Array.isArray(meta.testKinds) || !meta.testKinds.length || meta.testKinds.some((x) => typeof x !== 'string' || !PRACTICE_TEST_KINDS.has(x)))) errors.push(`${prefix} testKinds must be a non-empty array of supported test kinds when present`);
+  return {
+    curriculum, type: 'coding-practice', id, declaredItem: declared, item: null,
+    path: path.posix.dirname(relativePath), runtime: meta.runtime, language, entrypoint: meta.entrypoint || '',
+    browserRunnable, packages: Array.isArray(meta.packages) ? meta.packages : [], timeoutMs: meta.timeoutMs || 8000,
+    starterFile: starterName, testsFile: testsName, setupFile: setupName,
+    starterCode: starterCode || '', testCode: testCode || '', setupCode: setupCode || null,
+    localCommand: typeof meta.localCommand === 'string' ? meta.localCommand : null,
+    testKinds: Array.isArray(meta.testKinds) ? meta.testKinds.filter((x) => typeof x === 'string') : [],
+    errors,
+  };
+}
+
 export async function buildIndex(root = process.cwd()) {
-  const sources = [], knowledgeItems = [], codingItems = [], roadmapWeeks = [], interviewAnswers = [], codingSolutions = [], warnings = [], errors = [];
+  const sources = [], knowledgeItems = [], codingItems = [], roadmapWeeks = [], interviewAnswers = [], codingSolutions = [], practiceArtifacts = [], warnings = [], errors = [];
   for (const curriculum of Object.keys(CURRICULA)) {
     const base = path.join(root, 'curriculum', curriculum);
     for (const file of await walkMarkdown(path.join(base, 'sources'))) {
@@ -238,22 +323,61 @@ export async function buildIndex(root = process.cwd()) {
       delete solution.errors;
       codingSolutions.push(solution);
     }
+    for (const file of await walkNamedFiles(path.join(base, 'coding-practice'), 'meta.json')) {
+      const relativePath = path.relative(root, file).split(path.sep).join('/');
+      const directory = path.dirname(file);
+      const entries = await fs.readdir(directory, { withFileTypes: true });
+      const files = {};
+      for (const entry of entries) if (entry.isFile() && entry.name !== 'meta.json') files[entry.name] = await fs.readFile(path.join(directory, entry.name), 'utf8');
+      const artifact = parsePracticeArtifact({ curriculum, relativePath, rawMeta: await fs.readFile(file, 'utf8'), files });
+      errors.push(...artifact.errors); delete artifact.errors;
+      if (artifact.type === 'coding-practice') practiceArtifacts.push(artifact);
+    }
   }
 
   dedupeByKey(knowledgeItems, warnings); dedupeByKey(codingItems, warnings);
   const all = [...knowledgeItems, ...codingItems];
   for (const item of all) {
     if ('bank' in item) item.interviewAnswer = null;
-    else item.codingSolution = null;
+    else { item.codingSolution = null; item.practice = null; }
   }
   associateRoadmap(all, roadmapWeeks, warnings);
   associateArtifacts({ all, interviewAnswers, codingSolutions, errors });
+  associatePracticeArtifacts({ all, practiceArtifacts, errors });
+  const codingOrder = new Map(codingItems.map((item, index) => [item.canonicalKey, index]));
+  practiceArtifacts.sort((a, b) => (codingOrder.get(a.item) ?? Number.MAX_SAFE_INTEGER) - (codingOrder.get(b.item) ?? Number.MAX_SAFE_INTEGER));
   const index = {
-    schemaVersion: 4, generatedAt: new Date().toISOString(), curricula: Object.values(CURRICULA).filter((c) => sources.some((s) => s.curriculum === c.id)),
+    schemaVersion: 5, generatedAt: new Date().toISOString(), curricula: Object.values(CURRICULA).filter((c) => sources.some((s) => s.curriculum === c.id)),
     knowledgeItems, codingItems, roadmapWeeks: roadmapWeeks.sort((a,b) => a.curriculum.localeCompare(b.curriculum) || a.weekNumber-b.weekNumber),
-    interviewAnswers, codingSolutions, sources, warnings, errors,
+    interviewAnswers, codingSolutions, practiceArtifacts, sources, warnings, errors,
   };
   return index;
+}
+
+async function walkNamedFiles(root, filename) {
+  try {
+    const entries = await fs.readdir(root, { withFileTypes: true });
+    const files = [];
+    for (const entry of entries) {
+      const full = path.join(root, entry.name);
+      if (entry.isDirectory()) files.push(...await walkNamedFiles(full, filename));
+      else if (entry.name === filename) files.push(full);
+    }
+    return files.sort();
+  } catch (error) { if (error.code === 'ENOENT') return []; throw error; }
+}
+
+function associatePracticeArtifacts({ all, practiceArtifacts, errors }) {
+  const byItem = new Map();
+  for (const artifact of practiceArtifacts) {
+    const item = resolveArtifactReference(all, artifact.declaredItem, 'coding');
+    if (!item) errors.push(`${artifact.path}/meta.json: unknown or ambiguous canonical coding item "${artifact.declaredItem}"`);
+    else if (byItem.has(item.canonicalKey)) errors.push(`${artifact.path}/meta.json: duplicate practice artifact for ${item.canonicalKey}; already mapped by ${byItem.get(item.canonicalKey)}`);
+    else {
+      byItem.set(item.canonicalKey, artifact.path); artifact.item = item.canonicalKey;
+      item.practice = { runtime: artifact.runtime, browserRunnable: artifact.browserRunnable, path: artifact.path };
+    }
+  }
 }
 
 const FORBIDDEN_PROGRESS_FIELDS = ['status', 'mastery', 'observed_mastery', 'next_review', 'attempts', 'sprint_result'];
@@ -352,6 +476,7 @@ function associateArtifacts({ all, interviewAnswers, codingSolutions, errors }) 
 function artifactRef(artifact) { return { slug: artifact.slug, path: artifact.path, title: artifact.title, type: artifact.type, updated: artifact.updated }; }
 
 export function resolveArtifactReference(items, declared, target = 'any') {
+  if (typeof declared !== 'string') return null;
   const exact = items.find((item) => item.canonicalKey === declared);
   if (exact && matchesTarget(exact, target)) return exact;
   const match = declared.match(/^(2026|2027):([A-Z]+-?\d+)$/i);
