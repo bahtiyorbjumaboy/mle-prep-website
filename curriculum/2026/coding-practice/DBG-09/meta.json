@@ -1,7 +1,7 @@
 {
   "item": "2026:DBG-09",
   "runtime": "python-numpy",
-  "entrypoint": "parity_check",
+  "entrypoint": "OnlinePredictor",
   "starter": "starter.py",
   "tests": "tests.py",
   "packages": [
@@ -11,6 +11,10 @@
   "timeoutMs": 8000,
   "testKinds": [
     "contract",
-    "example"
+    "example",
+    "invariant",
+    "edge-case",
+    "adversarial",
+    "deterministic"
   ]
 }
