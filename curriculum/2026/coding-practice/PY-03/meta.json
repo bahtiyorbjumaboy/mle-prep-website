@@ -1,0 +1,19 @@
+{
+  "item": "2026:PY-03",
+  "runtime": "python",
+  "entrypoint": "batched",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "property",
+    "invariant"
+  ]
+}

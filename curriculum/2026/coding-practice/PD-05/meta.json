@@ -1,0 +1,21 @@
+{
+  "item": "2026:PD-05",
+  "runtime": "python-pandas",
+  "entrypoint": "build_modeling_table",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "numpy",
+    "pandas"
+  ],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "adversarial",
+    "deterministic",
+    "invariant"
+  ]
+}

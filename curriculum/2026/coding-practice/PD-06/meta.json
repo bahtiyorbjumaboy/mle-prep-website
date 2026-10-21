@@ -1,0 +1,21 @@
+{
+  "item": "2026:PD-06",
+  "runtime": "python-pandas",
+  "entrypoint": "reshape_and_reconcile",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "numpy",
+    "pandas"
+  ],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "adversarial",
+    "property",
+    "invariant"
+  ]
+}

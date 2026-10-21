@@ -1,0 +1,23 @@
+{
+  "item": "2026:PD-02",
+  "runtime": "python-pandas",
+  "entrypoint": "attach_profiles",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "numpy",
+    "pandas"
+  ],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "deterministic",
+    "property",
+    "invariant"
+  ]
+}

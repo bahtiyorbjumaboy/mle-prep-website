@@ -1,0 +1,22 @@
+{
+  "item": "2026:NP-08",
+  "runtime": "python-numpy",
+  "entrypoint": "sample_categorical",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "numpy"
+  ],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "invariant",
+    "deterministic",
+    "property"
+  ]
+}
