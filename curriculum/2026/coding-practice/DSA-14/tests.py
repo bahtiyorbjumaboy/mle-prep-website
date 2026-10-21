@@ -60,7 +60,14 @@ def test_reverse_list_rewires_existing_nodes():
 
 def test_reverse_list_long_list_is_iterative():
     # A recursive reversal overflows the default recursion limit here.
-    assert _values(reverse_list(_build(list(range(5000)))))[:3] == [4999, 4998, 4997]
+    nodes = _nodes(_build(list(range(5000))))
+    try:
+        assert _values(reverse_list(nodes[0]))[:3] == [4999, 4998, 4997]
+    finally:
+        # Unlink iteratively: freeing a 5000-node chain recurses in the deallocator and
+        # overflows Pyodide's WASM stack, which kills the browser runtime.
+        for node in nodes:
+            node.next = None
 
 
 def test_reverse_between_hand_computed():
