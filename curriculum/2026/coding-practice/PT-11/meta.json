@@ -1,7 +1,7 @@
 {
   "item": "2026:PT-11",
   "runtime": "local-pytorch",
-  "entrypoint": "configure_transfer_learning",
+  "entrypoint": "unfreeze",
   "starter": "starter.py",
   "tests": "tests.py",
   "packages": [
@@ -12,7 +12,10 @@
   "timeoutMs": 20000,
   "testKinds": [
     "contract",
-    "example"
+    "example",
+    "edge-case",
+    "adversarial",
+    "invariant"
   ],
   "localCommand": "npm run practice -- PT-11 && python -m pytest -q practice-workspace/PT-11/test_solution.py"
 }

@@ -12,7 +12,11 @@
   "timeoutMs": 20000,
   "testKinds": [
     "contract",
-    "example"
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "invariant"
   ],
   "localCommand": "npm run practice -- PT-08 && python -m pytest -q practice-workspace/PT-08/test_solution.py"
 }
