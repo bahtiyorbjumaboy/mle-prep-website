@@ -1,0 +1,18 @@
+{
+  "item": "2026:PT-06",
+  "runtime": "local-pytorch",
+  "entrypoint": "SequenceDataset",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "torch",
+    "pytest"
+  ],
+  "browserRunnable": false,
+  "timeoutMs": 20000,
+  "testKinds": [
+    "contract",
+    "example"
+  ],
+  "localCommand": "npm run practice -- PT-06 && python -m pytest -q practice-workspace/PT-06/test_solution.py"
+}

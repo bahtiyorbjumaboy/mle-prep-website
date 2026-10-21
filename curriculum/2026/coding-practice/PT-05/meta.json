@@ -1,0 +1,18 @@
+{
+  "item": "2026:PT-05",
+  "runtime": "local-pytorch",
+  "entrypoint": "train_with_accumulation",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "torch",
+    "pytest"
+  ],
+  "browserRunnable": false,
+  "timeoutMs": 20000,
+  "testKinds": [
+    "contract",
+    "example"
+  ],
+  "localCommand": "npm run practice -- PT-05 && python -m pytest -q practice-workspace/PT-05/test_solution.py"
+}

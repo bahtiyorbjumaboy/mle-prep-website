@@ -1,0 +1,18 @@
+{
+  "item": "2026:PT-02",
+  "runtime": "local-pytorch",
+  "entrypoint": "train_and_validate",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "torch",
+    "pytest"
+  ],
+  "browserRunnable": false,
+  "timeoutMs": 20000,
+  "testKinds": [
+    "contract",
+    "example"
+  ],
+  "localCommand": "npm run practice -- PT-02 && python -m pytest -q practice-workspace/PT-02/test_solution.py"
+}

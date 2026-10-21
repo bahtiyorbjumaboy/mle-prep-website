@@ -1,0 +1,18 @@
+{
+  "item": "2026:PT-07",
+  "runtime": "local-pytorch",
+  "entrypoint": "resume_training",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "torch",
+    "pytest"
+  ],
+  "browserRunnable": false,
+  "timeoutMs": 20000,
+  "testKinds": [
+    "contract",
+    "example"
+  ],
+  "localCommand": "npm run practice -- PT-07 && python -m pytest -q practice-workspace/PT-07/test_solution.py"
+}

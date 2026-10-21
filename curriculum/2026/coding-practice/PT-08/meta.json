@@ -1,0 +1,18 @@
+{
+  "item": "2026:PT-08",
+  "runtime": "local-pytorch",
+  "entrypoint": "scaled_dot_product_attention",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "torch",
+    "pytest"
+  ],
+  "browserRunnable": false,
+  "timeoutMs": 20000,
+  "testKinds": [
+    "contract",
+    "example"
+  ],
+  "localCommand": "npm run practice -- PT-08 && python -m pytest -q practice-workspace/PT-08/test_solution.py"
+}

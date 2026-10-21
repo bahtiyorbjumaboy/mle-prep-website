@@ -1,0 +1,18 @@
+{
+  "item": "2026:PT-01",
+  "runtime": "local-pytorch",
+  "entrypoint": "ShapeAwareMLP",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "torch",
+    "pytest"
+  ],
+  "browserRunnable": false,
+  "timeoutMs": 20000,
+  "testKinds": [
+    "contract",
+    "example"
+  ],
+  "localCommand": "npm run practice -- PT-01 && python -m pytest -q practice-workspace/PT-01/test_solution.py"
+}
