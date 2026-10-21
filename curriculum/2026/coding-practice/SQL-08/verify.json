@@ -1,0 +1,60 @@
+{
+  "tests": [
+    {
+      "name": "test_session_grain_not_event_counts",
+      "kind": "adversarial",
+      "query": "SELECT searches = 8 AND impressions = 4 AND clicks = 4 AS ok FROM funnel_overall",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_order_and_skipped_steps_respected",
+      "kind": "adversarial",
+      "query": "SELECT add_to_carts = 2 AND purchases = 1 AS ok FROM funnel_overall",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_later_prior_event_can_qualify_and_30_minutes_is_inclusive",
+      "kind": "boundary",
+      "query": "SELECT COUNT(*) = 1 AND MIN(clicks) = 1 AND MIN(impressions) = 1 AS ok FROM funnel_by_channel WHERE acquisition_channel = 'organic'",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_funnel_crosses_midnight_and_null_channel_is_unknown",
+      "kind": "edge-case",
+      "query": "SELECT COUNT(*) = 1 AND MIN(searches) = 1 AND MIN(clicks) = 1 AS ok FROM funnel_by_channel WHERE acquisition_channel = 'unknown'",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_rate_with_zero_denominator_is_null",
+      "kind": "edge-case",
+      "query": "SELECT cart_to_purchase_rate IS NULL AND click_to_cart_rate = 0 AS ok FROM funnel_by_channel WHERE acquisition_channel = 'organic'",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_funnel_overall_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT searches, impressions, clicks, add_to_carts, purchases, ROUND(search_to_impression_rate::DOUBLE, 6), ROUND(impression_to_click_rate::DOUBLE, 6), ROUND(click_to_cart_rate::DOUBLE, 6), ROUND(cart_to_purchase_rate::DOUBLE, 6) FROM funnel_overall), e AS (SELECT e0, e1, e2, e3, e4, ROUND(e5::DOUBLE, 6), ROUND(e6::DOUBLE, 6), ROUND(e7::DOUBLE, 6), ROUND(e8::DOUBLE, 6) FROM (VALUES (8, 4, 4, 2, 1, 0.5, 1.0, 0.5, 0.5)) v(e0, e1, e2, e3, e4, e5, e6, e7, e8)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_funnel_by_channel_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT acquisition_channel, searches, impressions, clicks, add_to_carts, purchases, ROUND(search_to_impression_rate::DOUBLE, 6), ROUND(impression_to_click_rate::DOUBLE, 6), ROUND(click_to_cart_rate::DOUBLE, 6), ROUND(cart_to_purchase_rate::DOUBLE, 6) FROM funnel_by_channel), e AS (SELECT e0, e1, e2, e3, e4, e5, ROUND(e6::DOUBLE, 6), ROUND(e7::DOUBLE, 6), ROUND(e8::DOUBLE, 6), ROUND(e9::DOUBLE, 6) FROM (VALUES ('paid', 5, 2, 2, 2, 1, 0.4, 1.0, 1.0, 0.5), ('organic', 2, 1, 1, 0, 0, 0.5, 1.0, 0.0, NULL), ('unknown', 1, 1, 1, 0, 0, 1.0, 1.0, 0.0, NULL)) v(e0, e1, e2, e3, e4, e5, e6, e7, e8, e9)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    }
+  ]
+}

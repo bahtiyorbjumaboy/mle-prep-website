@@ -1,0 +1,76 @@
+{
+  "tests": [
+    {
+      "name": "test_days_present_on_one_side_are_kept",
+      "kind": "edge-case",
+      "query": "SELECT COUNT(*) = 5 AND COUNT(*) FILTER (WHERE event_date = DATE '2026-01-03' AND raw_rows = 0 AND feature_rows = 1) = 1 AS ok FROM reconciliation_by_day_source",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_tolerance_boundary_is_inclusive",
+      "kind": "boundary",
+      "query": "SELECT MAX(CASE WHEN event_date = DATE '2026-01-01' AND source = 'web' THEN status END) = 'ok' AND MAX(CASE WHEN event_date = DATE '2026-01-01' AND source = 'app' THEN status END) = 'mismatch' AS ok FROM reconciliation_by_day_source",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_null_amounts_and_null_key_rows_in_aggregates",
+      "kind": "edge-case",
+      "query": "SELECT MAX(CASE WHEN event_date = DATE '2026-01-02' AND source = 'web' THEN raw_rows END) = 3 AND abs(MAX(CASE WHEN event_date = DATE '2026-01-01' AND source = 'app' THEN raw_amount END) - 7.0) < 1e-9 AS ok FROM reconciliation_by_day_source",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_reconciliation_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT event_date, source, raw_rows, feature_rows, ROUND(raw_amount::DOUBLE, 6), ROUND(feature_amount::DOUBLE, 6), row_diff, ROUND(amount_diff::DOUBLE, 6), status FROM reconciliation_by_day_source), e AS (SELECT e0, e1, e2, e3, ROUND(e4::DOUBLE, 6), ROUND(e5::DOUBLE, 6), e6, ROUND(e7::DOUBLE, 6), e8 FROM (VALUES (DATE '2026-01-01', 'web', 2, 2, 15.25, 15.75, 0, 0.5, 'ok'), (DATE '2026-01-01', 'app', 2, 2, 7.0, 7.625, 0, 0.625, 'mismatch'), (DATE '2026-01-02', 'web', 3, 3, 8.0, 8.0, 0, 0.0, 'ok'), (DATE '2026-01-02', 'app', 2, 2, 8.0, 3.0, 0, -5.0, 'mismatch'), (DATE '2026-01-03', 'app', 0, 1, 0.0, 6.0, 1, 6.0, 'mismatch')) v(e0, e1, e2, e3, e4, e5, e6, e7, e8)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_null_keys_are_not_missing_or_orphaned_twice",
+      "kind": "adversarial",
+      "query": "SELECT COUNT(*) FILTER (WHERE record_id IS NULL AND check_name <> 'null_key') = 0 AND COUNT(*) FILTER (WHERE check_name = 'null_key') = 2 AS ok FROM data_quality_issues",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_orphan_predictions_survive_null_feature_keys",
+      "kind": "adversarial",
+      "query": "SELECT COUNT(*) FILTER (WHERE check_name = 'orphan_prediction') = 3 AND COUNT(*) FILTER (WHERE check_name = 'missing_feature') = 1 AS ok FROM data_quality_issues",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_duplicate_key_reported_once",
+      "kind": "invariant",
+      "query": "SELECT COUNT(*) FILTER (WHERE check_name = 'duplicate_feature_key') = 1 AND COUNT(*) FILTER (WHERE check_name = 'prediction_before_feature') = 1 AS ok FROM data_quality_issues",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_data_quality_issues_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT check_name, table_name, record_id, event_date, source FROM data_quality_issues), e AS (SELECT e0, e1, e2, e3, e4 FROM (VALUES ('null_key', 'raw_events', NULL, DATE '2026-01-02', 'web'), ('null_key', 'features', NULL, DATE '2026-01-02', 'web'), ('missing_feature', 'raw_events', 6, DATE '2026-01-02', 'web'), ('unexpected_feature', 'features', 9, DATE '2026-01-02', 'app'), ('duplicate_feature_key', 'features', 5, DATE '2026-01-02', 'web'), ('feature_date_mismatch', 'features', 8, DATE '2026-01-03', 'app'), ('feature_before_event', 'features', 3, DATE '2026-01-01', 'app'), ('orphan_prediction', 'predictions', 3, DATE '2026-01-02', 'web'), ('orphan_prediction', 'predictions', 4, DATE '2026-01-02', 'app'), ('orphan_prediction', 'predictions', 6, DATE '2026-01-02', 'web'), ('prediction_before_feature', 'predictions', 2, DATE '2026-01-01', 'web')) v(e0, e1, e2, e3, e4)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_failure_summary_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT event_date, source, check_name, failures FROM failure_summary), e AS (SELECT e0, e1, e2, e3 FROM (VALUES (DATE '2026-01-02', 'web', 'null_key', 2), (DATE '2026-01-02', 'web', 'missing_feature', 1), (DATE '2026-01-02', 'app', 'unexpected_feature', 1), (DATE '2026-01-02', 'web', 'duplicate_feature_key', 1), (DATE '2026-01-03', 'app', 'feature_date_mismatch', 1), (DATE '2026-01-01', 'app', 'feature_before_event', 1), (DATE '2026-01-02', 'web', 'orphan_prediction', 2), (DATE '2026-01-02', 'app', 'orphan_prediction', 1), (DATE '2026-01-01', 'web', 'prediction_before_feature', 1)) v(e0, e1, e2, e3)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    }
+  ]
+}

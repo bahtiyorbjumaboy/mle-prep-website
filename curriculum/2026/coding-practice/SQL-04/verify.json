@@ -1,0 +1,52 @@
+{
+  "tests": [
+    {
+      "name": "test_strict_top_three_per_category",
+      "kind": "invariant",
+      "query": "SELECT COUNT(*) = 7 AND MAX(sales_rank) = 3 AND COUNT(DISTINCT (category, sales_rank)) = 7 AS ok FROM top_items",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_units_aggregated_within_half_open_window",
+      "kind": "boundary",
+      "query": "SELECT MAX(CASE WHEN item_id = 1 THEN units_sold END) = 10 AND COUNT(*) FILTER (WHERE item_id IN (6, 7)) = 0 AND MAX(CASE WHEN item_id = 20 THEN units_sold END) = 3 AS ok FROM top_items",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_top_items_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT category, item_id, units_sold, sales_rank FROM top_items), e AS (SELECT e0, e1, e2, e3 FROM (VALUES ('a', 1, 10, 1), ('a', 2, 8, 2), ('a', 3, 8, 3), ('b', 10, 9, 1), ('b', 11, 7, 2), ('b', 12, 5, 3), ('c', 20, 3, 1)) v(e0, e1, e2, e3)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_ties_skip_following_rank",
+      "kind": "adversarial",
+      "query": "SELECT COUNT(*) FILTER (WHERE category = 'a') = 3 AND MAX(CASE WHEN item_id = 3 THEN sales_rank END) = 2 AND COUNT(*) FILTER (WHERE item_id = 4) = 0 AS ok FROM top_items_with_ties",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_tie_at_rank_three_keeps_all_tied_items",
+      "kind": "adversarial",
+      "query": "SELECT COUNT(*) FILTER (WHERE category = 'b' AND sales_rank = 3) = 2 AS ok FROM top_items_with_ties",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_top_items_with_ties_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT category, item_id, units_sold, sales_rank FROM top_items_with_ties), e AS (SELECT e0, e1, e2, e3 FROM (VALUES ('a', 1, 10, 1), ('a', 2, 8, 2), ('a', 3, 8, 2), ('b', 10, 9, 1), ('b', 11, 7, 2), ('b', 12, 5, 3), ('b', 13, 5, 3), ('c', 20, 3, 1)) v(e0, e1, e2, e3)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    }
+  ]
+}

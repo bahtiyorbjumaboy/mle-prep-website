@@ -1,0 +1,60 @@
+{
+  "tests": [
+    {
+      "name": "test_assigned_users_deduplicated_and_multi_variant_excluded",
+      "kind": "adversarial",
+      "query": "SELECT MAX(CASE WHEN variant = 'A' THEN assigned_users END) = 3 AND MAX(CASE WHEN variant = 'B' THEN assigned_users END) = 5 AS ok FROM experiment_metrics",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_unexposed_and_pre_assignment_exposures_not_exposed",
+      "kind": "edge-case",
+      "query": "SELECT MAX(CASE WHEN variant = 'A' THEN exposed_users END) = 2 AND MAX(CASE WHEN variant = 'B' THEN exposed_users END) = 4 AS ok FROM experiment_metrics",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_repeated_exposures_do_not_double_revenue",
+      "kind": "adversarial",
+      "query": "SELECT abs(MAX(CASE WHEN variant = 'A' THEN revenue_per_user END) - 25.0) < 1e-9 AS ok FROM experiment_metrics",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_only_conversions_at_or_after_exposure_count",
+      "kind": "boundary",
+      "query": "SELECT MAX(CASE WHEN variant = 'B' THEN converters END) = 3 AND abs(MAX(CASE WHEN variant = 'B' THEN revenue_per_user END) - 11.25) < 1e-9 AS ok FROM experiment_metrics",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_experiment_metrics_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT variant, assigned_users, exposed_users, converters, ROUND(conversion_rate::DOUBLE, 6), ROUND(revenue_per_user::DOUBLE, 6), ROUND(assignment_share::DOUBLE, 6) FROM experiment_metrics), e AS (SELECT e0, e1, e2, e3, ROUND(e4::DOUBLE, 6), ROUND(e5::DOUBLE, 6), ROUND(e6::DOUBLE, 6) FROM (VALUES ('A', 3, 2, 1, 0.5, 25.0, 0.375), ('B', 5, 4, 3, 0.75, 11.25, 0.625)) v(e0, e1, e2, e3, e4, e5, e6)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_assignment_issues_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT user_id, issue FROM assignment_issues), e AS (SELECT e0, e1 FROM (VALUES (1, 'duplicate_assignment'), (4, 'multiple_variants'), (5, 'exposure_after_conversion')) v(e0, e1)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_srm_inputs_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT variant, observed_users, ROUND(expected_users::DOUBLE, 6), ROUND(chi_square_component::DOUBLE, 6) FROM srm_inputs), e AS (SELECT e0, e1, ROUND(e2::DOUBLE, 6), ROUND(e3::DOUBLE, 6) FROM (VALUES ('A', 3, 4.0, 0.25), ('B', 5, 4.0, 0.25)) v(e0, e1, e2, e3)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    }
+  ]
+}

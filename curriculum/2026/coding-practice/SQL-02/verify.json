@@ -1,0 +1,60 @@
+{
+  "tests": [
+    {
+      "name": "test_user_grain_is_unique",
+      "kind": "invariant",
+      "query": "SELECT COUNT(*) = COUNT(DISTINCT user_id) AND COUNT(*) = 3 AS ok FROM user_spend",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_duplicate_order_header_does_not_double_spend",
+      "kind": "adversarial",
+      "query": "SELECT COUNT(*) = 1 AND abs(MIN(spend) - 35.5) < 1e-9 AS ok FROM user_spend WHERE user_id = 1",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_distinct_items_not_line_count",
+      "kind": "adversarial",
+      "query": "SELECT COUNT(*) = 1 AND MIN(distinct_items) = 3 AS ok FROM user_spend WHERE user_id = 1",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_null_status_order_is_kept",
+      "kind": "edge-case",
+      "query": "SELECT COUNT(*) = 1 AND abs(MIN(spend) - 13.0) < 1e-9 AND MIN(distinct_items) = 2 AS ok FROM user_spend WHERE user_id = 3",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_user_spend_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT user_id, ROUND(spend::DOUBLE, 6), distinct_items FROM user_spend), e AS (SELECT e0, ROUND(e1::DOUBLE, 6), e2 FROM (VALUES (1, 35.5, 3), (2, 16.0, 2), (3, 13.0, 2)) v(e0, e1, e2)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_distinct_buyers_not_line_count",
+      "kind": "adversarial",
+      "query": "SELECT COUNT(*) = 1 AND MIN(distinct_buyers) = 1 AS ok FROM category_spend WHERE category = 'apparel'",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_category_spend_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT category, ROUND(spend::DOUBLE, 6), distinct_buyers FROM category_spend), e AS (SELECT e0, ROUND(e1::DOUBLE, 6), e2 FROM (VALUES ('apparel', 23.5, 1), ('books', 33.0, 3)) v(e0, e1, e2)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    }
+  ]
+}

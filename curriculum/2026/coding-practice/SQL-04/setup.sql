@@ -1,0 +1,19 @@
+DROP VIEW IF EXISTS top_items;
+DROP VIEW IF EXISTS top_items_with_ties;
+DROP TABLE IF EXISTS sales;
+CREATE TABLE sales(sale_id INTEGER, category VARCHAR, item_id INTEGER, sold_ts TIMESTAMP, units INTEGER);
+INSERT INTO sales VALUES
+  (1, 'a', 4, TIMESTAMP '2026-01-03 10:00', 5),
+  (2, 'a', 1, TIMESTAMP '2026-01-01 00:00', 6),
+  (3, 'a', 3, TIMESTAMP '2026-01-02 10:00', 8),
+  (4, 'a', 2, TIMESTAMP '2026-01-02 11:00', 8),
+  (5, 'a', 1, TIMESTAMP '2026-01-20 09:00', 4),
+  (6, 'a', 5, TIMESTAMP '2026-01-04 09:00', 2),
+  (7, 'a', 6, TIMESTAMP '2026-02-01 00:00', 50),
+  (8, 'a', 7, TIMESTAMP '2025-12-31 23:59', 40),
+  (9, 'b', 13, TIMESTAMP '2026-01-05 10:00', 5),
+  (10, 'b', 10, TIMESTAMP '2026-01-05 11:00', 9),
+  (11, 'b', 12, TIMESTAMP '2026-01-06 10:00', 5),
+  (12, 'b', 11, TIMESTAMP '2026-01-06 11:00', 7),
+  (13, 'b', 14, TIMESTAMP '2026-01-07 10:00', 1),
+  (14, 'c', 20, TIMESTAMP '2026-01-31 23:59:59', 3);

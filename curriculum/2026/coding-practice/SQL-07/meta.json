@@ -1,0 +1,18 @@
+{
+  "item": "2026:SQL-07",
+  "runtime": "sql",
+  "entrypoint": "deduped_events",
+  "starter": "starter.sql",
+  "setup": "setup.sql",
+  "tests": "verify.json",
+  "packages": [],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "deterministic"
+  ]
+}

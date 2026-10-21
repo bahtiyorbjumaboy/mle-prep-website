@@ -1,0 +1,17 @@
+{
+  "item": "2026:SQL-06",
+  "runtime": "sql",
+  "entrypoint": "daily_rolling",
+  "starter": "starter.sql",
+  "setup": "setup.sql",
+  "tests": "verify.json",
+  "packages": [],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "example",
+    "edge-case",
+    "boundary",
+    "invariant"
+  ]
+}

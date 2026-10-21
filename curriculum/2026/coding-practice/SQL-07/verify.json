@@ -1,0 +1,60 @@
+{
+  "tests": [
+    {
+      "name": "test_exact_duplicates_collapse",
+      "kind": "edge-case",
+      "query": "SELECT COUNT(*) FILTER (WHERE event_id = 1) = 1 AS ok FROM deduped_events",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_five_second_gap_is_duplicate_six_is_not",
+      "kind": "boundary",
+      "query": "SELECT COUNT(*) FILTER (WHERE event_id = 2) = 0 AND COUNT(*) FILTER (WHERE event_id IN (3, 13)) = 2 AND COUNT(*) FILTER (WHERE event_id = 7) = 0 AS ok FROM deduped_events",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_same_timestamp_keeps_lowest_event_id",
+      "kind": "deterministic",
+      "query": "SELECT COUNT(*) FILTER (WHERE event_id = 4) = 1 AND COUNT(*) FILTER (WHERE event_id IN (5, 11)) = 0 AND COUNT(*) FILTER (WHERE event_id = 10) = 1 AS ok FROM deduped_events",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_dedup_key_includes_event_type",
+      "kind": "adversarial",
+      "query": "SELECT COUNT(*) FILTER (WHERE event_id = 4) = 1 AND COUNT(*) FILTER (WHERE event_id = 3) = 1 AS ok FROM deduped_events",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_deduped_events_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT event_id, user_id, item_id, event_type, event_ts FROM deduped_events), e AS (SELECT e0, e1, e2, e3, e4 FROM (VALUES (1, 1, 10, 'impression', TIMESTAMP '2026-01-01 10:00:00'), (3, 1, 10, 'impression', TIMESTAMP '2026-01-01 10:00:11'), (4, 1, 10, 'click', TIMESTAMP '2026-01-01 10:00:12'), (6, 2, 11, 'impression', TIMESTAMP '2026-01-01 11:00:00'), (13, 2, 11, 'impression', TIMESTAMP '2026-01-01 11:00:10'), (8, 2, NULL, 'click', TIMESTAMP '2026-01-01 11:00:30'), (9, NULL, 13, 'click', TIMESTAMP '2026-01-01 12:00:00'), (10, 3, 13, 'impression', TIMESTAMP '2026-01-01 12:00:01')) v(e0, e1, e2, e3, e4)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_never_clicked_survives_null_user_clicks",
+      "kind": "adversarial",
+      "query": "WITH a AS (SELECT user_id FROM never_clicked), e AS (SELECT e0 FROM (VALUES (3), (4)) v(e0)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_items_without_clicks_requires_impression_and_survives_null_items",
+      "kind": "adversarial",
+      "query": "WITH a AS (SELECT item_id FROM items_without_clicks), e AS (SELECT e0 FROM (VALUES (11)) v(e0)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    }
+  ]
+}

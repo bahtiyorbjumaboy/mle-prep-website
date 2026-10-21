@@ -1,0 +1,31 @@
+DROP VIEW IF EXISTS point_in_time_features;
+DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS labels;
+DROP TABLE IF EXISTS profiles;
+CREATE TABLE labels(label_id INTEGER, entity_id INTEGER, label_ts TIMESTAMP);
+CREATE TABLE events(event_id INTEGER, entity_id INTEGER, event_ts TIMESTAMP, amount DOUBLE);
+CREATE TABLE profiles(profile_id INTEGER, entity_id INTEGER, profile_ts TIMESTAMP, tier VARCHAR);
+-- Labels 1 and 2 share an entity and timestamp but are separate rows.
+INSERT INTO labels VALUES
+  (1, 1, TIMESTAMP '2026-02-01 00:00:00'), (2, 1, TIMESTAMP '2026-02-01 00:00:00'),
+  (3, 1, TIMESTAMP '2026-01-10 12:00:00'), (4, 2, TIMESTAMP '2026-02-01 00:00:00'),
+  (5, 3, TIMESTAMP '2026-01-15 00:00:00');
+INSERT INTO events VALUES
+  (1, 1, TIMESTAMP '2026-02-01 00:00:00', 1000.0),
+  (2, 1, TIMESTAMP '2026-01-31 23:59:59', 1.0),
+  (3, 1, TIMESTAMP '2026-01-31 00:00:00', 2.0),
+  (4, 1, TIMESTAMP '2026-01-30 23:59:59', 4.0),
+  (5, 1, TIMESTAMP '2026-01-25 00:00:00', 8.0),
+  (6, 1, TIMESTAMP '2026-01-02 00:00:00', 16.0),
+  (7, 1, TIMESTAMP '2026-01-01 23:00:00', 32.0),
+  (8, 1, TIMESTAMP '2026-02-05 00:00:00', 64.0),
+  (9, 1, TIMESTAMP '2026-01-20 00:00:00', NULL),
+  (10, 3, TIMESTAMP '2026-01-16 00:00:00', 5.0),
+  (11, 3, TIMESTAMP '2026-01-15 00:00:00', 7.0);
+INSERT INTO profiles VALUES
+  (1, 1, TIMESTAMP '2026-01-01 00:00:00', 'bronze'),
+  (2, 1, TIMESTAMP '2026-01-20 00:00:00', 'silver'),
+  (3, 1, TIMESTAMP '2026-01-20 00:00:00', 'silver_plus'),
+  (4, 1, TIMESTAMP '2026-02-01 00:00:00', 'gold'),
+  (5, 1, TIMESTAMP '2026-03-01 00:00:00', 'platinum'),
+  (6, 3, TIMESTAMP '2026-01-15 00:00:00', 'new');

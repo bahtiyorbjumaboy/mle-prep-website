@@ -1,0 +1,60 @@
+{
+  "tests": [
+    {
+      "name": "test_one_row_per_label_row",
+      "kind": "invariant",
+      "query": "SELECT COUNT(*) = 5 AND COUNT(DISTINCT label_id) = 5 AS ok FROM point_in_time_features",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_event_at_label_ts_is_excluded",
+      "kind": "adversarial",
+      "query": "SELECT MAX(CASE WHEN label_id = 1 THEN event_count_1d END) = 2 AND MAX(CASE WHEN label_id = 5 THEN event_count_30d END) = 0 AND MAX(amount_30d) < 1000 AS ok FROM point_in_time_features",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_window_lower_bounds_are_inclusive",
+      "kind": "boundary",
+      "query": "SELECT MAX(CASE WHEN label_id = 1 THEN event_count_7d END) = 4 AND MAX(CASE WHEN label_id = 1 THEN event_count_30d END) = 6 AS ok FROM point_in_time_features",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_amount_ignores_null_and_future",
+      "kind": "edge-case",
+      "query": "SELECT abs(MAX(CASE WHEN label_id = 1 THEN amount_30d END) - 31.0) < 1e-9 AND abs(MAX(CASE WHEN label_id = 3 THEN amount_30d END) - 48.0) < 1e-9 AS ok FROM point_in_time_features",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_latest_profile_is_strictly_prior_with_tiebreak",
+      "kind": "adversarial",
+      "query": "SELECT MAX(CASE WHEN label_id = 2 THEN latest_tier END) = 'silver_plus' AND MAX(CASE WHEN label_id = 3 THEN latest_tier END) = 'bronze' AND COUNT(*) FILTER (WHERE label_id = 5 AND latest_tier IS NULL) = 1 AS ok FROM point_in_time_features",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_labels_without_history_keep_zero_counts",
+      "kind": "edge-case",
+      "query": "SELECT event_count_1d = 0 AND event_count_7d = 0 AND event_count_30d = 0 AND amount_30d = 0 AND latest_tier IS NULL AS ok FROM point_in_time_features WHERE label_id = 4",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_point_in_time_features_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT label_id, entity_id, label_ts, event_count_1d, event_count_7d, event_count_30d, ROUND(amount_30d::DOUBLE, 6), latest_tier FROM point_in_time_features), e AS (SELECT e0, e1, e2, e3, e4, e5, ROUND(e6::DOUBLE, 6), e7 FROM (VALUES (1, 1, TIMESTAMP '2026-02-01 00:00:00', 2, 4, 6, 31.0, 'silver_plus'), (2, 1, TIMESTAMP '2026-02-01 00:00:00', 2, 4, 6, 31.0, 'silver_plus'), (3, 1, TIMESTAMP '2026-01-10 12:00:00', 0, 0, 2, 48.0, 'bronze'), (4, 2, TIMESTAMP '2026-02-01 00:00:00', 0, 0, 0, 0.0, NULL), (5, 3, TIMESTAMP '2026-01-15 00:00:00', 0, 0, 0, 0.0, NULL)) v(e0, e1, e2, e3, e4, e5, e6, e7)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    }
+  ]
+}

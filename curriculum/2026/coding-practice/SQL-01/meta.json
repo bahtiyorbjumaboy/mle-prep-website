@@ -1,0 +1,17 @@
+{
+  "item": "2026:SQL-01",
+  "runtime": "sql",
+  "entrypoint": "learner_result",
+  "starter": "starter.sql",
+  "setup": "setup.sql",
+  "tests": "verify.json",
+  "packages": [],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial"
+  ]
+}

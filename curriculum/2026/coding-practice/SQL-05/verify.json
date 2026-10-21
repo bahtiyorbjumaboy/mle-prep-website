@@ -1,0 +1,60 @@
+{
+  "tests": [
+    {
+      "name": "test_gap_of_exactly_30_minutes_stays_in_session",
+      "kind": "boundary",
+      "query": "SELECT MAX(CASE WHEN user_id = 1 AND session_number = 1 THEN event_count END) = 2 AS ok FROM session_summary",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_gap_one_second_over_threshold_splits",
+      "kind": "boundary",
+      "query": "SELECT MAX(CASE WHEN user_id = 1 AND session_number = 2 THEN session_start END) = TIMESTAMP '2026-01-01 11:00:01' AS ok FROM session_summary",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_threshold_uses_exact_duration_not_minute_boundaries",
+      "kind": "adversarial",
+      "query": "SELECT COUNT(*) FILTER (WHERE user_id = 1) = 4 AND COUNT(*) FILTER (WHERE user_id = 1 AND event_count = 1) = 2 AS ok FROM session_summary",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_same_timestamp_events_counted_in_one_session",
+      "kind": "edge-case",
+      "query": "SELECT MAX(CASE WHEN user_id = 1 AND session_number = 2 THEN event_count END) = 3 AS ok FROM session_summary",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_sessions_are_per_user",
+      "kind": "invariant",
+      "query": "SELECT COUNT(*) = 7 AND COUNT(DISTINCT (user_id, session_number)) = 7 AND MIN(session_number) = 1 AS ok FROM session_summary",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_first_session_gap_is_null",
+      "kind": "edge-case",
+      "query": "SELECT COUNT(*) FILTER (WHERE session_number = 1 AND gap_from_previous_session_minutes IS NULL) = 3 AND COUNT(*) FILTER (WHERE session_number > 1 AND gap_from_previous_session_minutes IS NULL) = 0 AS ok FROM session_summary",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_session_summary_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT user_id, session_number, session_start, session_end, event_count, has_purchase, ROUND(gap_from_previous_session_minutes::DOUBLE, 6) FROM session_summary), e AS (SELECT e0, e1, e2, e3, e4, e5, ROUND(e6::DOUBLE, 6) FROM (VALUES (1, 1, TIMESTAMP '2026-01-01 10:00:00', TIMESTAMP '2026-01-01 10:30:00', 2, FALSE, NULL), (1, 2, TIMESTAMP '2026-01-01 11:00:01', TIMESTAMP '2026-01-01 11:29:59', 3, TRUE, 30.016667), (1, 3, TIMESTAMP '2026-01-01 12:00:30', TIMESTAMP '2026-01-01 12:00:30', 1, FALSE, 30.516667), (1, 4, TIMESTAMP '2026-01-01 12:30:59', TIMESTAMP '2026-01-01 12:30:59', 1, TRUE, 30.483333), (2, 1, TIMESTAMP '2026-01-01 10:15:00', TIMESTAMP '2026-01-01 10:15:00', 1, TRUE, NULL), (3, 1, TIMESTAMP '2026-01-01 08:00:00', TIMESTAMP '2026-01-01 08:10:00', 2, FALSE, NULL), (3, 2, TIMESTAMP '2026-01-01 08:50:00', TIMESTAMP '2026-01-01 08:50:00', 1, FALSE, 40.0)) v(e0, e1, e2, e3, e4, e5, e6)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    }
+  ]
+}

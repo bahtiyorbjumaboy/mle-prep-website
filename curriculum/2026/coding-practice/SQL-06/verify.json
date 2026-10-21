@@ -1,0 +1,60 @@
+{
+  "tests": [
+    {
+      "name": "test_dense_spine_from_first_purchase_to_dataset_end",
+      "kind": "invariant",
+      "query": "SELECT COUNT(*) = 44 AND COUNT(DISTINCT (user_id, day)) = 44 AND COUNT(*) FILTER (WHERE user_id = 3) = 0 AND MAX(day) = DATE '2026-02-10' AS ok FROM daily_rolling",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_multiple_purchases_per_day_counted",
+      "kind": "edge-case",
+      "query": "SELECT MAX(CASE WHEN user_id = 1 AND day = DATE '2026-01-01' THEN daily_purchases END) = 2 AND MAX(CASE WHEN user_id = 1 AND day = DATE '2026-01-31' THEN daily_purchases END) = 3 AS ok FROM daily_rolling",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_7_day_window_boundary",
+      "kind": "boundary",
+      "query": "SELECT MAX(CASE WHEN user_id = 1 AND day = DATE '2026-01-07' THEN rolling_7d_purchases END) = 3 AND MAX(CASE WHEN user_id = 1 AND day = DATE '2026-01-08' THEN rolling_7d_purchases END) = 2 AND MAX(CASE WHEN user_id = 1 AND day = DATE '2026-01-14' THEN rolling_7d_purchases END) = 1 AS ok FROM daily_rolling",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_30_day_spend_boundary",
+      "kind": "boundary",
+      "query": "SELECT abs(MAX(CASE WHEN user_id = 1 AND day = DATE '2026-01-30' THEN rolling_30d_spend END) - 22.0) < 1e-9 AND abs(MAX(CASE WHEN user_id = 1 AND day = DATE '2026-01-31' THEN rolling_30d_spend END) - 30.0) < 1e-9 AS ok FROM daily_rolling",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_rolling_7d_change",
+      "kind": "edge-case",
+      "query": "SELECT COUNT(*) FILTER (WHERE rolling_7d_change IS NULL) = 2 AND MAX(CASE WHEN user_id = 1 AND day = DATE '2026-01-08' THEN rolling_7d_change END) = -1 AND MAX(CASE WHEN user_id = 1 AND day = DATE '2026-02-07' THEN rolling_7d_change END) = -3 AS ok FROM daily_rolling",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_purchase_late_on_dataset_end_day_counts",
+      "kind": "boundary",
+      "query": "SELECT MAX(CASE WHEN user_id = 2 AND day = DATE '2026-02-10' THEN daily_purchases END) = 1 AND abs(MAX(CASE WHEN user_id = 2 AND day = DATE '2026-02-10' THEN rolling_30d_spend END) - 21.0) < 1e-9 AS ok FROM daily_rolling",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_daily_rolling_exact",
+      "kind": "example",
+      "query": "WITH a AS (SELECT user_id, day, daily_purchases, rolling_7d_purchases, ROUND(rolling_30d_spend::DOUBLE, 6), rolling_7d_change FROM daily_rolling), e AS (SELECT e0, e1, e2, e3, ROUND(e4::DOUBLE, 6), e5 FROM (VALUES (1, DATE '2026-01-01', 2, 2, 15.0, NULL), (1, DATE '2026-01-02', 0, 2, 15.0, 0), (1, DATE '2026-01-03', 0, 2, 15.0, 0), (1, DATE '2026-01-04', 0, 2, 15.0, 0), (1, DATE '2026-01-05', 0, 2, 15.0, 0), (1, DATE '2026-01-06', 0, 2, 15.0, 0), (1, DATE '2026-01-07', 1, 3, 18.0, 1), (1, DATE '2026-01-08', 1, 2, 22.0, -1), (1, DATE '2026-01-09', 0, 2, 22.0, 0), (1, DATE '2026-01-10', 0, 2, 22.0, 0), (1, DATE '2026-01-11', 0, 2, 22.0, 0), (1, DATE '2026-01-12', 0, 2, 22.0, 0), (1, DATE '2026-01-13', 0, 2, 22.0, 0), (1, DATE '2026-01-14', 0, 1, 22.0, -1), (1, DATE '2026-01-15', 0, 0, 22.0, -1), (1, DATE '2026-01-16', 0, 0, 22.0, 0), (1, DATE '2026-01-17', 0, 0, 22.0, 0), (1, DATE '2026-01-18', 0, 0, 22.0, 0), (1, DATE '2026-01-19', 0, 0, 22.0, 0), (1, DATE '2026-01-20', 0, 0, 22.0, 0), (1, DATE '2026-01-21', 0, 0, 22.0, 0), (1, DATE '2026-01-22', 0, 0, 22.0, 0), (1, DATE '2026-01-23', 0, 0, 22.0, 0), (1, DATE '2026-01-24', 0, 0, 22.0, 0), (1, DATE '2026-01-25', 0, 0, 22.0, 0), (1, DATE '2026-01-26', 0, 0, 22.0, 0), (1, DATE '2026-01-27', 0, 0, 22.0, 0), (1, DATE '2026-01-28', 0, 0, 22.0, 0), (1, DATE '2026-01-29', 0, 0, 22.0, 0), (1, DATE '2026-01-30', 0, 0, 22.0, 0), (1, DATE '2026-01-31', 3, 3, 30.0, 3), (1, DATE '2026-02-01', 0, 3, 30.0, 0), (1, DATE '2026-02-02', 0, 3, 30.0, 0), (1, DATE '2026-02-03', 0, 3, 30.0, 0), (1, DATE '2026-02-04', 0, 3, 30.0, 0), (1, DATE '2026-02-05', 0, 3, 30.0, 0), (1, DATE '2026-02-06', 0, 3, 27.0, 0), (1, DATE '2026-02-07', 0, 0, 23.0, -3), (1, DATE '2026-02-08', 0, 0, 23.0, 0), (1, DATE '2026-02-09', 0, 0, 23.0, 0), (1, DATE '2026-02-10', 0, 0, 23.0, 0), (2, DATE '2026-02-08', 2, 2, 15.0, NULL), (2, DATE '2026-02-09', 0, 2, 15.0, 0), (2, DATE '2026-02-10', 1, 3, 21.0, 1)) v(e0, e1, e2, e3, e4, e5)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "tests": [
+    {
+      "name": "test_country_grain_and_threshold",
+      "kind": "example",
+      "query": "SELECT COUNT(*) = 2 AND COUNT(DISTINCT country) = 2 AND BOOL_AND(country IN ('US', 'CA')) AS ok FROM learner_result",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_zero_conversion_country_is_kept",
+      "kind": "edge-case",
+      "query": "WITH a AS (SELECT country, signups_2026, converted_users, ROUND(conversion_rate::DOUBLE, 6), ROUND(paid_search_signup_share::DOUBLE, 6) FROM learner_result WHERE country = 'CA'), e AS (SELECT e0, e1, e2, ROUND(e3::DOUBLE, 6), ROUND(e4::DOUBLE, 6) FROM (VALUES ('CA', 100, 0, 0.0, 0.1)) v(e0, e1, e2, e3, e4)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_signups_restricted_to_2026",
+      "kind": "boundary",
+      "query": "SELECT COUNT(*) = 1 AND MIN(signups_2026) = 120 AND abs(MIN(paid_search_signup_share) - 0.25) < 1e-9 AS ok FROM learner_result WHERE country = 'US'",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_converted_users_are_distinct_2026_signups_with_paid_2026_orders",
+      "kind": "adversarial",
+      "query": "SELECT COUNT(*) = 1 AND MIN(converted_users) = 3 AND abs(MIN(conversion_rate) - 0.025) < 1e-9 AS ok FROM learner_result WHERE country = 'US'",
+      "expect": {
+        "scalar": true
+      }
+    },
+    {
+      "name": "test_exact_result",
+      "kind": "example",
+      "query": "WITH a AS (SELECT country, signups_2026, converted_users, ROUND(conversion_rate::DOUBLE, 6), ROUND(paid_search_signup_share::DOUBLE, 6) FROM learner_result), e AS (SELECT e0, e1, e2, ROUND(e3::DOUBLE, 6), ROUND(e4::DOUBLE, 6) FROM (VALUES ('US', 120, 3, 0.025, 0.25), ('CA', 100, 0, 0.0, 0.1)) v(e0, e1, e2, e3, e4)) SELECT (SELECT COUNT(*) FROM (SELECT * FROM a EXCEPT ALL SELECT * FROM e)) = 0 AND (SELECT COUNT(*) FROM (SELECT * FROM e EXCEPT ALL SELECT * FROM a)) = 0 AS ok",
+      "expect": {
+        "scalar": true
+      }
+    }
+  ]
+}
