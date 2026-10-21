@@ -1,0 +1,20 @@
+{
+  "item": "2026:ML-13",
+  "runtime": "python-numpy",
+  "entrypoint": "KNearestNeighbors",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "numpy"
+  ],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "invariant"
+  ]
+}

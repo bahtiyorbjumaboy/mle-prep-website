@@ -1,0 +1,20 @@
+{
+  "item": "2026:ML-06",
+  "runtime": "python-numpy",
+  "entrypoint": "LogisticRegression",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "numpy"
+  ],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "invariant"
+  ]
+}

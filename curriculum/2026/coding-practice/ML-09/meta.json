@@ -1,0 +1,22 @@
+{
+  "item": "2026:ML-09",
+  "runtime": "python-numpy",
+  "entrypoint": "permutation_pvalue",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "numpy"
+  ],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "invariant",
+    "deterministic",
+    "property"
+  ]
+}

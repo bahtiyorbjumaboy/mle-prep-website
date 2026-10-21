@@ -1,0 +1,21 @@
+{
+  "item": "2026:ML-03",
+  "runtime": "python-numpy",
+  "entrypoint": "group_hash_split",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "numpy"
+  ],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "invariant",
+    "deterministic"
+  ]
+}
