@@ -4,6 +4,7 @@ import { unified } from '@astrojs/markdown-remark';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { rehypeMermaid } from './src/lib/rehype-mermaid.ts';
+import { palenightTheme } from './src/lib/palenight-theme.ts';
 
 const repository = process.env.GITHUB_REPOSITORY?.split('/')[1];
 const isPages = Boolean(process.env.GITHUB_ACTIONS && repository);
@@ -25,7 +26,7 @@ export default defineConfig({
       remarkPlugins: [remarkMath],
       rehypePlugins: [rehypeMermaid, [rehypeKatex, { throwOnError: false, strict: false }]],
     }),
-    shikiConfig: { theme: 'material-theme-palenight', wrap: true },
+    shikiConfig: { theme: palenightTheme, wrap: true },
   },
   vite: { build: { chunkSizeWarningLimit: 800 }, define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) } },
 });

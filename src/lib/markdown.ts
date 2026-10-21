@@ -2,6 +2,7 @@ import { unified } from '@astrojs/markdown-remark';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { rehypeMermaid } from './rehype-mermaid';
+import { palenightTheme } from './palenight-theme';
 
 // Dynamic curriculum strings use Astro's own Unified processor with the same
 // math plugins configured in astro.config.mjs. Source LaTeX is passed directly
@@ -12,7 +13,7 @@ const processor = unified({
     rehypePlugins: [rehypeMermaid, [rehypeKatex, { throwOnError: false, strict: false }]],
   }).createRenderer({
   syntaxHighlight: 'shiki',
-  shikiConfig: { theme: 'material-theme-palenight', wrap: true },
+  shikiConfig: { theme: palenightTheme, wrap: true },
 });
 
 export async function renderMarkdown(markdown: string): Promise<string> {
