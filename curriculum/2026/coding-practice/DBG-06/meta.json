@@ -1,7 +1,7 @@
 {
   "item": "2026:DBG-06",
   "runtime": "python-numpy",
-  "entrypoint": "evaluate_predictions",
+  "entrypoint": "evaluate",
   "starter": "starter.py",
   "tests": "tests.py",
   "packages": [
@@ -11,6 +11,10 @@
   "timeoutMs": 8000,
   "testKinds": [
     "contract",
-    "example"
+    "example",
+    "boundary",
+    "edge-case",
+    "invariant",
+    "adversarial"
   ]
 }

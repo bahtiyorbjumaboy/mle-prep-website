@@ -1,15 +1,22 @@
 {
   "item": "2026:DBG-02",
   "runtime": "local-python",
-  "entrypoint": "align_labels_and_rows",
+  "entrypoint": "split_train_validation",
   "starter": "starter.py",
   "tests": "tests.py",
-  "packages": [],
+  "packages": [
+    "pandas",
+    "numpy",
+    "pytest"
+  ],
   "browserRunnable": false,
   "timeoutMs": 20000,
   "testKinds": [
     "contract",
-    "example"
+    "invariant",
+    "edge-case",
+    "adversarial",
+    "deterministic"
   ],
   "localCommand": "npm run practice -- DBG-02 && python -m pytest -q practice-workspace/DBG-02/test_solution.py"
 }

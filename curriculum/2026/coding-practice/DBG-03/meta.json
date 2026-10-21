@@ -1,7 +1,7 @@
 {
   "item": "2026:DBG-03",
   "runtime": "python-numpy",
-  "entrypoint": "repair_broadcasting",
+  "entrypoint": "score_candidates",
   "starter": "starter.py",
   "tests": "tests.py",
   "packages": [
@@ -11,6 +11,9 @@
   "timeoutMs": 8000,
   "testKinds": [
     "contract",
-    "example"
+    "example",
+    "boundary",
+    "invariant",
+    "edge-case"
   ]
 }

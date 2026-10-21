@@ -1,15 +1,20 @@
 {
   "item": "2026:DBG-07",
   "runtime": "local-python",
-  "entrypoint": "extend_evaluator",
+  "entrypoint": "RankingEvaluator",
   "starter": "starter.py",
   "tests": "tests.py",
-  "packages": [],
+  "packages": [
+    "pytest"
+  ],
   "browserRunnable": false,
   "timeoutMs": 20000,
   "testKinds": [
     "contract",
-    "example"
+    "example",
+    "edge-case",
+    "invariant",
+    "boundary"
   ],
   "localCommand": "npm run practice -- DBG-07 && python -m pytest -q practice-workspace/DBG-07/test_solution.py"
 }
