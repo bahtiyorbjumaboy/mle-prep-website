@@ -1,7 +1,7 @@
 {
   "item": "2026:PT-06",
   "runtime": "local-pytorch",
-  "entrypoint": "SequenceDataset",
+  "entrypoint": "collate_batch",
   "starter": "starter.py",
   "tests": "tests.py",
   "packages": [
@@ -12,7 +12,10 @@
   "timeoutMs": 20000,
   "testKinds": [
     "contract",
-    "example"
+    "example",
+    "edge-case",
+    "adversarial",
+    "invariant"
   ],
   "localCommand": "npm run practice -- PT-06 && python -m pytest -q practice-workspace/PT-06/test_solution.py"
 }

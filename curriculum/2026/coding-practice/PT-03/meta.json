@@ -1,7 +1,7 @@
 {
   "item": "2026:PT-03",
   "runtime": "local-pytorch",
-  "entrypoint": "masked_losses",
+  "entrypoint": "masked_ce_explicit",
   "starter": "starter.py",
   "tests": "tests.py",
   "packages": [
@@ -12,7 +12,11 @@
   "timeoutMs": 20000,
   "testKinds": [
     "contract",
-    "example"
+    "example",
+    "edge-case",
+    "boundary",
+    "adversarial",
+    "invariant"
   ],
   "localCommand": "npm run practice -- PT-03 && python -m pytest -q practice-workspace/PT-03/test_solution.py"
 }
