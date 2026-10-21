@@ -17,6 +17,12 @@ if (artifact.language === 'sql') {
   await fs.writeFile(path.join(target, 'setup.sql'), artifact.setupCode || '');
   await fs.writeFile(path.join(target, artifact.testsFile), artifact.testCode);
 } else await fs.writeFile(path.join(target, 'test_solution.py'), artifact.testCode);
-await fs.writeFile(path.join(target, 'README.md'), `# ${item.id}: ${item.title}\n\nCanonical key: \`${item.canonicalKey}\`\n\n${item.rawSection}\n\n## Run locally\n\n\`${artifact.localCommand?.replace(`npm run practice -- ${id} && `, '') || (artifact.language === 'sql' ? 'Use DuckDB CLI with setup.sql and solution.sql.' : 'python -m pytest -q test_solution.py')}\`\n`);
+const runLocally = artifact.language === 'sql'
+  ? 'Run `setup.sql`, then `solution.sql`, then each query in `verify.json` in DuckDB (CLI or the browser Practice page); every check must return `ok = true`.'
+  : artifact.localCommand
+    ? `From the repository root: \`${artifact.localCommand.replace(`npm run practice -- ${id} && `, '')}\``
+    : 'From this directory: `python -m pytest -q test_solution.py`';
+const requires = ['pytest', ...artifact.packages.filter((name) => name !== 'pytest')].join(', ');
+await fs.writeFile(path.join(target, 'README.md'), `# ${item.id}: ${item.title}\n\nCanonical key: \`${item.canonicalKey}\`\n\n${item.rawSection}\n\n## Run locally\n\n${runLocally}\n${artifact.language === 'sql' ? '' : `\nRequires: Python with ${requires}.\n`}`);
 await fs.writeFile(path.join(target, 'notes.md'), '# Attempt notes\n\n## Clarifications and assumptions\n\n## Baseline, invariant, and complexity\n\n## Evidence and lessons\n');
 console.log(`Created ${path.relative(process.cwd(), target)} from canonical practice artifact ${artifact.path}.`);
