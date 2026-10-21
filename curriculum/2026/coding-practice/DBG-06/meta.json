@@ -1,0 +1,16 @@
+{
+  "item": "2026:DBG-06",
+  "runtime": "python-numpy",
+  "entrypoint": "evaluate_predictions",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "numpy"
+  ],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example"
+  ]
+}

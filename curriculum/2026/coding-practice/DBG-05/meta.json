@@ -1,0 +1,18 @@
+{
+  "item": "2026:DBG-05",
+  "runtime": "local-pytorch",
+  "entrypoint": "repair_torch_lifecycle",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "torch",
+    "pytest"
+  ],
+  "browserRunnable": false,
+  "timeoutMs": 20000,
+  "testKinds": [
+    "contract",
+    "example"
+  ],
+  "localCommand": "npm run practice -- DBG-05 && python -m pytest -q practice-workspace/DBG-05/test_solution.py"
+}

@@ -1,0 +1,15 @@
+{
+  "item": "2026:DBG-01",
+  "runtime": "local-python",
+  "entrypoint": "fit_leakage_safe_pipeline",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [],
+  "browserRunnable": false,
+  "timeoutMs": 20000,
+  "testKinds": [
+    "contract",
+    "example"
+  ],
+  "localCommand": "npm run practice -- DBG-01 && python -m pytest -q practice-workspace/DBG-01/test_solution.py"
+}

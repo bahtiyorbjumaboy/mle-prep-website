@@ -1,0 +1,16 @@
+{
+  "item": "2026:DBG-04",
+  "runtime": "python-numpy",
+  "entrypoint": "stable_numerical_pipeline",
+  "starter": "starter.py",
+  "tests": "tests.py",
+  "packages": [
+    "numpy"
+  ],
+  "browserRunnable": true,
+  "timeoutMs": 8000,
+  "testKinds": [
+    "contract",
+    "example"
+  ]
+}
