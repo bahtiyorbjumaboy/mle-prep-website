@@ -11,7 +11,7 @@ export function initShell() {
   document.querySelector('[data-menu]')?.addEventListener('click', () => { sidebar?.classList.toggle('open'); scrim?.classList.toggle('show'); });
   scrim?.addEventListener('click', () => { sidebar?.classList.remove('open'); scrim.classList.remove('show'); });
   document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => { const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = theme; localStorage.setItem('ml-os-theme', theme); });
-  document.addEventListener('keydown', (event) => { if (event.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes((event.target as HTMLElement).tagName)) { event.preventDefault(); const base = import.meta.env.BASE_URL.replace(/\/$/, ''); location.href = `${base}/search/`; } });
+  document.addEventListener('keydown', (event) => { const target = event.target as HTMLElement; if (event.key === '/' && !target.isContentEditable && !['INPUT','TEXTAREA','SELECT'].includes(target.tagName)) { event.preventDefault(); const base = import.meta.env.BASE_URL.replace(/\/$/, ''); location.href = `${base}/search/`; } });
   initReadingSize(); initProgressForms(); renderProgress(); initFilters(); initPortability(); initCurriculumSelector();
 }
 
