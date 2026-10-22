@@ -24,6 +24,7 @@ export function initPracticePage() {
   const root=document.querySelector<HTMLElement>('[data-practice-root]'); const host=root?.querySelector<HTMLElement>('[data-editor]'); if(!root||!host)return;
   const payload=JSON.parse(root.dataset.payload||'{}') as Payload; const key=practiceDraftKey(payload.canonicalKey,payload.language); const saved=readStore().drafts[key];
   const state=EditorState.create({doc:saved?.code??payload.starterCode,extensions:[basicSetup,keymap.of([indentWithTab]),indentUnit.of('    '),EditorState.tabSize.of(4),payload.language==='sql'?sql():python(),EditorView.lineWrapping,palenight(payload.language),EditorView.theme({'&':{height:'100%',fontSize:'13px'},'.cm-scroller':{fontFamily:'ui-monospace, SFMono-Regular, Menlo, monospace',lineHeight:'1.6'}}),EditorView.updateListener.of(update=>{if(update.docChanged)scheduleSave();})]});
+  initPaneResizers(root);
   const view=new EditorView({state,parent:host}); let timer:number|undefined; const saveState=root.querySelector<HTMLElement>('[data-save-state]');
   const save=()=>{if(timer)window.clearTimeout(timer); if(saveState)saveState.textContent='Saving…'; const store=readStore(); store.drafts[key]={...(store.drafts[key]||{}),code:view.state.doc.toString(),language:payload.language,savedAt:new Date().toISOString()}; try{writeStore(store); if(saveState)saveState.textContent='Saved';}catch{if(saveState)saveState.textContent='Unsaved — storage error';}};
   const scheduleSave=()=>{if(saveState)saveState.textContent='Unsaved'; if(timer)window.clearTimeout(timer); timer=window.setTimeout(save,600);};
@@ -34,6 +35,27 @@ export function initPracticePage() {
   root.querySelector('[data-hide-solution]')?.addEventListener('click',()=>{const panel=root.querySelector<HTMLElement>('[data-solution-panel]');if(panel)panel.hidden=true;host.scrollIntoView({behavior:'smooth'});});
   root.querySelector('[data-mark-complete]')?.addEventListener('click',event=>{const store=readProgress();store.items[payload.canonicalKey]={...store.items[payload.canonicalKey],completed:true,lastAttempt:new Date().toISOString().slice(0,10)};writeProgress(store);(event.currentTarget as HTMLElement).textContent='Completed';});
   root.querySelector('[data-run]')?.addEventListener('click',async()=>{save();setRunning(root,true,payload.runtime.startsWith('python')?'Starting Python runtime…':'Starting SQL runtime…'); try{const run=payload.runtime==='sql'?await runSql(payload,view.state.doc.toString()):await runPython(payload,view.state.doc.toString());renderResults(root,run.results,run.stdout,run.stderr,payload.testKinds.some(kind=>kind!=='contract')); const passed=run.results.filter(x=>x.status==='passed').length,failed=run.results.length-passed;const store=readStore();store.drafts[key]={...(store.drafts[key]||{code:view.state.doc.toString(),language:payload.language,savedAt:new Date().toISOString()}),lastRunAt:new Date().toISOString(),lastRun:{passed,failed,status:failed?'failed':'passed'}};writeStore(store);}catch(error){renderRunnerError(root,error instanceof Error?error.message:String(error));}finally{setRunning(root,false);}});
+}
+
+const PANE_LAYOUT_KEY='ml-os-practice-layout';
+const clamp=(value:number,min:number,max:number)=>Math.min(max,Math.max(min,value));
+function initPaneResizers(root:HTMLElement){
+  const prompt=root.querySelector<HTMLElement>('.practice-prompt'); const bench=root.querySelector<HTMLElement>('.practice-workbench'); const tests=root.querySelector<HTMLElement>('.test-panel'); if(!prompt||!bench||!tests)return;
+  let layout:{split?:number;tests?:number}={}; try{layout=JSON.parse(localStorage.getItem(PANE_LAYOUT_KEY)||'{}')||{};}catch{}
+  const apply=()=>{layout.split?root.style.setProperty('--prompt-w',`${layout.split}%`):root.style.removeProperty('--prompt-w'); layout.tests?root.style.setProperty('--tests-h',`${layout.tests}px`):root.style.removeProperty('--tests-h');};
+  const persist=()=>{try{localStorage.setItem(PANE_LAYOUT_KEY,JSON.stringify(layout));}catch{}};
+  const editor=root.querySelector<HTMLElement>('.code-editor');
+  // split: prompt width as % of the shell; tests: test panel height in px, capped so the editor keeps its 280px minimum.
+  const resize=(gutter:HTMLElement,pos:number)=>{if(gutter.dataset.gutter==='split'){const rect=root.getBoundingClientRect(); layout.split=clamp((pos-rect.left-gutter.offsetWidth/2)/rect.width*100,20,75);}else{layout.tests=clamp(tests.getBoundingClientRect().bottom-pos-gutter.offsetHeight/2,60,Math.max(60,tests.offsetHeight+(editor?.offsetHeight??0)-280));} apply();};
+  root.querySelectorAll<HTMLElement>('[data-gutter]').forEach(gutter=>{
+    const axis=gutter.dataset.gutter||'';
+    gutter.addEventListener('pointerdown',event=>{event.preventDefault(); gutter.setPointerCapture(event.pointerId); gutter.classList.add('dragging'); document.body.classList.add('pane-resizing');});
+    gutter.addEventListener('pointermove',event=>{if(gutter.hasPointerCapture(event.pointerId))resize(gutter,axis==='split'?event.clientX:event.clientY);});
+    gutter.addEventListener('lostpointercapture',()=>{gutter.classList.remove('dragging'); document.body.classList.remove('pane-resizing'); persist();});
+    gutter.addEventListener('dblclick',()=>{delete layout[axis as 'split'|'tests']; apply(); persist();});
+    gutter.addEventListener('keydown',event=>{const step={ArrowLeft:-24,ArrowRight:24,ArrowUp:-24,ArrowDown:24}[event.key]; if(!step||(axis==='split')!==['ArrowLeft','ArrowRight'].includes(event.key))return; event.preventDefault(); const rect=gutter.getBoundingClientRect(); resize(gutter,axis==='split'?rect.left+rect.width/2+step:rect.top+rect.height/2+step); persist();});
+  });
+  apply();
 }
 
 function setRunning(root:HTMLElement,running:boolean,message=''){const button=root.querySelector<HTMLButtonElement>('[data-run]');if(button){button.disabled=running;button.textContent=running?'Running…':'Run';}if(message){const status=root.querySelector<HTMLElement>('[data-run-status]');if(status)status.textContent=message;}}
